@@ -1,0 +1,62 @@
+@use '@/styles/variables' as *;
+
+.chat-list-group__label {
+  padding: $spacing-sm $spacing-xs;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-semibold;
+  color: $text-muted;
+  letter-spacing: 0.5px;
+}
+
+.chat-list-item {
+  position: relative;
+  padding: 12px 14px;
+  margin-bottom: $spacing-xs;
+  cursor: pointer;
+  border-radius: $radius-md;
+
+  &:hover {
+    background: $bg-elevated;
+  }
+
+  &--active {
+    background: $accent-tint10;
+  }
+
+  &__header {
+    display: flex;
+    gap: $spacing-sm;
+    align-items: center;
+    justify-content: space-between;
+    padding-right: $spacing-lg;
+  }
+
+  &__title {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 13px;
+    font-weight: $font-weight-medium;
+    color: $text-primary-color;
+    white-space: nowrap;
+  }
+
+  &--active &__title {
+    font-weight: $font-weight-semibold;
+  }
+
+  &__time {
+    flex-shrink: 0;
+    font-size: $font-size-xs;
+    color: $text-muted;
+  }
+
+  &__preview {
+    margin-top: $spacing-xs;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: $font-size-xs;
+    color: $text-muted;
+    white-space: nowrap;
+  }
+}

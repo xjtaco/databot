@@ -1,0 +1,63 @@
+@use 'variables' as *;
+
+// Typography styles
+
+body {
+  font-family: $font-family-sans;
+  font-size: $font-size-md;
+  font-weight: $font-weight-normal;
+  line-height: $line-height-normal;
+}
+
+code,
+pre,
+kbd,
+samp {
+  font-family: $font-family-mono;
+}
+
+h1 {
+  font-size: $font-size-3xl;
+  font-weight: $font-weight-bold;
+  line-height: $line-height-tight;
+}
+
+h2 {
+  font-size: $font-size-xl;
+  font-weight: $font-weight-semibold;
+  line-height: $line-height-tight;
+}
+
+h3 {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  line-height: $line-height-tight;
+}
+
+h4 {
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  line-height: $line-height-tight;
+}
+
+small {
+  font-size: $font-size-sm;
+}
+
+.text-mono {
+  font-family: $font-family-mono;
+}
+
+.text-dm-mono {
+  font-family: $font-family-dm-mono;
+}
+
+.text-serif {
+  font-family: $font-family-serif;
+}
+
+.text-truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

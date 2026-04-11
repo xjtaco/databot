@@ -1,0 +1,24 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "type": "shell",
+      "command": "pnpm run dev",
+      "label": "pnpm: dev - frontend",
+      "options": {
+        "cwd": "${workspaceFolder}/frontend"
+      },
+      "isBackground": true,
+      "problemMatcher": {
+        "pattern": {
+          "regexp": "^$"
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "VITE",
+          "endsPattern": "ready in"
+        }
+      }
+    }
+  ]
+}

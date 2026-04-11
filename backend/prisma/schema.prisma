@@ -1,0 +1,323 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Datasource {
+  id       String  @id @default(uuid()) @db.Uuid
+  name     String  @unique @db.VarChar(255)
+  type     String  @db.VarChar(50)
+  filePath String? @map("file_path") @db.VarChar(500)
+
+  // Database connection fields
+  host     String? @db.VarChar(255)
+  port     Int?
+  database String? @db.VarChar(255)
+  user     String? @db.VarChar(255)
+  password String? @db.VarChar(500)
+
+  schema     String? @db.VarChar(255)
+  properties String? @db.Text
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  createdBy String?  @map("created_by") @db.Uuid
+  creator   User?    @relation("DatasourceCreator", fields: [createdBy], references: [id])
+  tables    Table[]
+
+  @@unique([type, host, port, database, schema], map: "datasources_connection_key")
+  @@map("datasources")
+}
+
+model Table {
+  id             String   @id @default(uuid()) @db.Uuid
+  displayName    String   @map("display_name") @db.VarChar(255)
+  physicalName   String   @map("physical_name") @db.VarChar(255)
+  description    String?  @db.Text
+  type           String   @db.VarChar(50)
+  datasourceId   String?  @map("datasource_id") @db.Uuid
+  dictionaryPath String?  @map("dictionary_path") @db.VarChar(500)
+  dataFilePath   String?  @map("data_file_path") @db.VarChar(500)
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  datasource Datasource? @relation(fields: [datasourceId], references: [id], onDelete: Cascade)
+  columns    Column[]
+
+  @@index([datasourceId])
+  @@unique([datasourceId, physicalName])
+  @@map("tables")
+}
+
+model Column {
+  id           String   @id @default(uuid()) @db.Uuid
+  tableId      String   @map("table_id") @db.Uuid
+  displayName  String   @map("display_name") @db.VarChar(255)
+  physicalName String   @map("physical_name") @db.VarChar(255)
+  description  String?  @db.Text
+  dataType     String   @map("data_type") @db.VarChar(50)
+  columnOrder  Int      @map("column_order")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  table Table @relation(fields: [tableId], references: [id], onDelete: Cascade)
+
+  @@unique([tableId, physicalName])
+  @@index([tableId])
+  @@map("columns")
+}
+
+model KnowledgeFolder {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String   @db.VarChar(255)
+  parentId  String?  @map("parent_id") @db.Uuid
+  sortOrder Int      @default(0) @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  parent   KnowledgeFolder?  @relation("FolderHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
+  children KnowledgeFolder[] @relation("FolderHierarchy")
+  files    KnowledgeFile[]
+
+  @@map("knowledge_folders")
+}
+
+model GlobalConfig {
+  id          String   @id @default(uuid()) @db.Uuid
+  configKey   String   @map("config_key") @db.VarChar(255)
+  category    String   @db.VarChar(100)
+  configValue String   @map("config_value") @db.Text
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@unique([category, configKey])
+  @@map("global_configs")
+}
+
+model User {
+  id                 String    @id @default(uuid()) @db.Uuid
+  username           String    @unique @db.VarChar(100)
+  password           String    @db.VarChar(255)
+  name               String?   @db.VarChar(100)
+  gender             String?   @db.VarChar(10)
+  birthDate          DateTime? @map("birth_date")
+  email              String    @unique @db.VarChar(255)
+  role               String    @default("user") @db.VarChar(20)
+  locked             Boolean   @default(false)
+  mustChangePassword Boolean   @default(true) @map("must_change_password")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+
+  chatSessions       ChatSession[]
+  refreshTokens      RefreshToken[]
+  createdDatasources Datasource[]         @relation("DatasourceCreator")
+  createdWorkflows   Workflow[]           @relation("WorkflowCreator")
+  createdTemplates   CustomNodeTemplate[] @relation("TemplateCreator")
+  createdSchedules   WorkflowSchedule[]   @relation("ScheduleCreator")
+
+  @@map("users")
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid()) @db.Uuid
+  token     String   @unique @db.VarChar(500)
+  userId    String   @map("user_id") @db.Uuid
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+model KnowledgeFile {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String   @db.VarChar(255)
+  filePath  String   @map("file_path") @db.VarChar(500)
+  folderId  String   @map("folder_id") @db.Uuid
+  fileSize  Int      @default(0) @map("file_size")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  folder KnowledgeFolder @relation(fields: [folderId], references: [id], onDelete: Cascade)
+
+  @@index([folderId])
+  @@map("knowledge_files")
+}
+
+model ChatSession {
+  id        String   @id @default(uuid()) @db.Uuid
+  title     String?  @db.VarChar(500)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  userId    String?  @map("user_id") @db.Uuid
+  user      User?    @relation(fields: [userId], references: [id])
+
+  messages ChatMessage[]
+
+  @@map("chat_sessions")
+}
+
+model ChatMessage {
+  id        String   @id @default(uuid()) @db.Uuid
+  sessionId String   @map("session_id") @db.Uuid
+  role      String   @db.VarChar(20)
+  content   String?  @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
+
+  session ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+  @@map("chat_messages")
+}
+
+model Workflow {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String   @db.VarChar(255)
+  description String?  @db.Text
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  createdBy String?  @map("created_by") @db.Uuid
+  creator   User?    @relation("WorkflowCreator", fields: [createdBy], references: [id])
+
+  nodes     WorkflowNode[]
+  edges     WorkflowEdge[]
+  runs      WorkflowRun[]
+  schedules WorkflowSchedule[]
+
+  @@map("workflows")
+}
+
+model WorkflowNode {
+  id          String   @id @default(uuid()) @db.Uuid
+  workflowId  String   @map("workflow_id") @db.Uuid
+  name        String   @db.VarChar(255)
+  description String?  @db.Text
+  type        String   @db.VarChar(50)
+  config      String   @db.Text
+  positionX   Float    @default(0) @map("position_x")
+  positionY   Float    @default(0) @map("position_y")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  workflow Workflow       @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  outEdges WorkflowEdge[] @relation("SourceNode")
+  inEdges  WorkflowEdge[] @relation("TargetNode")
+  nodeRuns WorkflowNodeRun[]
+
+  @@unique([workflowId, name])
+  @@index([workflowId])
+  @@map("workflow_nodes")
+}
+
+model WorkflowEdge {
+  id           String   @id @default(uuid()) @db.Uuid
+  workflowId   String   @map("workflow_id") @db.Uuid
+  sourceNodeId String   @map("source_node_id") @db.Uuid
+  targetNodeId String   @map("target_node_id") @db.Uuid
+  sourceHandle String?  @map("source_handle") @db.VarChar(50)
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  workflow   Workflow     @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  sourceNode WorkflowNode @relation("SourceNode", fields: [sourceNodeId], references: [id], onDelete: Cascade)
+  targetNode WorkflowNode @relation("TargetNode", fields: [targetNodeId], references: [id], onDelete: Cascade)
+
+  @@unique([sourceNodeId, targetNodeId])
+  @@index([workflowId])
+  @@map("workflow_edges")
+}
+
+model CustomNodeTemplate {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String   @unique @db.VarChar(255)
+  description String?  @db.Text
+  type        String   @db.VarChar(50)
+  config      String   @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  createdBy String?  @map("created_by") @db.Uuid
+  creator   User?    @relation("TemplateCreator", fields: [createdBy], references: [id])
+
+  @@map("custom_node_templates")
+}
+
+model WorkflowRun {
+  id           String    @id @default(uuid()) @db.Uuid
+  workflowId   String    @map("workflow_id") @db.Uuid
+  status       String    @db.VarChar(20)
+  workFolder   String    @map("work_folder") @db.VarChar(500)
+  startedAt    DateTime  @default(now()) @map("started_at")
+  completedAt  DateTime? @map("completed_at")
+  errorMessage String?   @map("error_message") @db.Text
+
+  workflow Workflow          @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  nodeRuns WorkflowNodeRun[]
+
+  @@index([workflowId])
+  @@index([status])
+  @@map("workflow_runs")
+}
+
+model WorkflowNodeRun {
+  id           String    @id @default(uuid()) @db.Uuid
+  runId        String    @map("run_id") @db.Uuid
+  nodeId       String    @map("node_id") @db.Uuid
+  status       String    @db.VarChar(20)
+  inputs       String?   @db.Text
+  outputs      String?   @db.Text
+  errorMessage String?   @map("error_message") @db.Text
+  startedAt    DateTime? @map("started_at")
+  completedAt  DateTime? @map("completed_at")
+
+  run  WorkflowRun  @relation(fields: [runId], references: [id], onDelete: Cascade)
+  node WorkflowNode @relation(fields: [nodeId], references: [id], onDelete: Cascade)
+
+  @@unique([runId, nodeId])
+  @@index([runId])
+  @@index([nodeId])
+  @@map("workflow_node_runs")
+}
+
+model WorkflowSchedule {
+  id            String    @id @default(uuid()) @db.Uuid
+  name          String    @db.VarChar(255)
+  description   String    @default("") @db.Text
+  workflowId    String    @map("workflow_id") @db.Uuid
+  workflow      Workflow  @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  scheduleType  String    @map("schedule_type") @db.VarChar(20)
+  cronExpr      String    @map("cron_expr") @db.VarChar(100)
+  timezone      String    @default("Asia/Shanghai") @db.VarChar(50)
+  params        String    @default("{}") @db.Text
+  enabled       Boolean   @default(true)
+  lastRunId     String?   @map("last_run_id") @db.Uuid
+  lastRunStatus String?   @map("last_run_status") @db.VarChar(20)
+  lastRunAt     DateTime? @map("last_run_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  createdBy String?  @map("created_by") @db.Uuid
+  creator   User?    @relation("ScheduleCreator", fields: [createdBy], references: [id])
+
+  @@index([workflowId])
+  @@map("workflow_schedules")
+}
+
+model AuditLog {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String?  @map("user_id") @db.Uuid
+  username  String
+  action    String
+  category  String
+  params    Json?
+  ipAddress String?  @map("ip_address")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([createdAt])
+  @@index([userId])
+  @@index([action])
+  @@index([category])
+  @@map("audit_logs")
+}

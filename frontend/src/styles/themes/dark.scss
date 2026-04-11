@@ -1,0 +1,92 @@
+@use '../variables' as *;
+
+// Dark theme (default and only theme)
+
+:root,
+[data-theme='dark'] {
+  // Background colors
+  --bg-primary: #{$bg-page};
+  --bg-secondary: #{$bg-sidebar};
+  --bg-tertiary: #{$bg-deeper};
+  --bg-elevated: #{$bg-elevated};
+  --bg-hover: #{$bg-elevated};
+
+  // Text colors
+  --text-primary: #{$text-primary-color};
+  --text-secondary: #{$text-secondary-color};
+  --text-tertiary: #{$text-muted};
+  --text-inverse: #{$bg-page};
+  --text-on-accent: #fff;
+
+  // Border colors
+  --border-primary: #{$border-dark};
+  --border-secondary: #{$border-elevated};
+
+  // Accent
+  --accent: #{$accent};
+  --accent-light: #{$accent-light};
+  --accent-tint10: #{$accent-tint10};
+  --accent-tint20: #{$accent-tint20};
+  --accent-gradient: linear-gradient(180deg, #{$accent} 0%, #{$accent-light} 100%);
+
+  // Status colors
+  --success: #{$success};
+  --success-tint: #{$success-tint};
+  --warning: #{$warning};
+  --warning-tint: #{$warning-tint};
+  --error: #{$error};
+  --error-tint: #{$error-tint};
+
+  // Shadows
+  --shadow-sm: #{$shadow-sm};
+  --shadow-md: #{$shadow-md};
+  --shadow-lg: #{$shadow-lg};
+  --shadow-modal: #{$shadow-modal};
+
+  // Message backgrounds
+  --message-user-bg: #{$accent-tint20};
+  --message-assistant-bg: #{$bg-card};
+
+  // Input
+  --input-bg: #{$bg-deeper};
+  --input-border: #{$border-dark};
+  --input-focus-border: #{$accent};
+
+  // Scrollbar
+  --scrollbar-track: #{$bg-sidebar};
+  --scrollbar-thumb: #{$border-elevated};
+  --scrollbar-thumb-hover: #{$text-muted};
+
+  // Dialog & Drawer
+  --dialog-overlay: rgb(0 0 0 / 50%);
+  --dialog-bg: #{$bg-sidebar};
+  --dialog-header-bg: #{$bg-sidebar};
+  --dialog-card-bg: #{$bg-elevated};
+  --dialog-border: #{$border-dark};
+
+  // Error backgrounds
+  --error-bg: #{$error-tint};
+  --error-bg-subtle: rgb(239 68 68 / 6%);
+
+  // Link colors
+  --link-color: #{$accent};
+  --link-hover-color: #{$accent-light};
+
+  // Inactive
+  --inactive-gray: rgb(107 107 112 / 9.4%);
+
+  // Legacy aliases (to be removed as components are updated)
+  --primary-50: #{$accent-tint10};
+  --primary-100: #{$accent-tint10};
+  --primary-400: #{$accent};
+  --primary-500: #{$accent};
+  --primary-600: #{$accent};
+  --primary-700: #{$accent};
+  --primary-900: #{$accent};
+  --success-500: #{$success};
+  --success-600: #{$success};
+  --warning-500: #{$warning};
+  --warning-600: #{$warning};
+  --error-500: #{$error};
+  --error-600: #{$error};
+}

@@ -1,0 +1,583 @@
+// Dialog and Drawer Styles
+// Unified styling for all modal dialogs and drawers
+
+@use '../variables' as *;
+
+// ============================================================================
+// Mixins
+// ============================================================================
+
+@mixin dialog-base {
+  overflow: hidden;
+  background: var(--dialog-bg);
+  border: 1px solid var(--dialog-border);
+  border-radius: $radius-lg;
+  box-shadow: var(--shadow-modal);
+}
+
+@mixin dialog-header {
+  display: flex;
+  gap: $spacing-lg;
+  align-items: center;
+  padding: 20px $spacing-lg;
+  background: var(--dialog-bg);
+  border-bottom: 1px solid var(--dialog-border);
+}
+
+@mixin dialog-body {
+  padding: $spacing-lg;
+  color: var(--text-primary);
+  background: var(--dialog-bg);
+}
+
+@mixin dialog-footer {
+  display: flex;
+  gap: $spacing-lg;
+  justify-content: flex-end;
+  padding: $spacing-md $spacing-lg;
+  background: var(--dialog-bg);
+  border-top: 1px solid var(--dialog-border);
+}
+
+@mixin card-elevated {
+  background: var(--dialog-card-bg);
+  border: 1px solid var(--dialog-border);
+  border-radius: $radius-md;
+}
+
+// ============================================================================
+// Element Plus Dialog Overrides
+// ============================================================================
+
+.el-overlay {
+  background-color: var(--dialog-overlay);
+}
+
+.el-dialog {
+  @include dialog-base;
+
+  position: relative;
+
+  &__header {
+    @include dialog-header;
+
+    padding-right: $spacing-md;
+    margin: 0;
+
+    .el-dialog__title {
+      font-size: $font-size-md;
+      font-weight: $font-weight-semibold;
+      color: var(--text-primary);
+    }
+
+    .el-dialog__headerbtn {
+      position: absolute;
+      top: $spacing-md;
+      right: $spacing-md;
+      width: 32px;
+      height: 32px;
+      border-radius: $radius-md;
+      transition: background-color $transition-fast;
+
+      &:hover {
+        background-color: var(--bg-hover);
+      }
+
+      .el-dialog__close {
+        font-size: 16px;
+        color: var(--text-secondary);
+      }
+    }
+  }
+
+  &__body {
+    @include dialog-body;
+
+    max-height: 70vh;
+    overflow-y: auto;
+
+    // Dark-themed form inputs inside all dialogs
+    .el-form-item {
+      margin-bottom: $spacing-md;
+
+      .el-form-item__label {
+        color: var(--text-secondary);
+      }
+    }
+
+    .el-input__wrapper,
+    .el-textarea__inner {
+      background: var(--bg-tertiary);
+      box-shadow: 0 0 0 1px var(--dialog-border) inset;
+
+      &:hover {
+        box-shadow: 0 0 0 1px var(--border-secondary) inset;
+      }
+
+      &:focus-within,
+      &.is-focus {
+        box-shadow: 0 0 0 1px var(--accent) inset;
+      }
+    }
+
+    .el-select .el-select__wrapper {
+      background: var(--bg-tertiary);
+      box-shadow: 0 0 0 1px var(--dialog-border) inset;
+
+      &:hover {
+        box-shadow: 0 0 0 1px var(--border-secondary) inset;
+      }
+
+      &.is-focused {
+        box-shadow: 0 0 0 1px var(--accent) inset;
+      }
+    }
+  }
+
+  &__footer {
+    @include dialog-footer;
+  }
+}
+
+// ============================================================================
+// Element Plus Drawer Overrides
+// ============================================================================
+
+.el-drawer {
+  @include dialog-base;
+
+  border-right: none;
+  border-radius: $radius-lg 0 0 $radius-lg;
+
+  &__header {
+    @include dialog-header;
+
+    .el-drawer__title {
+      font-size: $font-size-md;
+      font-weight: $font-weight-semibold;
+      color: var(--text-primary);
+    }
+
+    .el-drawer__close-btn {
+      width: 32px;
+      height: 32px;
+      border-radius: $radius-md;
+      transition: background-color $transition-fast;
+
+      &:hover {
+        background-color: var(--bg-hover);
+      }
+    }
+  }
+
+  &__body {
+    @include dialog-body;
+
+    padding: 0;
+  }
+}
+
+// ============================================================================
+// Confirm Dialog Styles
+// ============================================================================
+
+.confirm-dialog {
+  .el-dialog {
+    max-width: 400px;
+
+    &__header {
+      display: none;
+    }
+
+    &__body {
+      padding: $spacing-xl $spacing-lg;
+      overflow-x: hidden;
+    }
+
+    &__footer {
+      padding: $spacing-md $spacing-lg;
+    }
+  }
+}
+
+// ============================================================================
+// Metadata Dialog Styles
+// ============================================================================
+
+.metadata-dialog {
+  .el-dialog {
+    width: 80%;
+    max-width: 1000px;
+
+    @media (max-width: $breakpoint-md) {
+      width: calc(100% - $spacing-md);
+      margin: $spacing-xs auto !important;
+    }
+
+    &__body {
+      @media (max-width: $breakpoint-md) {
+        padding: $spacing-sm;
+      }
+    }
+
+    &__footer {
+      @media (max-width: $breakpoint-md) {
+        padding: $spacing-sm;
+      }
+    }
+  }
+
+  // Mobile form layout
+  @media (max-width: $breakpoint-md) {
+    .el-form {
+      .el-form-item {
+        flex-direction: column;
+        margin-bottom: $spacing-sm;
+
+        .el-form-item__label {
+          width: 100% !important;
+          padding: 0 0 $spacing-xs;
+          line-height: $line-height-tight;
+          text-align: left;
+        }
+
+        .el-form-item__content {
+          margin-left: 0 !important;
+        }
+      }
+    }
+
+    // Collapse compact header
+    .el-collapse-item__header {
+      padding: $spacing-sm $spacing-md;
+    }
+  }
+
+  // Collapse styling
+  .el-collapse {
+    background: transparent;
+    border: none;
+
+    .el-collapse-item {
+      margin-bottom: $spacing-sm;
+      overflow: hidden;
+      border: 1px solid var(--dialog-border);
+      border-radius: $radius-md;
+
+      &__header {
+        padding: $spacing-md $spacing-lg;
+        font-size: $font-size-md;
+        background: var(--dialog-card-bg);
+        border-bottom: none;
+        transition: background-color $transition-fast;
+
+        &:hover {
+          background: var(--bg-hover);
+        }
+
+        &.is-active {
+          border-bottom: 1px solid var(--dialog-border);
+        }
+      }
+
+      &__wrap {
+        border-bottom: none;
+      }
+
+      &__content {
+        padding: 0;
+        background: var(--dialog-bg);
+      }
+    }
+  }
+
+  // Table styling in dialog
+  .el-table {
+    --el-table-bg-color: var(--dialog-card-bg);
+    --el-table-tr-bg-color: var(--dialog-card-bg);
+    --el-table-header-bg-color: #{$bg-elevated};
+    --el-table-row-hover-bg-color: var(--bg-hover);
+    --el-table-border-color: var(--dialog-border);
+
+    overflow: hidden;
+    border-radius: $radius-md;
+
+    th.el-table__cell {
+      font-weight: $font-weight-semibold;
+    }
+  }
+
+  // Form styling in dialog
+  .el-form {
+    .el-form-item__label {
+      color: var(--text-secondary);
+    }
+
+    .el-input__wrapper,
+    .el-textarea__inner {
+      background: var(--bg-tertiary);
+      box-shadow: 0 0 0 1px var(--dialog-border) inset;
+
+      &:hover {
+        box-shadow: 0 0 0 1px var(--border-secondary) inset;
+      }
+
+      &:focus-within,
+      &.is-focus {
+        box-shadow: 0 0 0 1px var(--accent) inset;
+      }
+    }
+
+    .el-select {
+      .el-select__wrapper {
+        background: var(--bg-tertiary);
+        box-shadow: 0 0 0 1px var(--dialog-border) inset;
+
+        &:hover {
+          box-shadow: 0 0 0 1px var(--border-secondary) inset;
+        }
+
+        &.is-focused {
+          box-shadow: 0 0 0 1px var(--accent) inset;
+        }
+      }
+    }
+  }
+}
+
+// ============================================================================
+// Table Detail Drawer Styles
+// ============================================================================
+
+.table-detail-drawer {
+  .el-drawer {
+    @media (max-width: $breakpoint-lg) {
+      width: 80% !important;
+    }
+
+    @media (max-width: $breakpoint-md) {
+      width: 100% !important;
+      border-radius: 0;
+    }
+
+    &__body {
+      @media (max-width: $breakpoint-md) {
+        padding: 0;
+      }
+    }
+  }
+
+  // Mobile form layout
+  @media (max-width: $breakpoint-md) {
+    .el-form {
+      .el-form-item {
+        flex-direction: column;
+        margin-bottom: $spacing-sm;
+
+        .el-form-item__label {
+          width: 100% !important;
+          padding: 0 0 $spacing-xs;
+          line-height: $line-height-tight;
+          text-align: left;
+        }
+
+        .el-form-item__content {
+          margin-left: 0 !important;
+        }
+      }
+    }
+  }
+
+  // Table styling in drawer
+  .el-table {
+    --el-table-bg-color: var(--dialog-card-bg);
+    --el-table-tr-bg-color: var(--dialog-card-bg);
+    --el-table-header-bg-color: #{$bg-elevated};
+    --el-table-row-hover-bg-color: var(--bg-hover);
+    --el-table-border-color: var(--dialog-border);
+
+    overflow: hidden;
+    border-radius: $radius-md;
+
+    th.el-table__cell {
+      font-weight: $font-weight-semibold;
+    }
+  }
+
+  // Tabs styling
+  .el-tabs {
+    .el-tabs__header {
+      margin-bottom: $spacing-md;
+    }
+
+    .el-tabs__nav-wrap::after {
+      background-color: var(--dialog-border);
+    }
+
+    .el-tabs__item {
+      color: var(--text-secondary);
+      transition: color $transition-fast;
+
+      &:hover {
+        color: var(--text-primary);
+      }
+
+      &.is-active {
+        color: var(--accent);
+      }
+    }
+
+    .el-tabs__active-bar {
+      background-color: var(--accent);
+    }
+  }
+}
+
+// ============================================================================
+// Dialog Animations
+// ============================================================================
+
+.el-dialog {
+  animation: dialog-enter $transition-normal ease-out;
+}
+
+@keyframes dialog-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(-10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+// Drawer slide animation
+.el-drawer.rtl {
+  animation: drawer-slide-in $transition-normal ease-out;
+}
+
+@keyframes drawer-slide-in {
+  from {
+    opacity: 0.8;
+    transform: translateX(100%);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+// ============================================================================
+// Button Styles in Dialogs
+// ============================================================================
+
+.el-dialog__footer,
+.el-drawer__footer {
+  .el-button {
+    min-width: 80px;
+    border-radius: $radius-sm;
+
+    &--primary {
+      background: var(--accent-gradient);
+      border-color: var(--accent);
+
+      &:hover:not(:disabled) {
+        opacity: 0.9;
+      }
+    }
+
+    &--default {
+      color: var(--text-secondary);
+      background: var(--bg-elevated);
+      border-color: var(--border-secondary);
+
+      &:hover:not(:disabled) {
+        color: var(--text-primary);
+        background: var(--bg-hover);
+        border-color: var(--border-secondary);
+      }
+    }
+
+    &--danger {
+      background: var(--error);
+      border-color: var(--error);
+
+      &:hover:not(:disabled) {
+        opacity: 0.9;
+      }
+    }
+  }
+}
+
+// ============================================================================
+// Mobile Bottom Sheet Overrides
+// ============================================================================
+
+@media (max-width: $breakpoint-md) {
+  .el-overlay {
+    background-color: var(--dialog-overlay);
+  }
+
+  .el-dialog {
+    position: fixed !important;
+    inset: auto 0 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    max-height: 85vh;
+    margin: 0 !important;
+    border-radius: 24px 24px 0 0;
+    animation: sheet-slide-up $transition-normal ease-out;
+
+    // Drag handle
+    &::before {
+      position: absolute;
+      top: 12px;
+      left: 50%;
+      z-index: 1;
+      width: 40px;
+      height: 4px;
+      content: '';
+      background: #{$border-elevated};
+      border-radius: 2px;
+      transform: translateX(-50%);
+    }
+
+    &__header {
+      padding-top: 32px; // space for drag handle
+    }
+
+    &__footer {
+      padding-bottom: max($spacing-md, env(safe-area-inset-bottom, 0px));
+
+      .el-button {
+        width: 100%;
+      }
+    }
+  }
+
+  .confirm-dialog .el-dialog {
+    &__body {
+      padding-top: 40px; // space for drag handle
+    }
+
+    &__footer {
+      .el-button {
+        width: auto;
+        margin-left: 0 !important;
+      }
+    }
+  }
+}
+
+@keyframes sheet-slide-up {
+  from {
+    transform: translateY(100%);
+  }
+
+  to {
+    transform: translateY(0);
+  }
+}

@@ -1,0 +1,136 @@
+name: databot
+
+services:
+  postgres:
+    image: postgres:13
+    container_name: databot-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: databot
+      POSTGRES_PASSWORD: databot
+      POSTGRES_DB: databot
+    volumes:
+      - ../.data/databot/pg_data:/var/lib/postgresql/data:rw
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U databot"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - net
+
+  bridge:
+    build:
+      context: ../bridge
+    image: databot-bridge:1.0.0
+    container_name: databot-bridge
+    restart: unless-stopped
+    environment:
+      BRIDGE_PORT: "8080"
+      POOL_MAX_SIZE: "5"
+      POOL_IDLE_TIMEOUT: "1800000"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    networks:
+      - net
+
+  sandbox-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.sandbox-worker
+    image: sandbox-worker:0.1.0
+    container_name: databot-sandbox-worker
+    restart: unless-stopped
+    labels:
+      version: "0.1.0"
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 1G
+    volumes:
+      - ../.data/databot/logs:/app/databot/logs:rw
+      - ../.data/databot/workfolder:/app/databot/workfolder:rw
+      - ../.data/databot/dictionary:/app/databot/dictionary:ro
+      - ../.data/databot/uploads:/app/databot/uploads:ro
+    stdin_open: true
+    tty: true
+    networks:
+      - net
+
+  backend:
+    build:
+      context: ../backend
+    image: databot-backend:0.1.0
+    container_name: databot-backend
+    restart: unless-stopped
+    labels:
+      version: "0.1.0"
+    environment:
+      NODE_ENV: production
+      COOKIE_SECURE: "false"
+      PORT: "3000"
+      BASE_URL: /api
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: "5432"
+      POSTGRES_DB: databot
+      POSTGRES_USER: databot
+      POSTGRES_PASSWORD: databot
+      ENCRYPTION_KEY: "92d251e1ae468e98fc74bddfc6997a8a03278599559f7b4c71ac5d6f6ce3d82f"
+      LOG_DIR: /app/databot/logs
+      LOG_FILE: app.log
+      LOG_MAX_FILES: "5"
+      LOG_MAX_SIZE: 20m
+      DATA_DICTIONARY_FOLDER: /app/databot/dictionary
+      WORK_FOLDER: /app/databot/workfolder
+      KNOWLEDGE_FOLDER: /app/databot/knowledge
+      UPLOAD_DIR: /app/databot/uploads
+      WS_ENABLED: "true"
+      WS_PATH: /ws
+      SANDBOX_CONTAINER_NAME: databot-sandbox-worker
+      SANDBOX_DEFAULT_WORKDIR: /app/databot/workfolder
+      SANDBOX_USER: agent
+      SANDBOX_TIMEOUT: "120000"
+      BRIDGE_URL: http://bridge:8080
+      JWT_SECRET: ${JWT_SECRET:-change-this-jwt-secret-in-production}
+      ADMIN_INITIAL_PASSWORD: ${ADMIN_INITIAL_PASSWORD:-Admin@123}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@localhost}
+      INTERNAL_PORT: 3001
+    volumes:
+      - ../.data/databot/logs:/app/databot/logs:rw
+      - ../.data/databot/workfolder:/app/databot/workfolder:rw
+      - ../.data/databot/dictionary:/app/databot/dictionary:rw
+      - ../.data/databot/knowledge:/app/databot/knowledge:rw
+      - ../.data/databot/uploads:/app/databot/uploads:rw
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      postgres:
+        condition: service_healthy
+      bridge:
+        condition: service_healthy
+      sandbox-worker:
+        condition: service_started
+    networks:
+      - net
+
+  nginx:
+    build:
+      context: ../frontend
+    image: databot-nginx:0.1.0
+    container_name: databot-nginx
+    restart: unless-stopped
+    ports:
+      - "18080:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - backend
+    networks:
+      - net
+
+networks:
+  net:
+    driver: bridge

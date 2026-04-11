@@ -1,0 +1,275 @@
+@use '@/styles/variables' as *;
+
+.config-card {
+  display: flex;
+  flex-shrink: 0;
+  flex-direction: column;
+  overflow: hidden;
+  background-color: $bg-card;
+  border: 1px solid $border-dark;
+  border-radius: $radius-md;
+
+  // Override Element Plus loading mask for dark theme
+  :deep(.el-loading-mask) {
+    background-color: rgba($bg-card, 0.8);
+  }
+
+  &__header {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+    padding: 16px 20px;
+    border-bottom: 1px solid $border-dark;
+  }
+
+  &__header-icon {
+    flex-shrink: 0;
+    color: $accent;
+  }
+
+  &__header-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  &__title {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+    line-height: 1.4;
+    color: $text-primary-color;
+  }
+
+  &__desc {
+    font-size: $font-size-xs;
+    line-height: 1.4;
+    color: $text-muted;
+  }
+
+  &__body {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 20px;
+  }
+
+  &__row {
+    display: flex;
+    gap: 16px;
+
+    @media (max-width: $breakpoint-md) {
+      flex-direction: column;
+    }
+  }
+
+  &__footer {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    justify-content: flex-end;
+    padding: 14px 20px;
+    border-top: 1px solid $border-dark;
+
+    @media (max-width: $breakpoint-md) {
+      gap: 10px;
+      padding: 12px 16px;
+
+      .config-btn {
+        flex: 1;
+      }
+    }
+  }
+}
+
+// ── Form fields ──────────────────────────────────────────────────────
+
+.config-field {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+
+  &__label {
+    font-size: $font-size-xs;
+    font-weight: $font-weight-semibold;
+    line-height: 1.4;
+    color: $text-secondary-color;
+    letter-spacing: 0.5px;
+  }
+
+  &__input-box {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    padding: 10px 14px;
+    background-color: $bg-deeper;
+    border: 1px solid $border-dark;
+    border-radius: $radius-sm;
+    transition: border-color $transition-fast;
+
+    &:focus-within {
+      border-color: $border-elevated;
+    }
+  }
+
+  &__input {
+    flex: 1;
+    min-width: 0;
+    font-family: $font-family-sans;
+    font-size: 13px;
+    font-weight: $font-weight-normal;
+    line-height: 1.4;
+    color: $text-primary-color;
+    outline: none;
+    background: none;
+    border: none;
+
+    &::placeholder {
+      color: $text-muted;
+    }
+
+    &:disabled {
+      cursor: not-allowed;
+      opacity: 0.5;
+    }
+
+    // Hide number input spinners
+    &[type='number'] {
+      appearance: textfield;
+
+      &::-webkit-outer-spin-button,
+      &::-webkit-inner-spin-button {
+        margin: 0;
+        appearance: none;
+      }
+    }
+  }
+
+  &__toggle {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    color: $text-muted;
+    cursor: pointer;
+    background: none;
+    border: none;
+    transition: color $transition-fast;
+
+    &:hover {
+      color: $text-secondary-color;
+    }
+  }
+
+  &__hint {
+    font-size: $font-size-xs;
+    line-height: 1.4;
+    color: $text-muted;
+  }
+
+  // el-select override to match design
+  &__select {
+    width: 100%;
+
+    :deep(.el-select__wrapper) {
+      min-height: 38px;
+      padding: 6px 14px;
+      background-color: $bg-deeper;
+      border: 1px solid $border-dark;
+      border-radius: $radius-sm;
+      box-shadow: none;
+      transition: border-color $transition-fast;
+
+      &:hover,
+      &.is-focused {
+        border-color: $border-elevated;
+        box-shadow: none;
+      }
+    }
+
+    :deep(.el-select__selected-item) {
+      font-family: $font-family-sans;
+      font-size: 13px;
+      color: $text-primary-color;
+    }
+
+    :deep(.el-select__suffix) {
+      color: $text-muted;
+    }
+  }
+}
+
+// ── Buttons ──────────────────────────────────────────────────────────
+
+.config-btn {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 16px;
+  font-family: $font-family-sans;
+  font-size: 13px;
+  font-weight: $font-weight-medium;
+  white-space: nowrap;
+  cursor: pointer;
+  border: none;
+  border-radius: $radius-sm;
+  transition: all $transition-fast;
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+
+  &--secondary {
+    color: $text-secondary-color;
+    background-color: $bg-elevated;
+    border: 1px solid $border-elevated;
+
+    &:hover:not(:disabled) {
+      background-color: $border-dark;
+    }
+  }
+
+  &--primary {
+    color: $text-primary-color;
+    background: linear-gradient(to top, $accent, $accent-light);
+
+    &:hover:not(:disabled) {
+      filter: brightness(1.1);
+    }
+  }
+
+  &__spinner {
+    animation: spin 1s linear infinite;
+  }
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+// ── Mobile overrides ─────────────────────────────────────────────────
+
+@media (max-width: $breakpoint-md) {
+  .config-card {
+    &__header {
+      padding: 14px 16px;
+    }
+
+    &__body {
+      gap: 14px;
+      padding: 16px;
+    }
+  }
+}

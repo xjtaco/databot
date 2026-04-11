@@ -1,0 +1,49 @@
+{
+  // Use IntelliSense to learn about possible attributes.
+  // Hover to view descriptions of existing attributes.
+  // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Launch Frontend (Chrome)",
+      "type": "chrome",
+      "request": "launch",
+      "url": "http://localhost:5173",
+      "webRoot": "${workspaceFolder}/frontend/src",
+      "preLaunchTask": "pnpm: dev - frontend",
+      "skipFiles": ["**/node_modules/**"]
+    },
+    {
+      "name": "Launch Frontend Mobile (Chrome)",
+      "type": "chrome",
+      "request": "launch",
+      "url": "http://localhost:5173",
+      "webRoot": "${workspaceFolder}/frontend/src",
+      "preLaunchTask": "pnpm: dev - frontend",
+      "skipFiles": ["**/node_modules/**"],
+      "runtimeArgs": [
+        "--window-size=375,812",
+        "--user-agent=Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1"
+      ]
+    },
+    {
+      "name": "Launch backend TypeScript file",
+      "type": "node",
+      "request": "launch",
+      "runtimeArgs": [
+        "-r",
+        "ts-node/register",
+        "-r",
+        "tsconfig-paths/register"
+      ],
+      "args": ["${file}"],
+      "cwd": "${workspaceFolder}/backend",
+      "env": {
+        "TS_NODE_PROJECT": "${workspaceFolder}/backend/tsconfig.json",
+        "NODE_PATH": "${workspaceFolder}/backend/node_modules"
+      },
+      "console": "integratedTerminal",
+      "skipFiles": ["<node_internals>/**"]
+    }
+  ]
+}

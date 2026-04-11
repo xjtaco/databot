@@ -1,0 +1,259 @@
+@use 'variables' as *;
+@use 'reset';
+@use 'typography';
+@use 'themes/dark';
+@use 'components/dialogs';
+
+// Global styles
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  color: var(--text-primary);
+  background-color: var(--bg-primary);
+}
+
+#app {
+  height: 100%;
+}
+
+// Scrollbar styling
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: $radius-full;
+
+  &:hover {
+    background: var(--scrollbar-thumb-hover);
+  }
+}
+
+// Firefox scrollbar
+* {
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+  scrollbar-width: thin;
+}
+
+// Code block styling with highlight.js
+pre.hljs {
+  padding: $spacing-md;
+  overflow-x: auto;
+  font-size: $font-size-sm;
+  line-height: $line-height-relaxed;
+  background-color: var(--bg-tertiary);
+  border-radius: $radius-md;
+
+  code {
+    padding: 0;
+    font-family: $font-family-mono;
+    background: none;
+  }
+}
+
+// Inline code
+:not(pre) > code {
+  padding: 2px 6px;
+  font-family: $font-family-mono;
+  font-size: 0.9em;
+  color: var(--link-color);
+  background-color: var(--bg-tertiary);
+  border-radius: $radius-sm;
+}
+
+// Markdown content styling
+.markdown-content {
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    margin-top: $spacing-lg;
+    margin-bottom: $spacing-sm;
+    color: var(--text-primary);
+
+    &:first-child {
+      margin-top: 0;
+    }
+  }
+
+  p {
+    margin-bottom: $spacing-md;
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+
+  ul,
+  ol {
+    padding-left: $spacing-lg;
+    margin-bottom: $spacing-md;
+  }
+
+  ul {
+    list-style-type: disc;
+  }
+
+  ol {
+    list-style-type: decimal;
+  }
+
+  li {
+    margin-bottom: $spacing-xs;
+  }
+
+  blockquote {
+    padding-left: $spacing-md;
+    margin: $spacing-md 0;
+    font-style: italic;
+    color: var(--text-secondary);
+    border-left: 3px solid var(--accent);
+  }
+
+  a {
+    color: var(--link-color);
+    text-decoration: underline;
+
+    &:hover {
+      color: var(--link-hover-color);
+    }
+  }
+
+  table {
+    width: 100%;
+    margin: $spacing-md 0;
+    border-collapse: collapse;
+
+    th,
+    td {
+      padding: $spacing-sm $spacing-md;
+      text-align: left;
+      border: 1px solid var(--border-primary);
+    }
+
+    th {
+      font-weight: $font-weight-semibold;
+      background-color: var(--bg-tertiary);
+    }
+
+    tr:nth-child(even) {
+      background-color: var(--bg-secondary);
+    }
+  }
+
+  hr {
+    margin: $spacing-lg 0;
+    border: none;
+    border-top: 1px solid var(--border-primary);
+  }
+
+  .plotly-chart {
+    width: 100%;
+    min-height: 400px;
+    margin: $spacing-md 0;
+    overflow: hidden;
+    border-radius: $radius-md;
+  }
+
+  .plotly-chart-loading,
+  .plotly-chart-error {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 200px;
+    font-size: $font-size-sm;
+    color: var(--text-secondary);
+  }
+
+  .plotly-chart-error {
+    color: var(--error);
+  }
+}
+
+// Element Plus overrides
+.el-skeleton__item {
+  background: var(--bg-elevated);
+}
+
+.el-skeleton.is-animated .el-skeleton__item {
+  background: linear-gradient(
+    90deg,
+    var(--bg-elevated) 25%,
+    var(--bg-tertiary) 37%,
+    var(--bg-elevated) 63%
+  );
+  background-size: 400% 100%;
+}
+
+// Select dropdown dark theme
+.el-select-dropdown,
+.el-popper.is-light {
+  --el-bg-color-overlay: var(--bg-elevated);
+
+  background-color: var(--bg-elevated);
+  border-color: var(--border-primary);
+}
+
+.el-select-dropdown__item {
+  color: var(--text-primary);
+
+  &:hover,
+  &.hover {
+    background-color: var(--bg-tertiary);
+  }
+
+  &.is-selected {
+    color: var(--accent);
+  }
+}
+
+.el-message-box {
+  --el-messagebox-title-color: var(--text-primary);
+  --el-messagebox-content-color: var(--text-secondary);
+}
+
+.el-overlay .el-dialog {
+  --el-dialog-bg-color: #{$bg-card};
+  --el-dialog-border-radius: 8px;
+}
+
+.el-drawer {
+  --el-drawer-bg-color: var(--bg-primary);
+
+  .el-drawer__header {
+    padding: 16px 20px;
+    margin-bottom: 0;
+    color: var(--text-primary);
+    border-bottom: 1px solid var(--border-primary);
+  }
+
+  .el-drawer__title {
+    color: var(--text-primary);
+  }
+
+  .el-drawer__body {
+    padding: 16px 20px;
+    color: var(--text-primary);
+    background-color: var(--bg-primary);
+  }
+
+  .el-drawer__close-btn {
+    color: var(--text-secondary);
+
+    &:hover {
+      color: var(--text-primary);
+    }
+  }
+}

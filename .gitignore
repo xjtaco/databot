@@ -1,0 +1,75 @@
+# Dependencies
+node_modules/
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Build outputs
+dist/
+dist-ssr/
+build/
+
+# TypeScript
+*.tsbuildinfo
+
+# Vite
+.vite/
+.vite-cache/
+
+# Testing
+coverage/
+.nyc_output/
+
+# Misc
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDEs & Editors
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+*.swp
+*~
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+
+.claude
+
+.playwright-mcp/
+.superpowers/
+bridge/target/
+bridge/dependency-reduced-pom.xml
+
+# Runtime data (Docker volumes)
+.data/

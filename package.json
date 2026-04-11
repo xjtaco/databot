@@ -1,0 +1,12 @@
+{
+  "private": true,
+  "scripts": {
+    "preflight": "pnpm run preflight:frontend && pnpm run preflight:backend && pnpm run preflight:bridge",
+    "preflight:frontend": "cd frontend && pnpm run preflight",
+    "preflight:backend": "cd backend && pnpm run preflight",
+    "preflight:bridge": "cd bridge && mvn spotless:check checkstyle:check compile"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.3"
+  }
+}
