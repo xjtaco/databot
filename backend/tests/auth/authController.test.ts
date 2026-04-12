@@ -47,6 +47,19 @@ vi.mock('../../src/auth/passwordPolicyHelper', () => ({
   getPasswordPolicy: () => mockGetPasswordPolicy(),
 }));
 
+vi.mock('../../src/auditLog', () => ({
+  logAuditEvent: vi.fn(),
+  AuditAction: {
+    LOGIN_FAILED: 'LOGIN_FAILED',
+    LOGIN_SUCCESS: 'LOGIN_SUCCESS',
+    LOGOUT: 'LOGOUT',
+    PASSWORD_CHANGED: 'PASSWORD_CHANGED',
+  },
+  AuditCategory: {
+    AUTH: 'AUTH',
+  },
+}));
+
 vi.mock('../../src/errors/errorCode', () => ({
   ErrorCode: {
     UNAUTHORIZED: 'UNAUTHORIZED',

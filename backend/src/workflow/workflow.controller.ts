@@ -1,4 +1,4 @@
-import { readFileSync } from 'fs';
+import { readFileSync, realpathSync } from 'fs';
 import { resolve } from 'path';
 import type { Request, Response } from 'express';
 import { ValidationError } from '../errors/types';
@@ -217,10 +217,7 @@ export async function filePreviewHandler(req: Request, res: Response): Promise<v
   if (typeof pathParam !== 'string' || !pathParam) {
     throw new ValidationError('path query parameter is required');
   }
-  const resolved = resolve(pathParam);
-  if (!resolved.startsWith(resolve(config.work_folder) + '/')) {
-    throw new ValidationError('Access denied: file outside work folder');
-  }
+  const resolved = resolvePathInWorkFolder(pathParam);
   const content = readFileSync(resolved, 'utf-8');
   res.json({ content, path: resolved });
 }
@@ -237,15 +234,24 @@ const CONTENT_TYPE_MAP: Record<string, string> = {
   txt: 'text/plain',
 };
 
+function resolvePathInWorkFolder(pathParam: string): string {
+  const resolved = resolve(pathParam);
+  const workFolder = realpathSync(resolve(config.work_folder));
+  const realPath = realpathSync(resolved);
+
+  if (realPath !== workFolder && !realPath.startsWith(workFolder + '/')) {
+    throw new ValidationError('Access denied: file outside work folder');
+  }
+
+  return realPath;
+}
+
 export async function fileRawHandler(req: Request, res: Response): Promise<void> {
   const pathParam = req.query.path;
   if (typeof pathParam !== 'string' || !pathParam) {
     throw new ValidationError('path query parameter is required');
   }
-  const resolved = resolve(pathParam);
-  if (!resolved.startsWith(resolve(config.work_folder) + '/')) {
-    throw new ValidationError('Access denied: file outside work folder');
-  }
+  const resolved = resolvePathInWorkFolder(pathParam);
   const ext = resolved.split('.').pop()?.toLowerCase() ?? '';
   const contentType = CONTENT_TYPE_MAP[ext] ?? 'application/octet-stream';
   res.setHeader('Content-Type', contentType);

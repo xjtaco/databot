@@ -81,23 +81,38 @@ export const config = {
  */
 export function validateConfig(): void {
   const warnings: string[] = [];
+  const errors: string[] = [];
 
   if (!config.encryption.key) {
-    warnings.push('ENCRYPTION_KEY is not set — database password encryption will fail');
+    if (config.env === 'production') {
+      errors.push('ENCRYPTION_KEY is required in production');
+    } else {
+      warnings.push('ENCRYPTION_KEY is not set — database password encryption will fail');
+    }
   } else if (config.encryption.key.length !== 64 || !/^[0-9a-fA-F]+$/.test(config.encryption.key)) {
-    warnings.push('ENCRYPTION_KEY must be a 64-character hex string (AES-256)');
+    if (config.env === 'production') {
+      errors.push('ENCRYPTION_KEY must be a 64-character hex string (AES-256)');
+    } else {
+      warnings.push('ENCRYPTION_KEY must be a 64-character hex string (AES-256)');
+    }
   }
 
   if (
     config.jwt.secret === 'fallback-dev-secret-change-in-production' &&
     config.env === 'production'
   ) {
-    console.warn(
-      'WARNING: JWT_SECRET is using fallback value in production. Set JWT_SECRET env var.'
-    );
+    errors.push('JWT_SECRET cannot use fallback value in production');
+  }
+
+  if (config.admin.initialPassword === 'Admin@123' && config.env === 'production') {
+    errors.push('ADMIN_INITIAL_PASSWORD cannot use default value in production');
   }
 
   for (const warning of warnings) {
     console.warn(`[config] WARNING: ${warning}`);
+  }
+
+  if (errors.length > 0) {
+    throw new Error(`[config] ${errors.join('; ')}`);
   }
 }

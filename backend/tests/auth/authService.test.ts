@@ -120,4 +120,38 @@ describe('authService', () => {
       expect(/[!@#$%^&*]/.test(pwd)).toBe(true);
     });
   });
+
+  describe('changePassword', () => {
+    it('revokes all refresh tokens after changing password', async () => {
+      const { changePassword } = await import('../../src/auth/authService');
+
+      const passwordHash = await (
+        await import('../../src/auth/authService')
+      ).hashPassword('OldPass@1');
+      mockFindUserById.mockResolvedValue({
+        id: 'u1',
+        username: 'admin',
+        password: passwordHash,
+      });
+      mockUpdateUserPassword.mockResolvedValue(undefined);
+      mockDeleteUserRefreshTokens.mockResolvedValue(undefined);
+
+      const policy = {
+        minLength: 8,
+        requireUppercase: true,
+        requireLowercase: true,
+        requireNumbers: true,
+        requireSpecialChars: true,
+      };
+
+      await changePassword('u1', 'OldPass@1', 'NewPass@1', policy);
+
+      expect(mockUpdateUserPassword).toHaveBeenCalledWith(
+        'u1',
+        expect.any(String),
+        false
+      );
+      expect(mockDeleteUserRefreshTokens).toHaveBeenCalledWith('u1');
+    });
+  });
 });

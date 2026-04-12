@@ -177,6 +177,7 @@ export async function changePassword(
   validatePasswordPolicy(newPassword, policy);
   const hash = await hashPassword(newPassword);
   await authRepo.updateUserPassword(userId, hash, false);
+  await authRepo.deleteUserRefreshTokens(userId);
   logger.info('User changed password', { userId });
 }
 
