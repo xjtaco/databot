@@ -32,7 +32,7 @@ function getNodeTypeGuide(type: string): string {
     case 'email':
       return `### Email Node Guide
 
-- **Config fields**: to (required), subject (required), contentSource ('inline' | 'upstream'), body (optional), upstreamField (optional), isHtml (boolean), outputVariable (required)
+- **Config fields**: to (required), subject (required), contentSource ('inline' | 'upstream'), body (optional), upstreamField (optional), isHtml (boolean, default: true), outputVariable (required)
 - **Output**: success (boolean), messageId (string), recipients (string[])
 - **Tips**: Use upstream mode to reference a markdownPath field from a Python node; confirm global SMTP is configured
 - **Common issues**: Invalid email address, SMTP not configured, missing body/upstreamField`;

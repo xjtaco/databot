@@ -79,7 +79,7 @@ const NODE_TYPE_EMAIL = `### Email Sending (email)
     "contentSource": "'inline' | 'upstream' (content source: inline for direct body, upstream for referencing upstream field)",
     "body": "string (email body when contentSource is 'inline')",
     "upstreamField": "string (when contentSource is 'upstream', references an upstream node output field, e.g. {{report_gen.result.markdownPath}})",
-    "isHtml": "boolean (whether the email is HTML format)",
+    "isHtml": "boolean (whether the email is HTML format, default: true)",
     "outputVariable": "string (required, output variable name)"
   }
   \`\`\`
@@ -93,7 +93,7 @@ const NODE_TYPE_EMAIL = `### Email Sending (email)
   \`\`\`
 - **Inputs:** The to, subject, body, and upstreamField fields all support {{}} template variables. upstreamField can only reference outputs from upstream nodes reachable via edges.
 - **Outputs:** success (boolean), messageId (text), recipients (string[])
-- **Tips**: Confirm global SMTP is configured before sending; use upstream mode to reference a markdownPath field from a Python node's result as email content (e.g. \`{{report_gen.result.markdownPath}}\`); set isHtml to true for HTML rendering in email clients`;
+- **Tips**: Confirm global SMTP is configured before sending; use upstream mode to reference a markdownPath field from a Python node's result as email content (e.g. \`{{report_gen.result.markdownPath}}\`); isHtml defaults to true — always use HTML format unless the user explicitly requests plain text`;
 
 const NODE_TYPE_BRANCH = `### Branch (branch)
 
