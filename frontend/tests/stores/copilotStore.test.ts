@@ -3,6 +3,9 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { setActivePinia, createPinia } from 'pinia';
 import { useCopilotStore } from '@/stores/copilotStore';
 import { useWorkflowStore } from '@/stores/workflowStore';
+import * as workflowApi from '@/api/workflow';
+
+vi.mock('@/api/workflow');
 
 class InspectableWebSocket {
   static CONNECTING = 0;
@@ -62,6 +65,7 @@ describe('copilotStore', () => {
   beforeEach(() => {
     setActivePinia(createPinia());
     vi.useFakeTimers();
+    vi.clearAllMocks();
     InspectableWebSocket.instances = [];
     global.WebSocket = InspectableWebSocket as unknown as typeof WebSocket;
   });
@@ -100,6 +104,7 @@ describe('copilotStore', () => {
     const payloadsBeforeTurnDone = ws.send.mock.calls.map(([payload]) => JSON.parse(String(payload)));
 
     expect(payloadsBeforeTurnDone).toEqual([
+      { type: 'layout_session', hasManualLayoutEdits: false },
       { type: 'user_message', content: 'first' },
       { type: 'abort' },
     ]);
@@ -109,9 +114,29 @@ describe('copilotStore', () => {
     const payloadsAfterTurnDone = ws.send.mock.calls.map(([payload]) => JSON.parse(String(payload)));
 
     expect(payloadsAfterTurnDone).toEqual([
+      { type: 'layout_session', hasManualLayoutEdits: false },
       { type: 'user_message', content: 'first' },
       { type: 'abort' },
+      { type: 'layout_session', hasManualLayoutEdits: false },
       { type: 'user_message', content: 'second' },
+    ]);
+  });
+
+  it('sends the manual-layout session signal immediately before each user message', () => {
+    const store = useCopilotStore();
+    store.connect('wf-1');
+    vi.runAllTimers();
+
+    const ws = InspectableWebSocket.instances[0];
+    ws.send.mockClear();
+
+    store.sendMessage('first');
+
+    const payloads = ws.send.mock.calls.map(([payload]) => JSON.parse(String(payload)));
+
+    expect(payloads).toEqual([
+      { type: 'layout_session', hasManualLayoutEdits: false },
+      { type: 'user_message', content: 'first' },
     ]);
   });
 
@@ -152,6 +177,23 @@ describe('copilotStore', () => {
       type: 'layout_session',
       hasManualLayoutEdits: true,
     });
+  });
+
+  it('resets manual-layout edits when workflow data reloads from backend state', async () => {
+    const workflowStore = useWorkflowStore();
+    workflowStore.editorWorkflow = createEditorWorkflow();
+    workflowStore.updateNodePosition('node-1', 320, 240, { source: 'user-drag' });
+    expect(workflowStore.hasManualLayoutEdits).toBe(true);
+
+    vi.mocked(workflowApi.getWorkflow).mockResolvedValue({
+      ...createEditorWorkflow(),
+      updatedAt: new Date('2026-01-02T00:00:00.000Z'),
+    });
+    vi.mocked(workflowApi.listRuns).mockResolvedValue([]);
+
+    await workflowStore.loadForEditing('wf-1');
+
+    expect(workflowStore.hasManualLayoutEdits).toBe(false);
   });
 
   describe('handleServerMessage', () => {

@@ -158,7 +158,7 @@ export const useCopilotStore = defineStore('copilot', () => {
       }
       isConnected.value = true;
       reconnectDelay = 1000;
-      sendLayoutSessionSignal(workflowStore.hasManualLayoutEdits);
+      sendCurrentLayoutSessionSignal();
     };
 
     ws.onclose = () => {
@@ -196,6 +196,10 @@ export const useCopilotStore = defineStore('copilot', () => {
 
   function sendLayoutSessionSignal(hasManualLayoutEdits: boolean): void {
     wsSend({ type: 'layout_session', hasManualLayoutEdits });
+  }
+
+  function sendCurrentLayoutSessionSignal(): void {
+    sendLayoutSessionSignal(workflowStore.hasManualLayoutEdits);
   }
 
   watch(
@@ -342,6 +346,7 @@ export const useCopilotStore = defineStore('copilot', () => {
 
   function sendUserMessage(content: string): void {
     isAgentThinking.value = true;
+    sendCurrentLayoutSessionSignal();
     wsSend({ type: 'user_message', content });
   }
 

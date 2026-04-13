@@ -224,13 +224,10 @@ export const useWorkflowStore = defineStore('workflow', () => {
   // ── Editor Actions ───────────────────────────────────
   async function loadForEditing(id: string): Promise<void> {
     const workflow = await workflowApi.getWorkflow(id);
-    const shouldResetManualLayoutEdits = editorWorkflow.value?.id !== workflow.id;
     editorWorkflow.value = workflow;
     isDirty.value = false;
     selectedNodeId.value = null;
-    if (shouldResetManualLayoutEdits) {
-      hasManualLayoutEdits.value = false;
-    }
+    hasManualLayoutEdits.value = false;
     nodeExecutionStates.clear();
     lastRunDetail.value = null;
 
