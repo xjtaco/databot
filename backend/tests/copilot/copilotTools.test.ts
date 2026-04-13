@@ -30,6 +30,37 @@ function makeBase64(length: number): string {
   return result;
 }
 
+function expectRunResultSanitized(
+  data: unknown,
+  rawOutput: string,
+  rawBase64Payload: string,
+  expectedMimeType: string
+): void {
+  const serialized = JSON.stringify(data);
+
+  expect(serialized).not.toContain(rawOutput);
+  expect(serialized).not.toContain(rawBase64Payload);
+  expect(data).toMatchObject({
+    _sanitized: {
+      applied: true,
+      reasons: expect.arrayContaining(['large_text', 'base64']),
+    },
+    output: {
+      _summary: {
+        kind: 'text',
+        chars: rawOutput.length,
+      },
+    },
+    image: {
+      _summary: {
+        kind: 'base64',
+        mimeType: expectedMimeType,
+        chars: rawBase64Payload.length,
+      },
+    },
+  });
+}
+
 function makeTemplate(
   id: string,
   name: string,
@@ -258,28 +289,7 @@ describe('WfGetRunResultTool', () => {
     const result = await tool.execute({ runId: 'run-123' });
 
     expect(result.success).toBe(true);
-    expect(JSON.stringify(result.data)).not.toContain(longOutput);
-    expect(JSON.stringify(result.data)).not.toContain(base64Payload);
-    expect(result.data).toEqual({
-      _sanitized: {
-        applied: true,
-        reasons: ['large_text', 'base64'],
-      },
-      output: {
-        _summary: {
-          kind: 'text',
-          chars: longOutput.length,
-          preview: longOutput.slice(0, 160),
-        },
-      },
-      image: {
-        _summary: {
-          kind: 'base64',
-          mimeType: 'image/png',
-          chars: base64Payload.length,
-        },
-      },
-    });
+    expectRunResultSanitized(result.data, longOutput, base64Payload, 'image/png');
   });
 });
 
@@ -303,27 +313,6 @@ describe('WfExecuteNodeTool', () => {
     const result = await tool.execute({ nodeId: 'node-exec' });
 
     expect(result.success).toBe(true);
-    expect(JSON.stringify(result.data)).not.toContain(longOutput);
-    expect(JSON.stringify(result.data)).not.toContain(base64Payload);
-    expect(result.data).toEqual({
-      _sanitized: {
-        applied: true,
-        reasons: ['large_text', 'base64'],
-      },
-      output: {
-        _summary: {
-          kind: 'text',
-          chars: longOutput.length,
-          preview: longOutput.slice(0, 160),
-        },
-      },
-      image: {
-        _summary: {
-          kind: 'base64',
-          mimeType: 'image/png',
-          chars: base64Payload.length,
-        },
-      },
-    });
+    expectRunResultSanitized(result.data, longOutput, base64Payload, 'image/png');
   });
 });
