@@ -727,6 +727,52 @@ describe('workflow.service', () => {
       expect(mockSaveWorkflow).not.toHaveBeenCalled();
       expect(result).toEqual(workflow);
     });
+
+    it('returns the original workflow unchanged when auto layout throws', async () => {
+      const workflow = makeWorkflowDetail({
+        nodes: [
+          {
+            id: 'node-1',
+            workflowId: 'wf-1',
+            name: 'Start',
+            description: null,
+            type: 'sql',
+            config: makeSqlConfig(),
+            positionX: 10,
+            positionY: 20,
+          },
+          {
+            id: 'node-2',
+            workflowId: 'wf-1',
+            name: 'Finish',
+            description: null,
+            type: 'python',
+            config: makePythonConfig(),
+            positionX: 30,
+            positionY: 40,
+          },
+        ],
+        edges: [
+          {
+            id: 'edge-1',
+            workflowId: 'wf-1',
+            sourceNodeId: 'node-1',
+            targetNodeId: 'node-2',
+          },
+        ],
+      });
+
+      mockFindWorkflowById.mockResolvedValue(workflow);
+      mockAutoLayout.mockImplementation(() => {
+        throw new Error('layout failed');
+      });
+
+      const result = await reflowWorkflowLayout('wf-1');
+
+      expect(mockValidateAutoLayout).not.toHaveBeenCalled();
+      expect(mockSaveWorkflow).not.toHaveBeenCalled();
+      expect(result).toEqual(workflow);
+    });
   });
 
   // ── deleteWorkflow ──────────────────────────────────────

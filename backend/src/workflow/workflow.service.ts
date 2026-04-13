@@ -102,7 +102,13 @@ export async function saveWorkflow(id: string, input: SaveWorkflowInput): Promis
 
 export async function reflowWorkflowLayout(id: string): Promise<WorkflowDetail> {
   const workflow = await getWorkflow(id);
-  const layout = autoLayout(workflow.nodes, workflow.edges);
+  let layout;
+
+  try {
+    layout = autoLayout(workflow.nodes, workflow.edges);
+  } catch {
+    return workflow;
+  }
 
   if (!validateAutoLayout(layout, workflow.nodes)) {
     return workflow;
