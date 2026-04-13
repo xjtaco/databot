@@ -81,6 +81,29 @@ describe('sanitizeForLlm', () => {
     });
   });
 
+  it('keeps reserved root metadata stable when the input has a _sanitized key', () => {
+    const longText = 'lorem ipsum dolor sit amet '.repeat(40);
+
+    expect(
+      sanitizeForLlm({
+        _sanitized: 'user value',
+        prompt: longText,
+      })
+    ).toEqual({
+      _sanitized: {
+        applied: true,
+        reasons: ['large_text'],
+      },
+      prompt: {
+        _summary: {
+          kind: 'text',
+          chars: longText.length,
+          preview: longText.slice(0, 160),
+        },
+      },
+    });
+  });
+
   it('summarizes long text with preview', () => {
     const longText = 'abc '.repeat(400);
 

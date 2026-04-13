@@ -220,10 +220,10 @@ export function sanitizeForLlm(value: unknown): SanitizedValue | SanitizedSummar
   }
 
   return {
+    ...(sanitized as Record<string, SanitizedValue | SanitizedSummaryEnvelope>),
     _sanitized: {
       applied: true,
       reasons: Array.from(ctx.reasons),
     },
-    ...(sanitized as Record<string, SanitizedValue | SanitizedSummaryEnvelope>),
   };
 }
