@@ -4,23 +4,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 vi.mock('../../src/workflow/workflow.repository', () => ({
   findWorkflowById: vi.fn(),
 }));
-vi.mock('../../src/workflow/workflow.service', () => ({
-  getWorkflow: vi.fn(),
-  saveWorkflow: vi.fn(),
-  getRunDetail: vi.fn(),
-}));
-vi.mock('../../src/workflow/executionEngine', () => ({
-  executeNode: vi.fn(),
-  registerProgressCallback: vi.fn(),
-  unregisterProgressCallback: vi.fn(),
-  annotateOutputTypes: vi.fn(),
-}));
 vi.mock('../../src/workflow/nodeExecutors', () => ({
   getNodeExecutor: vi.fn(),
-}));
-vi.mock('../../src/workflow/templateResolver', () => ({
-  resolveTemplate: vi.fn((value) => value),
-  resolveParamsTemplates: vi.fn((value) => value),
 }));
 vi.mock('../../src/workflow/customNodeTemplate.repository', () => ({
   findAllTemplates: vi.fn(),
@@ -204,17 +189,25 @@ describe('WfGetNodeTool', () => {
     const workflow = makeWorkflow();
     const accessor = new InMemoryWorkflowAccessor(workflow);
     const tool = new WfGetNodeTool(accessor);
+    const oversizedPrompt = 'abc '.repeat(400);
 
     const result = await tool.execute({ nodeId: 'node-1' });
 
     expect(result.success).toBe(true);
-    expect(result.data).toMatchObject({
+    expect(JSON.stringify(result.data)).not.toContain(oversizedPrompt);
+    expect(result.data).toEqual({
       _sanitized: {
         applied: true,
         reasons: ['large_text'],
       },
       id: 'node-1',
+      workflowId: 'wf-node-sanitize',
+      name: 'Large LLM node',
+      description: null,
+      type: 'llm',
       config: {
+        nodeType: 'llm',
+        params: {},
         prompt: {
           _summary: {
             kind: 'text',
@@ -222,7 +215,10 @@ describe('WfGetNodeTool', () => {
             preview: 'abc '.repeat(40),
           },
         },
+        outputVariable: 'result',
       },
+      positionX: 0,
+      positionY: 0,
     });
   });
 });
