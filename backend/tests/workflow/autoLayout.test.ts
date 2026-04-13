@@ -28,6 +28,24 @@ describe('autoLayout', () => {
     expect(result.positions.get('left')?.x).not.toBe(result.positions.get('right')?.x);
   });
 
+  it('orders a layer by upstream coordinates instead of ids', () => {
+    const result = autoLayout(
+      [
+        { id: 'right-parent', positionX: 200 },
+        { id: 'left-parent', positionX: -200 },
+        { id: 'right-child' },
+        { id: 'left-child' },
+      ],
+      [
+        { sourceNodeId: 'right-parent', targetNodeId: 'right-child' },
+        { sourceNodeId: 'left-parent', targetNodeId: 'left-child' },
+      ]
+    );
+
+    expect(result.positions.get('left-child')?.y).toBe(result.positions.get('right-child')?.y);
+    expect(result.positions.get('left-child')?.x).toBeLessThan(result.positions.get('right-child')?.x);
+  });
+
   it('merge node sits below upstreams and near center', () => {
     const result = autoLayout(
       [{ id: 'start' }, { id: 'left' }, { id: 'right' }, { id: 'merge' }],
@@ -47,5 +65,11 @@ describe('autoLayout', () => {
     expect(merge!.y).toBeGreaterThan(left!.y);
     expect(merge!.y).toBeGreaterThan(right!.y);
     expect(merge!.x).toBeCloseTo((left!.x + right!.x) / 2, 0);
+  });
+
+  it('throws when an edge references an unknown node', () => {
+    expect(() =>
+      autoLayout([{ id: 'a' }], [{ sourceNodeId: 'a', targetNodeId: 'missing' }])
+    ).toThrow('unknown node');
   });
 });
