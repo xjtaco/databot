@@ -582,6 +582,80 @@ describe('CopilotAgent', () => {
     });
   });
 
+  it('does not reflow when wf_connect_nodes reports an existing edge', async () => {
+    vi.mocked(workflowService.getWorkflow).mockResolvedValue(
+      createAutoLaidWorkflow(
+        ['node-1', 'node-2'],
+        [{ sourceNodeId: 'node-1', targetNodeId: 'node-2' }]
+      )
+    );
+
+    const toolResponse: ChatResponse = {
+      content: '',
+      finishReason: 'tool_calls',
+      toolCalls: [
+        {
+          id: 'tc1',
+          type: 'function',
+          function: {
+            name: 'wf_connect_nodes',
+            arguments: '{"sourceNodeId":"node-1","targetNodeId":"node-2"}',
+          },
+        },
+      ],
+    };
+    const textResponse: ChatResponse = {
+      content: 'Connection already exists',
+      finishReason: 'stop',
+    };
+    baseMockChat.mockResolvedValueOnce(toolResponse).mockResolvedValueOnce(textResponse);
+    mockToolExecute.mockResolvedValue({
+      success: true,
+      data: { message: 'Edge already exists', sourceNodeId: 'node-1', targetNodeId: 'node-2' },
+    });
+
+    await agent.handleUserMessage('Connect the nodes');
+
+    expect(workflowService.reflowWorkflowLayout).not.toHaveBeenCalled();
+  });
+
+  it('does not reflow when wf_disconnect_nodes reports a missing edge', async () => {
+    vi.mocked(workflowService.getWorkflow).mockResolvedValue(
+      createAutoLaidWorkflow(
+        ['node-1', 'node-2'],
+        [{ sourceNodeId: 'node-1', targetNodeId: 'node-2' }]
+      )
+    );
+
+    const toolResponse: ChatResponse = {
+      content: '',
+      finishReason: 'tool_calls',
+      toolCalls: [
+        {
+          id: 'tc1',
+          type: 'function',
+          function: {
+            name: 'wf_disconnect_nodes',
+            arguments: '{"sourceNodeId":"node-2","targetNodeId":"node-3"}',
+          },
+        },
+      ],
+    };
+    const textResponse: ChatResponse = {
+      content: 'Connection already missing',
+      finishReason: 'stop',
+    };
+    baseMockChat.mockResolvedValueOnce(toolResponse).mockResolvedValueOnce(textResponse);
+    mockToolExecute.mockResolvedValue({
+      success: true,
+      data: { message: 'Edge not found', sourceNodeId: 'node-2', targetNodeId: 'node-3' },
+    });
+
+    await agent.handleUserMessage('Disconnect the nodes');
+
+    expect(workflowService.reflowWorkflowLayout).not.toHaveBeenCalled();
+  });
+
   it('emits refresh events for wf_replace_node even when reflow is skipped', async () => {
     vi.mocked(workflowService.getWorkflow).mockResolvedValue(
       createWorkflow([{ id: 'node-1', positionX: 137, positionY: 91 }])

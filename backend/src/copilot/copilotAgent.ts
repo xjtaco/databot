@@ -161,7 +161,7 @@ export class CopilotAgent {
             this.emitWorkflowChanged(tc.function.name, { success: isSuccess, data: toolData });
             this.emitNodeConfigCard(tc.function.name, { success: isSuccess, data: toolData });
             if (isSuccess) {
-              this.recordRoundMutation(roundMutations, tc.function.name);
+              this.recordRoundMutation(roundMutations, tc.function.name, toolData);
             }
 
             // Forward todos_writer metadata to frontend
@@ -291,7 +291,15 @@ export class CopilotAgent {
     };
   }
 
-  private recordRoundMutation(summary: CopilotRoundMutationSummary, toolName: string): void {
+  private recordRoundMutation(
+    summary: CopilotRoundMutationSummary,
+    toolName: string,
+    toolData: unknown
+  ): void {
+    if (!this.didMutateWorkflow(toolName, toolData)) {
+      return;
+    }
+
     if (toolName === 'wf_add_node') {
       summary.addedNodes += 1;
     } else if (toolName === 'wf_delete_node') {
@@ -305,6 +313,33 @@ export class CopilotAgent {
     } else if (toolName === 'wf_update_node' || toolName === 'wf_patch_node') {
       summary.updatedNodes += 1;
     }
+  }
+
+  private didMutateWorkflow(toolName: string, toolData: unknown): boolean {
+    if (toolName === 'wf_connect_nodes') {
+      return this.hasTruthyFlag(toolData, 'connected');
+    }
+
+    if (toolName === 'wf_disconnect_nodes') {
+      return this.hasTruthyFlag(toolData, 'disconnected');
+    }
+
+    return (
+      toolName === 'wf_add_node' ||
+      toolName === 'wf_delete_node' ||
+      toolName === 'wf_replace_node' ||
+      toolName === 'wf_update_node' ||
+      toolName === 'wf_patch_node'
+    );
+  }
+
+  private hasTruthyFlag(toolData: unknown, key: string): boolean {
+    if (!toolData || typeof toolData !== 'object') {
+      return false;
+    }
+
+    const data = toolData as Record<string, unknown>;
+    return data[key] === true;
   }
 
   private getStructuralChangeCount(summary: CopilotRoundMutationSummary): number {

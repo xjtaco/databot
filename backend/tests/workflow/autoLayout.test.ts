@@ -31,19 +31,26 @@ describe('autoLayout', () => {
   it('orders a layer by upstream coordinates instead of ids', () => {
     const result = autoLayout(
       [
+        { id: 'root' },
         { id: 'right-parent', positionX: 200 },
         { id: 'left-parent', positionX: -200 },
         { id: 'right-child' },
         { id: 'left-child' },
       ],
       [
+        { sourceNodeId: 'root', targetNodeId: 'right-parent' },
+        { sourceNodeId: 'root', targetNodeId: 'left-parent' },
         { sourceNodeId: 'right-parent', targetNodeId: 'right-child' },
         { sourceNodeId: 'left-parent', targetNodeId: 'left-child' },
       ]
     );
 
-    expect(result.positions.get('left-child')?.y).toBe(result.positions.get('right-child')?.y);
-    expect(result.positions.get('left-child')?.x).toBeLessThan(result.positions.get('right-child')?.x);
+    const leftChild = result.positions.get('left-child');
+    const rightChild = result.positions.get('right-child');
+
+    expect(leftChild && rightChild).toBeTruthy();
+    expect(leftChild!.y).toBe(rightChild!.y);
+    expect(leftChild!.x).toBeLessThan(rightChild!.x);
   });
 
   it('merge node sits below upstreams and near center', () => {
@@ -71,5 +78,46 @@ describe('autoLayout', () => {
     expect(() =>
       autoLayout([{ id: 'a' }], [{ sourceNodeId: 'a', targetNodeId: 'missing' }])
     ).toThrow('unknown node');
+  });
+
+  it('places disconnected nodes below the main connected graph', () => {
+    const result = autoLayout(
+      [{ id: 'start' }, { id: 'middle' }, { id: 'end' }, { id: 'orphan' }],
+      [
+        { sourceNodeId: 'start', targetNodeId: 'middle' },
+        { sourceNodeId: 'middle', targetNodeId: 'end' },
+      ]
+    );
+
+    const connectedMaxY = Math.max(
+      result.positions.get('start')?.y ?? 0,
+      result.positions.get('middle')?.y ?? 0,
+      result.positions.get('end')?.y ?? 0
+    );
+
+    expect(result.positions.get('orphan')?.y).toBeGreaterThan(connectedMaxY);
+  });
+
+  it('places disconnected subgraphs in a secondary zone while preserving local flow order', () => {
+    const result = autoLayout(
+      [
+        { id: 'main-start' },
+        { id: 'main-end' },
+        { id: 'secondary-start' },
+        { id: 'secondary-end' },
+      ],
+      [
+        { sourceNodeId: 'main-start', targetNodeId: 'main-end' },
+        { sourceNodeId: 'secondary-start', targetNodeId: 'secondary-end' },
+      ]
+    );
+
+    const mainEnd = result.positions.get('main-end');
+    const secondaryStart = result.positions.get('secondary-start');
+    const secondaryEnd = result.positions.get('secondary-end');
+
+    expect(mainEnd && secondaryStart && secondaryEnd).toBeTruthy();
+    expect(secondaryStart!.y).toBeGreaterThan(mainEnd!.y);
+    expect(secondaryEnd!.y).toBeGreaterThan(secondaryStart!.y);
   });
 });
