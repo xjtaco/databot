@@ -15,6 +15,72 @@ describe('sanitizeForLlm', () => {
     expect(sanitizeForLlm({ note: 'short text' })).toEqual({ note: 'short text' });
   });
 
+  it('summarizes circular references instead of recursing forever', () => {
+    const node: Record<string, unknown> = { label: 'root' };
+    node.self = node;
+
+    expect(sanitizeForLlm(node)).toEqual({
+      _sanitized: {
+        applied: true,
+        reasons: ['circular_reference'],
+      },
+      label: 'root',
+      self: {
+        _summary: {
+          kind: 'unsupported',
+          valueType: 'Object',
+          reason: 'circular_reference',
+        },
+      },
+    });
+  });
+
+  it('summarizes unsupported values explicitly', () => {
+    expect(
+      sanitizeForLlm({
+        createdAt: new Date('2024-01-01T00:00:00Z'),
+        failure: new Error('boom'),
+        missing: undefined,
+      })
+    ).toEqual({
+      _sanitized: {
+        applied: true,
+        reasons: ['non_plain_object', 'unsupported_value'],
+      },
+      createdAt: {
+        _summary: {
+          kind: 'unsupported',
+          valueType: 'Date',
+          reason: 'non_plain_object',
+        },
+      },
+      failure: {
+        _summary: {
+          kind: 'unsupported',
+          valueType: 'Error',
+          reason: 'non_plain_object',
+        },
+      },
+      missing: {
+        _summary: {
+          kind: 'unsupported',
+          valueType: 'undefined',
+          reason: 'unsupported_value',
+        },
+      },
+    });
+  });
+
+  it('summarizes unsupported root values explicitly', () => {
+    expect(sanitizeForLlm(new Date('2024-01-01T00:00:00Z'))).toEqual({
+      _summary: {
+        kind: 'unsupported',
+        valueType: 'Date',
+        reason: 'non_plain_object',
+      },
+    });
+  });
+
   it('summarizes long text with preview', () => {
     const longText = 'abc '.repeat(400);
 
