@@ -12,10 +12,45 @@
 const BASE64_MIN_LENGTH = 256;
 
 /**
+ * Summary describing a detected base64 payload.
+ */
+export interface Base64Summary {
+  kind: 'base64';
+  mimeType?: string;
+  chars: number;
+}
+
+/**
+ * Detect a full-string base64 payload, either as a data URI or a standalone blob.
+ */
+export function summarizeBase64String(value: string): Base64Summary | null {
+  const dataUriMatch = value.match(
+    new RegExp(`^data:([\\w+/.-]+);base64,([A-Za-z0-9+/]{${BASE64_MIN_LENGTH},}={0,2})$`)
+  );
+  if (dataUriMatch) {
+    return {
+      kind: 'base64',
+      mimeType: dataUriMatch[1],
+      chars: dataUriMatch[2].length,
+    };
+  }
+
+  const standaloneMatch = value.match(new RegExp(`^([A-Za-z0-9+/]{${BASE64_MIN_LENGTH},}={0,2})$`));
+  if (standaloneMatch) {
+    return {
+      kind: 'base64',
+      chars: standaloneMatch[1].length,
+    };
+  }
+
+  return null;
+}
+
+/**
  * Matches `data:<mime>;base64,<payload>` where payload >= BASE64_MIN_LENGTH.
  */
 const DATA_URI_BASE64_RE = new RegExp(
-  `data:[\\w+/.-]+;base64,([A-Za-z0-9+/]{${BASE64_MIN_LENGTH},}={0,2})`,
+  `data:([\\w+/.-]+);base64,([A-Za-z0-9+/]{${BASE64_MIN_LENGTH},}={0,2})`,
   'g'
 );
 
@@ -40,10 +75,7 @@ const STANDALONE_BASE64_RE = new RegExp(
  */
 export function sanitizeBase64(line: string): string {
   // 1. Data URIs
-  let result = line.replace(DATA_URI_BASE64_RE, (_match, payload: string) => {
-    const colonIdx = _match.indexOf(':');
-    const semiIdx = _match.indexOf(';');
-    const mimeType = _match.slice(colonIdx + 1, semiIdx);
+  let result = line.replace(DATA_URI_BASE64_RE, (_match, mimeType: string, payload: string) => {
     return `[base64 ${mimeType}, ${payload.length} chars]`;
   });
 
