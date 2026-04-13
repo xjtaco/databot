@@ -41,6 +41,8 @@ describe('buildDebugSystemPrompt', () => {
     expect(prompt).toContain('query_result.csv');
     expect(prompt).toContain('WORKSPACE');
     expect(prompt).toContain('node execution temp directory at runtime');
+    expect(prompt).toContain('large outputs should prefer files under `WORKSPACE`');
+    expect(prompt).toContain('when the result can be a file, prefer returning the file path instead of large text');
     expect(prompt).not.toContain('debug workspace');
     expect(prompt).not.toContain('do not assume it is the same');
   });

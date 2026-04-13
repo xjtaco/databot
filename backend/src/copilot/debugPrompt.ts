@@ -2,55 +2,10 @@
 
 import { config } from '../base/config';
 import type { WorkflowNodeInfo } from '../workflow/workflow.types';
-
-function getNodeTypeGuide(type: string): string {
-  switch (type) {
-    case 'sql':
-      return `### SQL Node Guide
-
-- **Config fields**: datasourceId (required), sql (required, supports \`{{outputVariable.field}}\` templates), outputVariable (required)
-- **Output**: csvPath (string), totalRows (number), columns (string[]), previewData (Record[])
-- **Tips**: Use \`{{}}\` to reference upstream data; downstream Python nodes can read CSV via csvPath; CSV output files are saved under the work folder directory
-- **Common issues**: Wrong datasourceId, SQL syntax errors, missing template variables`;
-
-    case 'python':
-      return `### Python Node Guide
-
-- **Config fields**: params (key-value pairs, supports \`{{}}\` templates), script (required), timeout (optional), outputVariable (required)
-- **Output**: result (Record — JSON from the script's \`result\` variable), csvPath (string | undefined), stderr (string)
-- **Tips**: Access inputs via the \`params\` dict; \`result\` must be a JSON-serializable dict; the script has a predefined \`WORKSPACE\` variable pointing to the node execution temp directory at runtime — use \`os.path.join(WORKSPACE, 'filename')\` for file paths
-- **Common issues**: Missing params, import errors, non-serializable result, hardcoded absolute paths`;
-
-    case 'llm':
-      return `### LLM Node Guide
-
-- **Config fields**: params (key-value pairs, supports \`{{}}\` templates), prompt (required), outputVariable (required)
-- **Output**: result (Record — parsed JSON from LLM), rawResponse (string)
-- **Tips**: Explicitly request a specific JSON structure in the prompt; params are automatically injected as context
-- **Common issues**: Non-JSON output from LLM, overly large params input, vague prompt`;
-
-    case 'email':
-      return `### Email Node Guide
-
-- **Config fields**: to (required), subject (required), contentSource ('inline' | 'upstream'), body (optional), upstreamField (optional), isHtml (boolean, default: true), outputVariable (required)
-- **Output**: success (boolean), messageId (string), recipients (string[])
-- **Tips**: Use upstream mode to reference a markdownPath field from a Python node; confirm global SMTP is configured
-- **Common issues**: Invalid email address, SMTP not configured, missing body/upstreamField`;
-
-    case 'web_search':
-      return `### Web Search Node Guide
-
-- **Config fields**: params (optional key-value pairs for custom text inputs), keywords (required, supports \`{{}}\` templates), outputVariable (required)
-- **Output**: markdownPath (string), totalResults (number)
-- **Tips**: Search engine is configured in global settings; output Markdown can be passed to downstream LLM nodes
-- **Common issues**: Search engine not configured, empty keywords`;
-
-    default:
-      return `### Node Guide
-
-No specific guide available for node type "${type}".`;
-  }
-}
+import {
+  buildSharedTempWorkdirGuidelines,
+  getSharedNodeTypeGuide,
+} from './nodePromptShared';
 
 /**
  * Build the system prompt for the debug agent, focused on a single node.
@@ -72,16 +27,7 @@ You are a single-node debug assistant. Your job is to help the user edit, test, 
 
   const nodeTypeRef = `## Node Type Reference
 
-${getNodeTypeGuide(node.type)}`;
-
-  const tempWorkdirSection = `## Temp Workdir
-
-- Current temp directory: \`${tempWorkdir}\`
-- generated files must be written under this directory
-- Do not write directly under \`${config.work_folder}\`
-- Use short English snake_case filenames such as \`query_result.csv\`, \`report.md\`, or \`chart.png\`
-- Python \`WORKSPACE\` points to the node execution temp directory at runtime and should be used for file writes in Python nodes
-- Build file paths with \`os.path.join(WORKSPACE, 'filename')\` so files stay inside the runtime workspace`;
+${getSharedNodeTypeGuide(node.type)}`;
 
   const toolsList = `## Available Tools
 
@@ -150,7 +96,7 @@ Respond in the same language the user uses. Before making changes, briefly expla
     role,
     currentNode,
     nodeTypeRef,
-    tempWorkdirSection,
+    buildSharedTempWorkdirGuidelines(tempWorkdir),
     toolsList,
     dataContext,
     debugWorkflow,
