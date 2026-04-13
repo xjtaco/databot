@@ -77,6 +77,10 @@ export function initCopilotWebSocket(app: Application): void {
                 sendEvent({ type: 'pong' });
                 break;
 
+              case 'layout_session':
+                agent.setHasManualLayoutEdits(message.hasManualLayoutEdits);
+                break;
+
               default:
                 logger.warn('Unknown copilot message type', { raw });
             }

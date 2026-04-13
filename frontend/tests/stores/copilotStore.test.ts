@@ -1,10 +1,73 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { nextTick } from 'vue';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { setActivePinia, createPinia } from 'pinia';
 import { useCopilotStore } from '@/stores/copilotStore';
+import { useWorkflowStore } from '@/stores/workflowStore';
+
+class InspectableWebSocket {
+  static CONNECTING = 0;
+  static OPEN = 1;
+  static CLOSING = 2;
+  static CLOSED = 3;
+  static instances: InspectableWebSocket[] = [];
+
+  readyState = InspectableWebSocket.CONNECTING;
+  onopen: ((event: Event) => void) | null = null;
+  onclose: ((event: CloseEvent) => void) | null = null;
+  onerror: ((event: Event) => void) | null = null;
+  onmessage: ((event: MessageEvent) => void) | null = null;
+
+  constructor(public url: string) {
+    InspectableWebSocket.instances.push(this);
+    setTimeout(() => {
+      this.readyState = InspectableWebSocket.OPEN;
+      this.onopen?.(new Event('open'));
+    }, 0);
+  }
+
+  send = vi.fn();
+  close = vi.fn();
+}
+
+function createEditorWorkflow() {
+  return {
+    id: 'wf-1',
+    name: 'Test Workflow',
+    description: null,
+    nodes: [
+      {
+        id: 'node-1',
+        workflowId: 'wf-1',
+        name: 'Node 1',
+        description: null,
+        type: 'sql',
+        config: {
+          nodeType: 'sql',
+          datasourceId: 'ds-1',
+          params: {},
+          sql: 'select 1',
+          outputVariable: 'result_1',
+        },
+        positionX: 0,
+        positionY: 0,
+      },
+    ],
+    edges: [],
+    createdAt: new Date('2026-01-01T00:00:00.000Z'),
+    updatedAt: new Date('2026-01-01T00:00:00.000Z'),
+  } as const;
+}
 
 describe('copilotStore', () => {
   beforeEach(() => {
     setActivePinia(createPinia());
+    vi.useFakeTimers();
+    InspectableWebSocket.instances = [];
+    global.WebSocket = InspectableWebSocket as unknown as typeof WebSocket;
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it('initializes with correct defaults', () => {
@@ -22,6 +85,73 @@ describe('copilotStore', () => {
     store.reset();
     expect(store.messages).toEqual([]);
     expect(store.isAgentThinking).toBe(false);
+  });
+
+  it('queues a follow-up message until turn_done when sending during active processing', () => {
+    const store = useCopilotStore();
+    store.connect('wf-1');
+    vi.runAllTimers();
+    const ws = InspectableWebSocket.instances[0];
+    ws.send.mockClear();
+
+    store.sendMessage('first');
+    store.sendMessage('second');
+
+    const payloadsBeforeTurnDone = ws.send.mock.calls.map(([payload]) => JSON.parse(String(payload)));
+
+    expect(payloadsBeforeTurnDone).toEqual([
+      { type: 'user_message', content: 'first' },
+      { type: 'abort' },
+    ]);
+
+    store.handleServerMessage({ type: 'turn_done' });
+
+    const payloadsAfterTurnDone = ws.send.mock.calls.map(([payload]) => JSON.parse(String(payload)));
+
+    expect(payloadsAfterTurnDone).toEqual([
+      { type: 'user_message', content: 'first' },
+      { type: 'abort' },
+      { type: 'user_message', content: 'second' },
+    ]);
+  });
+
+  it('marks the workflow as manually arranged after node dragging', () => {
+    const workflowStore = useWorkflowStore();
+    workflowStore.editorWorkflow = createEditorWorkflow();
+
+    workflowStore.updateNodePosition('node-1', 320, 240, { source: 'user-drag' });
+
+    expect(workflowStore.hasManualLayoutEdits).toBe(true);
+  });
+
+  it('does not mark the workflow as manually arranged for system position updates', () => {
+    const workflowStore = useWorkflowStore();
+    workflowStore.editorWorkflow = createEditorWorkflow();
+
+    workflowStore.updateNodePosition('node-1', 320, 240, { source: 'system' });
+
+    expect(workflowStore.hasManualLayoutEdits).toBe(false);
+  });
+
+  it('sends the manual-layout session signal after a user drag', async () => {
+    const workflowStore = useWorkflowStore();
+    workflowStore.editorWorkflow = createEditorWorkflow();
+
+    const store = useCopilotStore();
+    store.connect('wf-1');
+    vi.runAllTimers();
+
+    const ws = InspectableWebSocket.instances[0];
+    ws.send.mockClear();
+
+    workflowStore.updateNodePosition('node-1', 320, 240, { source: 'user-drag' });
+    await nextTick();
+
+    const payloads = ws.send.mock.calls.map(([payload]) => JSON.parse(String(payload)));
+    expect(payloads).toContainEqual({
+      type: 'layout_session',
+      hasManualLayoutEdits: true,
+    });
   });
 
   describe('handleServerMessage', () => {

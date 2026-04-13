@@ -214,7 +214,9 @@ function handleNodesChange(changes: NodeChange[]): void {
     if (change.type === 'position' && (change as NodePositionChange).position) {
       const posChange = change as NodePositionChange;
       if (posChange.position) {
-        store.updateNodePosition(posChange.id, posChange.position.x, posChange.position.y);
+        store.updateNodePosition(posChange.id, posChange.position.x, posChange.position.y, {
+          source: 'user-drag',
+        });
       }
     }
   }

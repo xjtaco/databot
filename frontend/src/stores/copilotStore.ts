@@ -1,4 +1,4 @@
-import { ref } from 'vue';
+import { ref, watch } from 'vue';
 import { defineStore } from 'pinia';
 import type { NodeConfig, WsWorkflowEvent } from '@/types/workflow';
 import { i18n } from '@/locales';
@@ -109,10 +109,12 @@ type CopilotServerMessage =
   | ErrorMsg;
 
 export const useCopilotStore = defineStore('copilot', () => {
+  const workflowStore = useWorkflowStore();
   const isConnected = ref(false);
   const workflowId = ref<string | null>(null);
   const messages = ref<CopilotMessage[]>([]);
   const isAgentThinking = ref(false);
+  const pendingMessage = ref<string | null>(null);
   let ws: WebSocket | null = null;
   let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   let reconnectDelay = 1000;
@@ -156,6 +158,7 @@ export const useCopilotStore = defineStore('copilot', () => {
       }
       isConnected.value = true;
       reconnectDelay = 1000;
+      sendLayoutSessionSignal(workflowStore.hasManualLayoutEdits);
     };
 
     ws.onclose = () => {
@@ -191,18 +194,30 @@ export const useCopilotStore = defineStore('copilot', () => {
     }
   }
 
+  function sendLayoutSessionSignal(hasManualLayoutEdits: boolean): void {
+    wsSend({ type: 'layout_session', hasManualLayoutEdits });
+  }
+
+  watch(
+    () => workflowStore.hasManualLayoutEdits,
+    (hasManualLayoutEdits) => {
+      sendLayoutSessionSignal(hasManualLayoutEdits);
+    }
+  );
+
   // ── Actions ──────────────────────────────────────────
   function sendMessage(content: string): void {
-    // If agent is currently processing, abort first then send
-    if (isAgentThinking.value) {
-      wsSend({ type: 'abort' });
-    }
     messages.value.push({ type: 'user', content });
-    isAgentThinking.value = true;
-    wsSend({ type: 'user_message', content });
+    if (isAgentThinking.value) {
+      pendingMessage.value = content;
+      wsSend({ type: 'abort' });
+      return;
+    }
+    sendUserMessage(content);
   }
 
   function abort(): void {
+    pendingMessage.value = null;
     wsSend({ type: 'abort' });
     isAgentThinking.value = false;
   }
@@ -210,6 +225,7 @@ export const useCopilotStore = defineStore('copilot', () => {
   function reset(): void {
     messages.value = [];
     isAgentThinking.value = false;
+    pendingMessage.value = null;
     const todosStore = useTodosStore();
     todosStore.clear();
   }
@@ -287,14 +303,12 @@ export const useCopilotStore = defineStore('copilot', () => {
         });
         break;
       case 'workflow_changed': {
-        const workflowStore = useWorkflowStore();
         if (workflowId.value) {
           workflowStore.loadForEditing(workflowId.value);
         }
         break;
       }
       case 'execution_event': {
-        const workflowStore = useWorkflowStore();
         workflowStore.handleExecutionEvent(msg.event);
         break;
       }
@@ -305,6 +319,11 @@ export const useCopilotStore = defineStore('copilot', () => {
       }
       case 'turn_done':
         isAgentThinking.value = false;
+        if (pendingMessage.value) {
+          const nextMessage = pendingMessage.value;
+          pendingMessage.value = null;
+          sendUserMessage(nextMessage);
+        }
         break;
       case 'error': {
         const content =
@@ -319,6 +338,11 @@ export const useCopilotStore = defineStore('copilot', () => {
         // Heartbeat response, ignore
         break;
     }
+  }
+
+  function sendUserMessage(content: string): void {
+    isAgentThinking.value = true;
+    wsSend({ type: 'user_message', content });
   }
 
   return {

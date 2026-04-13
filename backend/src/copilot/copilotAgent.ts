@@ -23,6 +23,7 @@ export class CopilotAgent {
   private workflowId: string;
   private locale: string;
   private sendEvent: (event: CopilotServerMessage) => void;
+  private hasManualLayoutEdits: boolean;
   private aborted: boolean;
   private isProcessing: boolean;
   private toolRegistry: ToolRegistryClass;
@@ -36,6 +37,7 @@ export class CopilotAgent {
     this.workflowId = workflowId;
     this.locale = locale;
     this.sendEvent = sendEvent;
+    this.hasManualLayoutEdits = false;
     this.aborted = false;
     this.isProcessing = false;
     this.toolRegistry = createCopilotToolRegistry(workflowId, (event) => {
@@ -45,6 +47,10 @@ export class CopilotAgent {
 
   abort(): void {
     this.aborted = true;
+  }
+
+  setHasManualLayoutEdits(hasManualLayoutEdits: boolean): void {
+    this.hasManualLayoutEdits = hasManualLayoutEdits;
   }
 
   async handleUserMessage(content: string): Promise<void> {
@@ -379,6 +385,16 @@ export class CopilotAgent {
     return structuralChanges >= 4;
   }
 
+  private resolveLayoutOwnership(workflowSnapshot: WorkflowDetail | null): CopilotLayoutOwnership {
+    const ownership = workflowSnapshot ? this.classifyLayoutOwnership(workflowSnapshot) : 'mixed';
+
+    if (!this.hasManualLayoutEdits) {
+      return ownership;
+    }
+
+    return ownership === 'copilot' ? 'mixed' : 'user';
+  }
+
   private async maybeReflowRound(
     summary: CopilotRoundMutationSummary,
     workflowSnapshot: WorkflowDetail | null
@@ -387,7 +403,7 @@ export class CopilotAgent {
       return;
     }
 
-    const ownership = workflowSnapshot ? this.classifyLayoutOwnership(workflowSnapshot) : 'mixed';
+    const ownership = this.resolveLayoutOwnership(workflowSnapshot);
     if (!this.shouldReflowRound(summary, ownership)) {
       return;
     }

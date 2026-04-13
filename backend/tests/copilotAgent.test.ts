@@ -437,6 +437,96 @@ describe('CopilotAgent', () => {
     expect(workflowService.reflowWorkflowLayout).not.toHaveBeenCalled();
   });
 
+  it('does not reflow a single structural change when the session reports manual layout edits', async () => {
+    let currentWorkflow = createAutoLaidWorkflow(['node-1']);
+    vi.mocked(workflowService.getWorkflow).mockImplementation(async () => currentWorkflow);
+    agent.setHasManualLayoutEdits(true);
+
+    const toolResponse: ChatResponse = {
+      content: '',
+      finishReason: 'tool_calls',
+      toolCalls: [
+        {
+          id: 'tc1',
+          type: 'function',
+          function: { name: 'wf_add_node', arguments: '{"type":"sql","name":"Manual Node"}' },
+        },
+      ],
+    };
+    const textResponse: ChatResponse = {
+      content: 'Added a node',
+      finishReason: 'stop',
+    };
+    baseMockChat.mockResolvedValueOnce(toolResponse).mockResolvedValueOnce(textResponse);
+    mockToolExecute.mockImplementation(async () => {
+      currentWorkflow = createWorkflow([
+        { id: 'node-1', positionX: 0, positionY: 0 },
+        { id: 'node-2', positionX: 913, positionY: 427 },
+      ]);
+
+      return {
+        success: true,
+        data: { id: 'node-2', name: 'Manual Node', type: 'sql', config: {} },
+      };
+    });
+
+    await agent.handleUserMessage('Add a node');
+
+    expect(workflowService.reflowWorkflowLayout).not.toHaveBeenCalled();
+  });
+
+  it('treats mixed layouts as user-owned when the session reports manual layout edits', async () => {
+    const currentWorkflow = createAutoLaidWorkflow(
+      ['node-1', 'node-2'],
+      [{ sourceNodeId: 'node-1', targetNodeId: 'node-2' }]
+    );
+    currentWorkflow.nodes[1].positionX += 125;
+    vi.mocked(workflowService.getWorkflow).mockResolvedValue(currentWorkflow);
+    agent.setHasManualLayoutEdits(true);
+
+    const toolResponse: ChatResponse = {
+      content: '',
+      finishReason: 'tool_calls',
+      toolCalls: [
+        {
+          id: 'tc1',
+          type: 'function',
+          function: { name: 'wf_add_node', arguments: '{"type":"sql","name":"Node 3"}' },
+        },
+        {
+          id: 'tc2',
+          type: 'function',
+          function: {
+            name: 'wf_connect_nodes',
+            arguments: '{"sourceNodeId":"node-2","targetNodeId":"node-3"}',
+          },
+        },
+      ],
+    };
+    const textResponse: ChatResponse = {
+      content: 'Updated the workflow',
+      finishReason: 'stop',
+    };
+    baseMockChat.mockResolvedValueOnce(toolResponse).mockResolvedValueOnce(textResponse);
+    mockToolExecute.mockImplementation(async (toolName: string) => {
+      if (toolName === 'wf_add_node') {
+        return {
+          success: true,
+          data: { id: 'node-3', name: 'Node 3', type: 'sql', config: {} },
+        };
+      }
+
+      return {
+        success: true,
+        data: { id: 'edge-2', sourceNodeId: 'node-2', targetNodeId: 'node-3' },
+      };
+    });
+
+    await agent.handleUserMessage('Add and connect a node');
+
+    expect(workflowService.reflowWorkflowLayout).not.toHaveBeenCalled();
+  });
+
   it('does not reflow workflow layout after a config-only update round', async () => {
     const toolResponse: ChatResponse = {
       content: '',

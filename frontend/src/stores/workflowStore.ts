@@ -21,6 +21,8 @@ import type {
 } from '@/types/workflow';
 import { useAuthStore } from './authStore';
 
+type NodePositionUpdateSource = 'user-drag' | 'system';
+
 export const useWorkflowStore = defineStore('workflow', () => {
   // ── List State ──────────────────────────────────────
   const workflows = ref<WorkflowListItem[]>([]);
@@ -32,6 +34,7 @@ export const useWorkflowStore = defineStore('workflow', () => {
   const editorWorkflow = ref<WorkflowDetail | null>(null);
   const isDirty = ref(false);
   const selectedNodeId = ref<string | null>(null);
+  const hasManualLayoutEdits = ref(false);
 
   // ── Execution State ─────────────────────────────────
   const currentRunId = ref<string | null>(null);
@@ -221,9 +224,13 @@ export const useWorkflowStore = defineStore('workflow', () => {
   // ── Editor Actions ───────────────────────────────────
   async function loadForEditing(id: string): Promise<void> {
     const workflow = await workflowApi.getWorkflow(id);
+    const shouldResetManualLayoutEdits = editorWorkflow.value?.id !== workflow.id;
     editorWorkflow.value = workflow;
     isDirty.value = false;
     selectedNodeId.value = null;
+    if (shouldResetManualLayoutEdits) {
+      hasManualLayoutEdits.value = false;
+    }
     nodeExecutionStates.clear();
     lastRunDetail.value = null;
 
@@ -243,6 +250,7 @@ export const useWorkflowStore = defineStore('workflow', () => {
     editorWorkflow.value = null;
     isDirty.value = false;
     selectedNodeId.value = null;
+    hasManualLayoutEdits.value = false;
     currentRunId.value = null;
     nodeExecutionStates.clear();
     lastRunDetail.value = null;
@@ -306,12 +314,20 @@ export const useWorkflowStore = defineStore('workflow', () => {
     isDirty.value = true;
   }
 
-  function updateNodePosition(nodeId: string, x: number, y: number): void {
+  function updateNodePosition(
+    nodeId: string,
+    x: number,
+    y: number,
+    options?: { source?: NodePositionUpdateSource }
+  ): void {
     if (!editorWorkflow.value) return;
     const node = editorWorkflow.value.nodes.find((n) => n.id === nodeId);
     if (!node) return;
     node.positionX = x;
     node.positionY = y;
+    if (options?.source === 'user-drag') {
+      hasManualLayoutEdits.value = true;
+    }
     isDirty.value = true;
   }
 
@@ -842,6 +858,7 @@ export const useWorkflowStore = defineStore('workflow', () => {
     selectedNodeId,
     selectedNode,
     isEditing,
+    hasManualLayoutEdits,
     loadForEditing,
     closeEditor,
     updateWorkflowName,

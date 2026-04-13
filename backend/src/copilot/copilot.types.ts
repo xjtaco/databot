@@ -20,11 +20,17 @@ export interface CopilotPing {
   type: 'ping';
 }
 
+export interface CopilotLayoutSession {
+  type: 'layout_session';
+  hasManualLayoutEdits: boolean;
+}
+
 export type CopilotClientMessage =
   | CopilotUserMessage
   | CopilotAbort
   | CopilotExecuteNode
-  | CopilotPing;
+  | CopilotPing
+  | CopilotLayoutSession;
 
 // ── Server → Client Messages ─────────────────────────────
 export interface CopilotTextDelta {
