@@ -4,6 +4,10 @@ import { AgentSessionManager } from '../../../src/agent';
 import { CoreAgentSession } from '../../../src/agent';
 import type { SessionConfig } from '../../../src/agent';
 import http from 'http';
+import fs from 'node:fs';
+import path from 'node:path';
+import os from 'node:os';
+import { config } from '../../../src/base/config';
 
 /* eslint-disable no-undef */
 // WebSocket is a browser API used in these tests
@@ -13,8 +17,14 @@ describe('WebSocket Integration', () => {
   let wss: WebSocketServer;
   let port: number;
   let wsUrl: string;
+  let originalWorkFolder: string;
+  let testWorkFolder: string;
 
   beforeEach(async () => {
+    originalWorkFolder = config.work_folder;
+    testWorkFolder = fs.mkdtempSync(path.join(os.tmpdir(), 'websocket-test-'));
+    config.work_folder = testWorkFolder;
+
     // Create HTTP server
     server = http.createServer();
 
@@ -47,6 +57,9 @@ describe('WebSocket Integration', () => {
         });
       });
     });
+
+    config.work_folder = originalWorkFolder;
+    fs.rmSync(testWorkFolder, { recursive: true, force: true });
   });
 
   describe('WebSocket Connection', () => {
