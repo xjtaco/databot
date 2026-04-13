@@ -14,7 +14,8 @@ import {
   CopilotServerMessage,
   COPILOT_MAX_TOOL_CALLS_PER_TURN,
 } from './copilot.types';
-import { NodeConfig } from '../workflow/workflow.types';
+import { autoLayout } from '../workflow/layout/autoLayout';
+import { NodeConfig, WorkflowDetail } from '../workflow/workflow.types';
 import { buildToolStartSummary, buildToolDoneSummary } from './toolSummaries';
 
 export class CopilotAgent {
@@ -299,20 +300,69 @@ export class CopilotAgent {
     }
   }
 
-  private detectLayoutOwnership(): CopilotLayoutOwnership {
-    return 'copilot';
+  private getStructuralChangeCount(summary: CopilotRoundMutationSummary): number {
+    return (
+      summary.addedNodes +
+      summary.deletedNodes +
+      summary.addedEdges +
+      summary.deletedEdges +
+      summary.replacedNodes
+    );
+  }
+
+  private async detectLayoutOwnership(): Promise<CopilotLayoutOwnership> {
+    try {
+      const workflow = await workflowService.getWorkflow(this.workflowId);
+      return this.classifyLayoutOwnership(workflow);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      logger.warn('Copilot layout ownership detection failed', {
+        workflowId: this.workflowId,
+        error: message,
+      });
+      return 'mixed';
+    }
+  }
+
+  private classifyLayoutOwnership(workflow: WorkflowDetail): CopilotLayoutOwnership {
+    if (workflow.nodes.length === 0) {
+      return 'copilot';
+    }
+
+    let matchedNodes = 0;
+
+    try {
+      const layout = autoLayout(workflow.nodes, workflow.edges);
+      for (const node of workflow.nodes) {
+        const position = layout.positions.get(node.id);
+        if (!position) {
+          continue;
+        }
+
+        if (position.x === node.positionX && position.y === node.positionY) {
+          matchedNodes += 1;
+        }
+      }
+    } catch {
+      return 'mixed';
+    }
+
+    if (matchedNodes === workflow.nodes.length) {
+      return 'copilot';
+    }
+
+    if (matchedNodes === 0) {
+      return 'user';
+    }
+
+    return 'mixed';
   }
 
   private shouldReflowRound(
     summary: CopilotRoundMutationSummary,
     ownership: CopilotLayoutOwnership
   ): boolean {
-    const structuralChanges =
-      summary.addedNodes +
-      summary.deletedNodes +
-      summary.addedEdges +
-      summary.deletedEdges +
-      summary.replacedNodes;
+    const structuralChanges = this.getStructuralChangeCount(summary);
 
     if (structuralChanges === 0) {
       return false;
@@ -330,7 +380,11 @@ export class CopilotAgent {
   }
 
   private async maybeReflowRound(summary: CopilotRoundMutationSummary): Promise<void> {
-    const ownership = this.detectLayoutOwnership();
+    if (this.getStructuralChangeCount(summary) === 0) {
+      return;
+    }
+
+    const ownership = await this.detectLayoutOwnership();
     if (!this.shouldReflowRound(summary, ownership)) {
       return;
     }
