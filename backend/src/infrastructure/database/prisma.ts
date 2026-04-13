@@ -1,15 +1,17 @@
 import type { PrismaClient as PrismaClientType } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
+import { createRequire } from 'node:module';
 import { Pool } from 'pg';
 import { config } from '../../base/config';
 import logger from '../../utils/logger';
 
 let prismaClient: PrismaClientType | null = null;
 let pool: Pool | null = null;
+const loadModule = createRequire(import.meta.url);
 
 function loadPrismaClientConstructor(): typeof import('@prisma/client').PrismaClient {
   try {
-    const prismaModule = require('@prisma/client') as typeof import('@prisma/client');
+    const prismaModule = loadModule('@prisma/client') as typeof import('@prisma/client');
     return prismaModule.PrismaClient;
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);

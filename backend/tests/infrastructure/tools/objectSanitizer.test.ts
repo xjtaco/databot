@@ -66,9 +66,7 @@ describe('sanitizeForLlm', () => {
   });
 
   it('returns root Date values as ISO strings', () => {
-    expect(sanitizeForLlm(new Date('2024-01-01T00:00:00Z'))).toEqual(
-      '2024-01-01T00:00:00.000Z'
-    );
+    expect(sanitizeForLlm(new Date('2024-01-01T00:00:00Z'))).toEqual('2024-01-01T00:00:00.000Z');
   });
 
   it('keeps reserved root metadata stable when the input has a _sanitized key', () => {
@@ -153,7 +151,10 @@ describe('sanitizeForLlm', () => {
   it('summarizes oversized arrays with preview items', () => {
     expect(
       sanitizeForLlm({
-        rows: Array.from({ length: 8 }, (_, index) => ({ id: index + 1, value: `row-${index + 1}` })),
+        rows: Array.from({ length: 8 }, (_, index) => ({
+          id: index + 1,
+          value: `row-${index + 1}`,
+        })),
       })
     ).toEqual({
       _sanitized: {
@@ -270,7 +271,9 @@ describe('sanitizeForLlm', () => {
 
   it('replaces non-compactable root fields with omission summaries instead of dropping them', () => {
     const value = sanitizeForLlm(
-      Object.fromEntries(Array.from({ length: 300 }, (_, index) => [`field${index + 1}`, index + 1]))
+      Object.fromEntries(
+        Array.from({ length: 300 }, (_, index) => [`field${index + 1}`, index + 1])
+      )
     );
 
     expect(value).toMatchObject({

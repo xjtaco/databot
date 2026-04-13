@@ -123,7 +123,10 @@ function describeValueType(value: unknown): string {
   return Object.prototype.toString.call(value).slice(8, -1);
 }
 
-function summarizeUnsupported(value: unknown, reason: SanitizedUnsupportedSummary['reason']): SanitizedSummaryEnvelope {
+function summarizeUnsupported(
+  value: unknown,
+  reason: SanitizedUnsupportedSummary['reason']
+): SanitizedSummaryEnvelope {
   return {
     _summary: {
       kind: 'unsupported',
@@ -192,7 +195,9 @@ function isSummaryEnvelope(value: unknown): value is SanitizedSummaryEnvelope {
   return isPlainObjectRoot(value) && Object.prototype.hasOwnProperty.call(value, '_summary');
 }
 
-function compactSummaryEnvelopeForBudget(value: SanitizedSummaryEnvelope): SanitizedSummaryEnvelope | undefined {
+function compactSummaryEnvelopeForBudget(
+  value: SanitizedSummaryEnvelope
+): SanitizedSummaryEnvelope | undefined {
   if (value._summary.kind === 'omitted') {
     return undefined;
   }
@@ -272,7 +277,9 @@ function compactRootObjectToBudget(
   const entries = Object.entries(value);
   let changed = false;
 
-  const buildCandidate = (candidateEntries: Array<[string, SanitizedValue | SanitizedSummaryEnvelope]>) => {
+  const buildCandidate = (
+    candidateEntries: Array<[string, SanitizedValue | SanitizedSummaryEnvelope]>
+  ) => {
     const candidate = Object.fromEntries(candidateEntries);
     if (!changed && reasons.size === 0) {
       return candidate;
@@ -292,7 +299,10 @@ function compactRootObjectToBudget(
     };
   };
 
-  while (estimateSerializedSize(buildCandidate(entries)) > DEFAULT_TOTAL_BUDGET && entries.length > 0) {
+  while (
+    estimateSerializedSize(buildCandidate(entries)) > DEFAULT_TOTAL_BUDGET &&
+    entries.length > 0
+  ) {
     changed = true;
 
     let compacted = false;
@@ -317,7 +327,11 @@ function compactRootObjectToBudget(
   };
 }
 
-function visit(value: unknown, ctx: TraversalContext, depth: number): SanitizedValue | SanitizedSummaryEnvelope {
+function visit(
+  value: unknown,
+  ctx: TraversalContext,
+  depth: number
+): SanitizedValue | SanitizedSummaryEnvelope {
   if (value === null) {
     return null;
   }
@@ -401,10 +415,14 @@ function visit(value: unknown, ctx: TraversalContext, depth: number): SanitizedV
 }
 
 function isPlainObjectRoot(value: unknown): value is PlainObject {
-  return value !== null && typeof value === 'object' && !Array.isArray(value) && isPlainObject(value);
+  return (
+    value !== null && typeof value === 'object' && !Array.isArray(value) && isPlainObject(value)
+  );
 }
 
-export function sanitizeForLlm(value: unknown): SanitizedValue | SanitizedSummaryEnvelope | SanitizedRootResult {
+export function sanitizeForLlm(
+  value: unknown
+): SanitizedValue | SanitizedSummaryEnvelope | SanitizedRootResult {
   const ctx: TraversalContext = {
     reasons: new Set<SanitizationReason>(),
     visiting: new WeakSet<object>(),

@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { WebSocketServer } from 'ws';
 import http from 'http';
 import fs from 'node:fs';

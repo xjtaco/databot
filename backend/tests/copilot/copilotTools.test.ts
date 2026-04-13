@@ -321,7 +321,12 @@ describe('WfExecuteTool', () => {
       }),
     } as Awaited<ReturnType<typeof executionEngine.executeWorkflow>>);
 
-    const registry = createCopilotToolRegistry('wf-execute');
+    const registry = createCopilotToolRegistry(
+      'wf-execute',
+      undefined,
+      undefined,
+      '/tmp/copilot-run'
+    );
     const result = await registry.execute('wf_execute', {});
 
     expect(result.success).toBe(true);
