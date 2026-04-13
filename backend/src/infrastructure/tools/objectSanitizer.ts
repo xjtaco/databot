@@ -171,6 +171,20 @@ function isSummaryEnvelope(value: unknown): value is SanitizedSummaryEnvelope {
   return isPlainObjectRoot(value) && Object.prototype.hasOwnProperty.call(value, '_summary');
 }
 
+function compactSummaryEnvelopeForBudget(value: SanitizedSummaryEnvelope): SanitizedSummaryEnvelope | undefined {
+  if (value._summary.kind !== 'array' || !value.items || value._summary.keptItems === 0) {
+    return undefined;
+  }
+
+  return {
+    _summary: {
+      kind: 'array',
+      totalItems: value._summary.totalItems,
+      keptItems: 0,
+    },
+  };
+}
+
 function summarizeValueForBudget(
   value: SanitizedValue | SanitizedSummaryEnvelope
 ): SanitizedValue | SanitizedSummaryEnvelope | undefined {
@@ -184,7 +198,11 @@ function summarizeValueForBudget(
     };
   }
 
-  if (!isPlainObjectRoot(value) || isSummaryEnvelope(value)) {
+  if (isSummaryEnvelope(value)) {
+    return compactSummaryEnvelopeForBudget(value);
+  }
+
+  if (!isPlainObjectRoot(value)) {
     return undefined;
   }
 

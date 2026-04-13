@@ -259,4 +259,90 @@ describe('sanitizeForLlm', () => {
       },
     });
   });
+
+  it('keeps summarized root arrays as zero-preview summaries instead of dropping them during budget compaction', () => {
+    const rows = Array.from({ length: 8 }, (_, index) => ({
+      id: index + 1,
+      payload: 'y'.repeat(120),
+    }));
+
+    expect(
+      sanitizeForLlm({
+        alpha: rows,
+        beta: rows,
+        gamma: rows,
+        delta: rows,
+      })
+    ).toEqual({
+      _sanitized: {
+        applied: true,
+        reasons: ['array_truncated', 'budget_compacted'],
+      },
+      alpha: {
+        _summary: {
+          kind: 'array',
+          totalItems: 8,
+          keptItems: 5,
+        },
+        items: [
+          { id: 1, payload: 'y'.repeat(120) },
+          { id: 2, payload: 'y'.repeat(120) },
+          { id: 3, payload: 'y'.repeat(120) },
+          { id: 4, payload: 'y'.repeat(120) },
+          { id: 5, payload: 'y'.repeat(120) },
+        ],
+      },
+      beta: {
+        _summary: {
+          kind: 'array',
+          totalItems: 8,
+          keptItems: 5,
+        },
+        items: [
+          { id: 1, payload: 'y'.repeat(120) },
+          { id: 2, payload: 'y'.repeat(120) },
+          { id: 3, payload: 'y'.repeat(120) },
+          { id: 4, payload: 'y'.repeat(120) },
+          { id: 5, payload: 'y'.repeat(120) },
+        ],
+      },
+      gamma: {
+        _summary: {
+          kind: 'array',
+          totalItems: 8,
+          keptItems: 0,
+        },
+      },
+      delta: {
+        _summary: {
+          kind: 'array',
+          totalItems: 8,
+          keptItems: 0,
+        },
+      },
+    });
+  });
+
+  it('keeps sanitizer reasons in a deterministic order', () => {
+    const rows = Array.from({ length: 8 }, (_, index) => ({
+      id: index + 1,
+      payload: 'z'.repeat(140),
+    }));
+    const longText = 'abc '.repeat(400);
+
+    expect(
+      sanitizeForLlm({
+        prompt: longText,
+        rowsA: rows,
+        createdAt: new Date('2024-01-01T00:00:00Z'),
+        rowsB: rows,
+        rowsC: rows,
+      })
+    ).toMatchObject({
+      _sanitized: {
+        applied: true,
+        reasons: ['large_text', 'array_truncated', 'non_plain_object', 'budget_compacted'],
+      },
+    });
+  });
 });
