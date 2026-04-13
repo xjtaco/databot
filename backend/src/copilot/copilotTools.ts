@@ -951,7 +951,7 @@ export class WfExecuteNodeTool extends Tool {
         onProgress: this.onProgress,
       });
       const runResult = await this.accessor.getRunResult(runId);
-      return { success: true, data: runResult };
+      return { success: true, data: sanitizeForLlm(runResult) };
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       logger.error('wf_execute_node failed', { workflowId: this.accessor.workflowId, error: msg });
@@ -986,7 +986,7 @@ export class WfGetRunResultTool extends Tool {
       }
 
       const runDetail = await this.accessor.getRunResult(runId);
-      return { success: true, data: runDetail };
+      return { success: true, data: sanitizeForLlm(runDetail) };
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       logger.error('wf_get_run_result failed', {

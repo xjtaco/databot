@@ -12,9 +12,23 @@ vi.mock('../../src/workflow/customNodeTemplate.repository', () => ({
 }));
 
 import * as templateRepository from '../../src/workflow/customNodeTemplate.repository';
-import { WfSearchCustomNodesTool, WfGetNodeTool } from '../../src/copilot/copilotTools';
+import {
+  WfExecuteNodeTool,
+  WfGetNodeTool,
+  WfGetRunResultTool,
+  WfSearchCustomNodesTool,
+} from '../../src/copilot/copilotTools';
 import { InMemoryWorkflowAccessor } from '../../src/copilot/workflowAccessor';
 import type { CustomNodeTemplateInfo, WorkflowDetail } from '../../src/workflow/workflow.types';
+
+function makeBase64(length: number): string {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+  let result = '';
+  for (let index = 0; index < length; index++) {
+    result += chars[index % chars.length];
+  }
+  return result;
+}
 
 function makeTemplate(
   id: string,
@@ -45,6 +59,7 @@ describe('WfSearchCustomNodesTool', () => {
 
   beforeEach(() => {
     tool = new WfSearchCustomNodesTool();
+    vi.resetAllMocks();
     vi.mocked(templateRepository.findAllTemplates).mockResolvedValue(SAMPLE_TEMPLATES);
   });
 
@@ -219,6 +234,96 @@ describe('WfGetNodeTool', () => {
       },
       positionX: 0,
       positionY: 0,
+    });
+  });
+});
+
+describe('WfGetRunResultTool', () => {
+  it('sanitizes base64 and long output fields from run results', async () => {
+    const longOutput = 'debug output '.repeat(80);
+    const base64Payload = makeBase64(600);
+    const accessor = {
+      workflowId: 'wf-run-result',
+      getWorkflow: vi.fn(),
+      getNode: vi.fn(),
+      updateNode: vi.fn(),
+      executeNode: vi.fn(),
+      getRunResult: vi.fn().mockResolvedValue({
+        output: longOutput,
+        image: `data:image/png;base64,${base64Payload}`,
+      }),
+    };
+    const tool = new WfGetRunResultTool(accessor);
+
+    const result = await tool.execute({ runId: 'run-123' });
+
+    expect(result.success).toBe(true);
+    expect(JSON.stringify(result.data)).not.toContain(longOutput);
+    expect(JSON.stringify(result.data)).not.toContain(base64Payload);
+    expect(result.data).toEqual({
+      _sanitized: {
+        applied: true,
+        reasons: ['large_text', 'base64'],
+      },
+      output: {
+        _summary: {
+          kind: 'text',
+          chars: longOutput.length,
+          preview: longOutput.slice(0, 160),
+        },
+      },
+      image: {
+        _summary: {
+          kind: 'base64',
+          mimeType: 'image/png',
+          chars: base64Payload.length,
+        },
+      },
+    });
+  });
+});
+
+describe('WfExecuteNodeTool', () => {
+  it('sanitizes fetched run results before returning them', async () => {
+    const longOutput = 'debug output '.repeat(80);
+    const base64Payload = makeBase64(600);
+    const accessor = {
+      workflowId: 'wf-exec-node',
+      getWorkflow: vi.fn(),
+      getNode: vi.fn(),
+      updateNode: vi.fn(),
+      executeNode: vi.fn().mockResolvedValue({ runId: 'run-456' }),
+      getRunResult: vi.fn().mockResolvedValue({
+        output: longOutput,
+        image: `data:image/png;base64,${base64Payload}`,
+      }),
+    };
+
+    const tool = new WfExecuteNodeTool(accessor);
+    const result = await tool.execute({ nodeId: 'node-exec' });
+
+    expect(result.success).toBe(true);
+    expect(JSON.stringify(result.data)).not.toContain(longOutput);
+    expect(JSON.stringify(result.data)).not.toContain(base64Payload);
+    expect(result.data).toEqual({
+      _sanitized: {
+        applied: true,
+        reasons: ['large_text', 'base64'],
+      },
+      output: {
+        _summary: {
+          kind: 'text',
+          chars: longOutput.length,
+          preview: longOutput.slice(0, 160),
+        },
+      },
+      image: {
+        _summary: {
+          kind: 'base64',
+          mimeType: 'image/png',
+          chars: base64Payload.length,
+        },
+      },
     });
   });
 });
