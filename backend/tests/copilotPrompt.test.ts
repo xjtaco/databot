@@ -114,6 +114,9 @@ describe('buildSystemPrompt', () => {
     expect(prompt).toContain('short English snake_case filenames');
     expect(prompt).toContain('query_result.csv');
     expect(prompt).toContain('node execution temp directory at runtime');
+    expect(prompt).toContain('small structured outputs may still return directly in `result`');
+    expect(prompt).toContain('large outputs should prefer files under `WORKSPACE`');
+    expect(prompt).toContain('when the result can be a file, prefer returning the file path instead of large text');
     expect(prompt).not.toContain('agent temp directory');
     expect(prompt).not.toContain('do not assume it is the same');
   });
