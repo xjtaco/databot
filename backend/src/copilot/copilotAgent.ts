@@ -109,6 +109,7 @@ export class CopilotAgent {
 
         const allMessages = this.context.validHistory();
         const roundMutations = this.createRoundMutationSummary();
+        const preRoundWorkflow = await this.getWorkflowSnapshot();
 
         // Call LLM with copilot tool registry + UI callbacks
         const response = await provider.chat(allMessages, {
@@ -209,7 +210,7 @@ export class CopilotAgent {
 
           // Compress context if token usage exceeds limit
           await this.maybeCompressContext(response.usage?.totalTokens);
-          await this.maybeReflowRound(roundMutations);
+          await this.maybeReflowRound(roundMutations, preRoundWorkflow);
 
           // Check abort after completing this round
           if (this.aborted) break;
@@ -310,17 +311,16 @@ export class CopilotAgent {
     );
   }
 
-  private async detectLayoutOwnership(): Promise<CopilotLayoutOwnership> {
+  private async getWorkflowSnapshot(): Promise<WorkflowDetail | null> {
     try {
-      const workflow = await workflowService.getWorkflow(this.workflowId);
-      return this.classifyLayoutOwnership(workflow);
+      return await workflowService.getWorkflow(this.workflowId);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       logger.warn('Copilot layout ownership detection failed', {
         workflowId: this.workflowId,
         error: message,
       });
-      return 'mixed';
+      return null;
     }
   }
 
@@ -379,12 +379,15 @@ export class CopilotAgent {
     return structuralChanges >= 4;
   }
 
-  private async maybeReflowRound(summary: CopilotRoundMutationSummary): Promise<void> {
+  private async maybeReflowRound(
+    summary: CopilotRoundMutationSummary,
+    workflowSnapshot: WorkflowDetail | null
+  ): Promise<void> {
     if (this.getStructuralChangeCount(summary) === 0) {
       return;
     }
 
-    const ownership = await this.detectLayoutOwnership();
+    const ownership = workflowSnapshot ? this.classifyLayoutOwnership(workflowSnapshot) : 'mixed';
     if (!this.shouldReflowRound(summary, ownership)) {
       return;
     }

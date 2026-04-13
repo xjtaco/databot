@@ -28,6 +28,7 @@ import type { Message } from '../src/infrastructure/llm/types';
 import type { ToolResult } from '../src/infrastructure/tools/types';
 import * as workflowService from '../src/workflow/workflow.service';
 import type { WorkflowDetail } from '../src/workflow/workflow.types';
+import { autoLayout } from '../src/workflow/layout/autoLayout';
 
 /**
  * Wrap a mock chat fn so it invokes callbacks when toolCalls are present.
@@ -123,6 +124,28 @@ describe('CopilotAgent', () => {
       createdAt: new Date('2026-01-01T00:00:00.000Z'),
       updatedAt: new Date('2026-01-01T00:00:00.000Z'),
     }) as WorkflowDetail;
+
+  const createAutoLaidWorkflow = (
+    nodeIds: string[],
+    edges: Array<{ sourceNodeId: string; targetNodeId: string }> = []
+  ): WorkflowDetail => {
+    const layout = autoLayout(
+      nodeIds.map((id) => ({ id })),
+      edges
+    );
+
+    return createWorkflow(
+      nodeIds.map((id) => {
+        const position = layout.positions.get(id);
+        if (!position) {
+          throw new Error(`Missing auto layout position for ${id}`);
+        }
+
+        return { id, positionX: position.x, positionY: position.y };
+      }),
+      edges
+    );
+  };
 
   beforeEach(() => {
     events = [];
@@ -325,10 +348,9 @@ describe('CopilotAgent', () => {
     expect(mockChat).toHaveBeenCalledTimes(1);
   });
 
-  it('reflows workflow layout after a structurally mutating round', async () => {
-    vi.mocked(workflowService.getWorkflow).mockResolvedValue(
-      createWorkflow([{ id: 'node-1', positionX: 0, positionY: 0 }])
-    );
+  it('reflows a single structural change when the pre-round workflow is copilot-owned', async () => {
+    let currentWorkflow = createAutoLaidWorkflow(['node-1']);
+    vi.mocked(workflowService.getWorkflow).mockImplementation(async () => currentWorkflow);
 
     const toolResponse: ChatResponse = {
       content: '',
@@ -346,27 +368,38 @@ describe('CopilotAgent', () => {
       finishReason: 'stop',
     };
     baseMockChat.mockResolvedValueOnce(toolResponse).mockResolvedValueOnce(textResponse);
-    mockToolExecute.mockResolvedValue({
-      success: true,
-      data: { id: 'node-1', name: 'New Node', type: 'sql', config: {} },
+    mockToolExecute.mockImplementation(async () => {
+      // Copilot tools can persist temporary coordinates before round-end reflow.
+      currentWorkflow = createWorkflow([
+        { id: 'node-1', positionX: 0, positionY: 0 },
+        { id: 'node-2', positionX: 913, positionY: 427 },
+      ]);
+
+      return {
+        success: true,
+        data: { id: 'node-2', name: 'New Node', type: 'sql', config: {} },
+      };
     });
 
     await agent.handleUserMessage('Add a node');
 
+    expect(workflowService.getWorkflow).toHaveBeenCalled();
+    expect(vi.mocked(workflowService.getWorkflow).mock.invocationCallOrder[0]).toBeLessThan(
+      mockToolExecute.mock.invocationCallOrder[0]
+    );
     expect(workflowService.reflowWorkflowLayout).toHaveBeenCalledWith('test-workflow-id');
     expect(events).toContainEqual({ type: 'workflow_changed', changeType: 'node_updated' });
   });
 
-  it('does not reflow a user-owned layout after a single structural change', async () => {
-    vi.mocked(workflowService.getWorkflow).mockResolvedValue(
-      createWorkflow(
-        [
-          { id: 'node-1', positionX: 137, positionY: 91 },
-          { id: 'node-2', positionX: 643, positionY: 418 },
-        ],
-        [{ sourceNodeId: 'node-1', targetNodeId: 'node-2' }]
-      )
+  it('does not reflow a single structural change when the pre-round workflow is user-owned', async () => {
+    let currentWorkflow = createWorkflow(
+      [
+        { id: 'node-1', positionX: 137, positionY: 91 },
+        { id: 'node-2', positionX: 643, positionY: 418 },
+      ],
+      [{ sourceNodeId: 'node-1', targetNodeId: 'node-2' }]
     );
+    vi.mocked(workflowService.getWorkflow).mockImplementation(async () => currentWorkflow);
 
     const toolResponse: ChatResponse = {
       content: '',
@@ -384,14 +417,23 @@ describe('CopilotAgent', () => {
       finishReason: 'stop',
     };
     baseMockChat.mockResolvedValueOnce(toolResponse).mockResolvedValueOnce(textResponse);
-    mockToolExecute.mockResolvedValue({
-      success: true,
-      data: { id: 'node-3', name: 'Manual Node', type: 'sql', config: {} },
+    mockToolExecute.mockImplementation(async () => {
+      currentWorkflow = createAutoLaidWorkflow(['node-1', 'node-2', 'node-3'], [
+        { sourceNodeId: 'node-1', targetNodeId: 'node-2' },
+      ]);
+
+      return {
+        success: true,
+        data: { id: 'node-3', name: 'Manual Node', type: 'sql', config: {} },
+      };
     });
 
     await agent.handleUserMessage('Add a node');
 
-    expect(workflowService.getWorkflow).toHaveBeenCalledWith('test-workflow-id');
+    expect(workflowService.getWorkflow).toHaveBeenCalled();
+    expect(vi.mocked(workflowService.getWorkflow).mock.invocationCallOrder[0]).toBeLessThan(
+      mockToolExecute.mock.invocationCallOrder[0]
+    );
     expect(workflowService.reflowWorkflowLayout).not.toHaveBeenCalled();
   });
 
