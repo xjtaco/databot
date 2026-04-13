@@ -15,6 +15,16 @@ import type {
 
 vi.mock('@/api/workflow');
 
+function createDeferred<T>() {
+  let resolve!: (value: T | PromiseLike<T>) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+  return { promise, resolve, reject };
+}
+
 describe('workflowStore', () => {
   beforeEach(() => {
     setActivePinia(createPinia());
@@ -538,6 +548,114 @@ describe('workflowStore', () => {
 
   // ── closeEditor ────────────────────────────────────────
 
+  describe('loadForEditing', () => {
+    it('should preserve manual-layout edits when reloading the same workflow', async () => {
+      const store = setupEditorWorkflow(makeWorkflowDetail({ nodes: [makeNode()] }));
+      store.updateNodePosition('node-1', 320, 240, { source: 'user-drag' });
+      expect(store.hasManualLayoutEdits).toBe(true);
+
+      vi.mocked(workflowApi.getWorkflow).mockResolvedValue(
+        makeWorkflowDetail({
+          id: 'wf-1',
+          nodes: [makeNode({ positionX: 500, positionY: 600 })],
+          updatedAt: '2024-01-02T00:00:00Z',
+        })
+      );
+      vi.mocked(workflowApi.listRuns).mockResolvedValue([]);
+
+      await store.loadForEditing('wf-1');
+
+      expect(store.hasManualLayoutEdits).toBe(true);
+      expect(store.editorWorkflow?.updatedAt).toBe('2024-01-02T00:00:00Z');
+    });
+
+    it('should ignore stale workflow reload responses and keep the newest result', async () => {
+      const store = useWorkflowStore();
+      const olderLoad = createDeferred<WorkflowDetail>();
+      const newerLoad = createDeferred<WorkflowDetail>();
+
+      vi.mocked(workflowApi.getWorkflow)
+        .mockReturnValueOnce(olderLoad.promise)
+        .mockReturnValueOnce(newerLoad.promise);
+      vi.mocked(workflowApi.listRuns).mockResolvedValue([]);
+
+      const olderPromise = store.loadForEditing('wf-1');
+      const newerPromise = store.loadForEditing('wf-1');
+
+      newerLoad.resolve(
+        makeWorkflowDetail({
+          id: 'wf-1',
+          name: 'Newest Workflow',
+          updatedAt: '2024-01-03T00:00:00Z',
+        })
+      );
+      await newerPromise;
+
+      olderLoad.resolve(
+        makeWorkflowDetail({
+          id: 'wf-1',
+          name: 'Stale Workflow',
+          updatedAt: '2024-01-02T00:00:00Z',
+        })
+      );
+      await olderPromise;
+
+      expect(store.editorWorkflow?.name).toBe('Newest Workflow');
+      expect(store.editorWorkflow?.updatedAt).toBe('2024-01-03T00:00:00Z');
+    });
+
+    it('should ignore stale run-detail responses from an older reload', async () => {
+      const store = useWorkflowStore();
+      const staleRuns = createDeferred<
+        Array<{
+          id: string;
+          workflowId: string;
+          status: 'completed';
+          startedAt: string;
+          completedAt: string;
+          errorMessage: null;
+        }>
+      >();
+
+      vi.mocked(workflowApi.getWorkflow)
+        .mockResolvedValueOnce(makeWorkflowDetail({ name: 'Stale Workflow' }))
+        .mockResolvedValueOnce(makeWorkflowDetail({ name: 'Newest Workflow' }));
+      vi.mocked(workflowApi.listRuns)
+        .mockReturnValueOnce(staleRuns.promise)
+        .mockResolvedValueOnce([]);
+      vi.mocked(workflowApi.getRunDetail).mockResolvedValue({
+        id: 'run-stale',
+        workflowId: 'wf-1',
+        status: 'completed',
+        startedAt: '2024-01-01T00:00:00Z',
+        completedAt: '2024-01-01T00:01:00Z',
+        errorMessage: null,
+        nodeRuns: [],
+      });
+
+      const olderPromise = store.loadForEditing('wf-1');
+      await Promise.resolve();
+      const newerPromise = store.loadForEditing('wf-1');
+
+      await newerPromise;
+
+      staleRuns.resolve([
+        {
+          id: 'run-stale',
+          workflowId: 'wf-1',
+          status: 'completed',
+          startedAt: '2024-01-01T00:00:00Z',
+          completedAt: '2024-01-01T00:01:00Z',
+          errorMessage: null,
+        },
+      ]);
+      await olderPromise;
+
+      expect(store.editorWorkflow?.name).toBe('Newest Workflow');
+      expect(store.lastRunDetail).toBeNull();
+    });
+  });
+
   describe('closeEditor', () => {
     it('should reset all editor state', () => {
       const store = setupEditorWorkflow(
@@ -562,6 +680,7 @@ describe('workflowStore', () => {
       expect(store.editorWorkflow).toBeNull();
       expect(store.isDirty).toBe(false);
       expect(store.selectedNodeId).toBeNull();
+      expect(store.hasManualLayoutEdits).toBe(false);
       expect(store.currentRunId).toBeNull();
       expect(store.nodeExecutionStates.size).toBe(0);
       expect(store.lastRunDetail).toBeNull();

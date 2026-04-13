@@ -432,7 +432,11 @@ export class CopilotAgent {
         changeType: 'node_added',
         nodeId: data && typeof data === 'object' && 'id' in data ? String(data.id) : undefined,
       });
-    } else if (toolName === 'wf_update_node') {
+    } else if (
+      toolName === 'wf_update_node' ||
+      toolName === 'wf_patch_node' ||
+      toolName === 'wf_replace_node'
+    ) {
       this.sendEvent({ type: 'workflow_changed', changeType: 'node_updated' });
     } else if (toolName === 'wf_delete_node') {
       this.sendEvent({ type: 'workflow_changed', changeType: 'node_deleted' });
@@ -446,7 +450,14 @@ export class CopilotAgent {
   /** Emit node_config_card for node creation/update */
   private emitNodeConfigCard(toolName: string, result: { success: boolean; data: unknown }): void {
     if (!result.success) return;
-    if (toolName !== 'wf_add_node' && toolName !== 'wf_update_node') return;
+    if (
+      toolName !== 'wf_add_node' &&
+      toolName !== 'wf_update_node' &&
+      toolName !== 'wf_patch_node' &&
+      toolName !== 'wf_replace_node'
+    ) {
+      return;
+    }
     const data = result.data as Record<string, unknown> | null;
     if (!data || typeof data !== 'object') return;
     if ('id' in data && 'name' in data && 'type' in data && 'config' in data) {

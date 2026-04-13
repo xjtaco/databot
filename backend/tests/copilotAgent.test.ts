@@ -549,11 +549,93 @@ describe('CopilotAgent', () => {
     baseMockChat.mockResolvedValueOnce(toolResponse).mockResolvedValueOnce(textResponse);
     mockToolExecute.mockResolvedValue({
       success: true,
-      data: { id: 'node-1', patched: true },
+      data: {
+        id: 'node-1',
+        name: 'Node 1',
+        type: 'sql',
+        config: {
+          nodeType: 'sql',
+          datasourceId: 'ds-1',
+          params: {},
+          sql: 'SELECT id',
+          outputVariable: 'output_1',
+        },
+      },
     });
 
     await agent.handleUserMessage('Patch the node');
 
     expect(workflowService.reflowWorkflowLayout).not.toHaveBeenCalled();
+    expect(events).toContainEqual({ type: 'workflow_changed', changeType: 'node_updated' });
+    expect(events).toContainEqual({
+      type: 'node_config_card',
+      nodeId: 'node-1',
+      nodeName: 'Node 1',
+      nodeType: 'sql',
+      config: {
+        nodeType: 'sql',
+        datasourceId: 'ds-1',
+        params: {},
+        sql: 'SELECT id',
+        outputVariable: 'output_1',
+      },
+    });
+  });
+
+  it('emits refresh events for wf_replace_node even when reflow is skipped', async () => {
+    vi.mocked(workflowService.getWorkflow).mockResolvedValue(
+      createWorkflow([{ id: 'node-1', positionX: 137, positionY: 91 }])
+    );
+
+    const toolResponse: ChatResponse = {
+      content: '',
+      finishReason: 'tool_calls',
+      toolCalls: [
+        {
+          id: 'tc1',
+          type: 'function',
+          function: {
+            name: 'wf_replace_node',
+            arguments: '{"nodeId":"node-1","type":"python"}',
+          },
+        },
+      ],
+    };
+    const textResponse: ChatResponse = {
+      content: 'Replaced the node',
+      finishReason: 'stop',
+    };
+    baseMockChat.mockResolvedValueOnce(toolResponse).mockResolvedValueOnce(textResponse);
+    mockToolExecute.mockResolvedValue({
+      success: true,
+      data: {
+        id: 'node-1',
+        name: 'Node 1',
+        type: 'python',
+        config: {
+          nodeType: 'python',
+          script: 'print("hello")',
+          params: {},
+          outputVariable: 'output_1',
+        },
+      },
+    });
+
+    await agent.handleUserMessage('Replace the node');
+
+    expect(workflowService.reflowWorkflowLayout).not.toHaveBeenCalled();
+    expect(events).toContainEqual({ type: 'workflow_changed', changeType: 'node_updated' });
+    expect(events).toContainEqual({
+      type: 'node_config_card',
+      nodeId: 'node-1',
+      nodeName: 'Node 1',
+      nodeType: 'python',
+      config: {
+        nodeType: 'python',
+        script: 'print("hello")',
+        params: {},
+        outputVariable: 'output_1',
+      },
+    });
   });
 });

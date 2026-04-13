@@ -63,6 +63,7 @@ export const useWorkflowStore = defineStore('workflow', () => {
   const customTemplates = ref<CustomNodeTemplateInfo[]>([]);
   const activeTab = ref<'workflows' | 'customNodes'>('workflows');
   const editingTemplateId = ref<string | null>(null);
+  let latestEditorLoadRequestId = 0;
 
   // ── Computed ─────────────────────────────────────────
   const isEditing = computed(() => editorWorkflow.value !== null);
@@ -223,20 +224,35 @@ export const useWorkflowStore = defineStore('workflow', () => {
 
   // ── Editor Actions ───────────────────────────────────
   async function loadForEditing(id: string): Promise<void> {
+    const requestId = ++latestEditorLoadRequestId;
+    const preserveManualLayoutSession =
+      editorWorkflow.value?.id === id && hasManualLayoutEdits.value;
     const workflow = await workflowApi.getWorkflow(id);
+    if (requestId !== latestEditorLoadRequestId) {
+      return;
+    }
+
     editorWorkflow.value = workflow;
     isDirty.value = false;
     selectedNodeId.value = null;
-    hasManualLayoutEdits.value = false;
+    hasManualLayoutEdits.value = preserveManualLayoutSession;
     nodeExecutionStates.clear();
     lastRunDetail.value = null;
 
     // Load the most recent completed run so node previews are available
     try {
       const runList = await workflowApi.listRuns(id);
+      if (requestId !== latestEditorLoadRequestId) {
+        return;
+      }
+
       const lastCompleted = runList.find((r) => r.status === 'completed');
       if (lastCompleted) {
-        lastRunDetail.value = await workflowApi.getRunDetail(id, lastCompleted.id);
+        const runDetail = await workflowApi.getRunDetail(id, lastCompleted.id);
+        if (requestId !== latestEditorLoadRequestId) {
+          return;
+        }
+        lastRunDetail.value = runDetail;
       }
     } catch {
       // Best effort — previews just won't be available
@@ -244,6 +260,7 @@ export const useWorkflowStore = defineStore('workflow', () => {
   }
 
   function closeEditor(): void {
+    latestEditorLoadRequestId += 1;
     editorWorkflow.value = null;
     isDirty.value = false;
     selectedNodeId.value = null;

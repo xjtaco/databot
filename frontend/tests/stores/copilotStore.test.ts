@@ -182,7 +182,7 @@ describe('copilotStore', () => {
     });
   });
 
-  it('resets manual-layout edits when workflow data reloads from backend state', async () => {
+  it('preserves manual-layout edits across copilot-triggered workflow reloads', async () => {
     const workflowStore = useWorkflowStore();
     workflowStore.editorWorkflow = createEditorWorkflow();
     workflowStore.updateNodePosition('node-1', 320, 240, { source: 'user-drag' });
@@ -194,9 +194,15 @@ describe('copilotStore', () => {
     });
     vi.mocked(workflowApi.listRuns).mockResolvedValue([]);
 
-    await workflowStore.loadForEditing('wf-1');
+    const store = useCopilotStore();
+    store.connect('wf-1');
+    vi.runAllTimers();
 
-    expect(workflowStore.hasManualLayoutEdits).toBe(false);
+    store.handleServerMessage({ type: 'workflow_changed', changeType: 'node_updated' });
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(workflowStore.hasManualLayoutEdits).toBe(true);
   });
 
   describe('handleServerMessage', () => {

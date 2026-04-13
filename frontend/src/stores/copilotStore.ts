@@ -308,7 +308,7 @@ export const useCopilotStore = defineStore('copilot', () => {
         break;
       case 'workflow_changed': {
         if (workflowId.value) {
-          workflowStore.loadForEditing(workflowId.value);
+          void workflowStore.loadForEditing(workflowId.value);
         }
         break;
       }
