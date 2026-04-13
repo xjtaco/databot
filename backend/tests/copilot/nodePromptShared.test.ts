@@ -1,69 +1,66 @@
-import { describe, expect, it, afterAll } from 'vitest';
-import { join } from 'path';
-import { config } from '../../src/base/config';
+import { describe, expect, it } from 'vitest';
+import type { ConfigStatusResponse } from '../../src/globalConfig/globalConfig.types';
 import {
   buildSharedTempWorkdirGuidelines,
   getSharedNodeTypeDescriptions,
   getSharedNodeTypeGuide,
 } from '../../src/copilot/nodePromptShared';
-import type { ConfigStatusResponse } from '../../src/globalConfig/globalConfig.types';
 
 const ALL_CONFIGURED: ConfigStatusResponse = { llm: true, webSearch: true, smtp: true };
-const NONE_CONFIGURED: ConfigStatusResponse = { llm: false, webSearch: false, smtp: false };
 
 describe('nodePromptShared', () => {
-  const ORIGINAL_WORK_FOLDER = config.work_folder;
-  const TEMP_ROOT = '/tmp/databot-test-workfolder-shared';
-  const TEMP_WORKDIR = join(TEMP_ROOT, 'wf_shared123');
+  it('builds shared temp workdir guidance', () => {
+    const text = buildSharedTempWorkdirGuidelines('/tmp/work/wf_123');
 
-  config.work_folder = TEMP_ROOT;
-
-  afterAll(() => {
-    config.work_folder = ORIGINAL_WORK_FOLDER;
+    expect(text).toContain('/tmp/work/wf_123');
+    expect(text).toContain('generated files must be written under this directory');
+    expect(text).toContain('WORKSPACE');
+    expect(text).toContain('Do not write directly under `/tmp/work`');
+    expect(text).toContain('query_result.csv');
   });
 
-  it('includes temp path and WORKSPACE guidance in shared temp workdir wording', () => {
-    const prompt = buildSharedTempWorkdirGuidelines(TEMP_WORKDIR);
+  it('includes large-result file output guidance in the python node guide', () => {
+    const text = getSharedNodeTypeGuide('python');
 
-    expect(prompt).toContain(TEMP_WORKDIR);
-    expect(prompt).toContain('generated files must be written under this directory');
-    expect(prompt).toContain(`Do not write directly under \`${TEMP_ROOT}\``);
-    expect(prompt).toContain('WORKSPACE');
-    expect(prompt).toContain('node execution temp directory at runtime');
-    expect(prompt).toContain('os.path.join(WORKSPACE');
+    expect(text).toContain('Small structured outputs can still be returned directly in `result`');
+    expect(text).toContain('prefer writing files under `WORKSPACE`');
+    expect(text).toContain('prefer returning a file path');
+    expect(text).toContain('final user-facing answer');
   });
 
-  it('includes large-result file-output wording in the python guide', () => {
-    const guide = getSharedNodeTypeGuide('python');
+  it('documents params in the web search node guide', () => {
+    const text = getSharedNodeTypeGuide('web_search');
 
-    expect(guide).toContain('small structured outputs may still return directly in `result`');
-    expect(guide).toContain('large outputs should prefer files under `WORKSPACE`');
-    expect(guide).toContain('when the result can be a file, prefer returning the file path instead of large text');
-    expect(guide).toContain('markdownPath');
-    expect(guide).toContain('txtPath');
-    expect(guide).toContain('jsonPath');
-    expect(guide).toContain('csvPath');
-    expect(guide).toContain('the final user-facing answer should mention the file path instead of pasting full contents');
+    expect(text).toContain('`params`');
+    expect(text).toContain('custom text inputs');
+    expect(text).toContain('supports `{{}}` templates');
   });
 
-  it('builds config-aware node type descriptions with expected sections', () => {
-    const allPrompt = getSharedNodeTypeDescriptions(ALL_CONFIGURED);
+  it('builds config-aware multi-node descriptions', () => {
+    const text = getSharedNodeTypeDescriptions(ALL_CONFIGURED);
 
-    expect(allPrompt).toContain('## Node Type Reference');
-    expect(allPrompt).toContain('### SQL Query (sql)');
-    expect(allPrompt).toContain('### Python Script (python)');
-    expect(allPrompt).toContain('### LLM Generation (llm)');
-    expect(allPrompt).toContain('### Email Sending (email)');
-    expect(allPrompt).toContain('### Branch (branch)');
-    expect(allPrompt).toContain('### Web Search (web_search)');
+    expect(text).toContain('### SQL Query (sql)');
+    expect(text).toContain('### Python Script (python)');
+    expect(text).toContain('### LLM Generation (llm)');
+    expect(text).toContain('### Email Sending (email)');
+    expect(text).toContain('### Branch (branch)');
+    expect(text).toContain('### Web Search (web_search)');
+  });
 
-    const nonePrompt = getSharedNodeTypeDescriptions(NONE_CONFIGURED);
+  it('omits optional node types when config is unavailable', () => {
+    const text = getSharedNodeTypeDescriptions({ llm: false, webSearch: false, smtp: false });
 
-    expect(nonePrompt).toContain('### SQL Query (sql)');
-    expect(nonePrompt).toContain('### Python Script (python)');
-    expect(nonePrompt).toContain('### Branch (branch)');
-    expect(nonePrompt).not.toContain('### LLM Generation (llm)');
-    expect(nonePrompt).not.toContain('### Email Sending (email)');
-    expect(nonePrompt).not.toContain('### Web Search (web_search)');
+    expect(text).toContain('### SQL Query (sql)');
+    expect(text).toContain('### Python Script (python)');
+    expect(text).toContain('### Branch (branch)');
+    expect(text).not.toContain('### LLM Generation (llm)');
+    expect(text).not.toContain('### Email Sending (email)');
+    expect(text).not.toContain('### Web Search (web_search)');
+  });
+
+  it('returns a fallback guide for unknown node types', () => {
+    const text = getSharedNodeTypeGuide('unknown_type');
+
+    expect(text).toContain('No specific guide available for node type "unknown_type".');
   });
 });

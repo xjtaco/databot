@@ -1,4 +1,4 @@
-import { config } from '../base/config';
+import { dirname } from 'node:path';
 import type { ConfigStatusResponse } from '../globalConfig/globalConfig.types';
 
 const NODE_TYPE_SQL = `### SQL Query (sql)
@@ -22,7 +22,7 @@ const NODE_TYPE_SQL = `### SQL Query (sql)
 const NODE_TYPE_PYTHON = `### Python Script (python)
 
 - **Description**: Executes Python scripts in a secure sandbox (Docker). Can receive upstream parameters, process data, and output results.
-- **Capabilities**: Docker-isolated execution; params receive upstream data; outputs JSON via the \`result\` variable; optional file outputs for larger generated artifacts
+- **Capabilities**: Docker-isolated execution; params receive upstream data; outputs JSON via the \`result\` variable; optional CSV output
 - **Config schema**:
   - params (key-value pairs, supports \`{{}}\` templates): Parameter dictionary passed to the script
   - script (required): Python script content
@@ -35,7 +35,13 @@ const NODE_TYPE_PYTHON = `### Python Script (python)
 - **Inputs:** Values in the params dict support {{}} template variables. The script field also supports {{}} templates. Can accept outputs from multiple upstream nodes.
 - **Outputs:** result (object), csvPath (csvFile, optional), stderr (text)
 - **Downstream reference examples:** {{result.key}}, {{result.csvPath}}
-- **Tips**: Access inputs via the \`params\` dict; \`result\` must be a JSON-serializable dict; use pandas for CSV processing; the script has a predefined \`WORKSPACE\` variable pointing to the node execution temp directory at runtime — prefer \`os.path.join(WORKSPACE, 'filename')\` for file paths when the node needs to write artifacts; small structured outputs may still return directly in \`result\`, but large outputs should prefer files under \`WORKSPACE\`; when the result can be a file, prefer returning the file path instead of large text; common file path fields include \`markdownPath\`, \`txtPath\`, \`jsonPath\`, and \`csvPath\`; the final user-facing answer should mention the file path instead of pasting full contents
+- **Tips**: Access inputs via the \`params\` dict; \`result\` must be a JSON-serializable dict; use pandas for CSV processing; the script has a predefined \`WORKSPACE\` variable pointing to the node execution temp directory at runtime — always use \`os.path.join(WORKSPACE, 'filename')\` to build file paths; never hardcode absolute paths
+- **Large-result handling**:
+  - Small structured outputs can still be returned directly in \`result\`
+  - For large outputs such as reports, long text, detailed tables, exported records, or generated artifacts, prefer writing files under \`WORKSPACE\`
+  - When the result can reasonably be represented as a file, prefer returning a file path rather than embedding large text in the output
+  - Return path fields such as \`markdownPath\`, \`txtPath\`, \`jsonPath\`, or \`csvPath\` when appropriate
+  - In the final user-facing answer, mention the result file path instead of pasting the full contents
 - **Report generation**: When generating data analysis reports, the Python node handles chart generation, data embedding, and Markdown file assembly:
   - Charts: Use matplotlib; must set \`plt.rcParams['font.sans-serif'] = ['WenQuanYi Zen Hei']\` and \`plt.rcParams['axes.unicode_minus'] = False\`; save PNG with \`fig.savefig(os.path.join(WORKSPACE, 'chart.png'), dpi=150, bbox_inches='tight')\`
   - Image embedding: Read PNG as base64 and embed in Markdown as \`![description](data:image/png;base64,{base64_str})\`
@@ -74,7 +80,7 @@ const NODE_TYPE_EMAIL = `### Email Sending (email)
     "body": "string (email body when contentSource is 'inline')",
     "upstreamField": "string (when contentSource is 'upstream', references an upstream node output field, e.g. {{report_gen.result.markdownPath}})",
     "isHtml": "boolean (whether the email is HTML format, default: true)",
-    "outputVariable": "string (required, output name)"
+    "outputVariable": "string (required, output variable name)"
   }
   \`\`\`
 - **Output schema**:
@@ -116,6 +122,7 @@ const NODE_TYPE_WEB_SEARCH = `### Web Search (web_search)
 Web search node that calls the globally configured search engine to search for keywords, saving results as a Markdown file.
 
 **Config:**
+- \`params\`: key-value pairs for custom text inputs, supports \`{{}}\` templates
 - \`keywords\`: string — Search keywords, supports \`{{}}\` template variables
 - \`outputVariable\`: string — Output variable name
 
@@ -123,7 +130,7 @@ Web search node that calls the globally configured search engine to search for k
 - \`markdownPath\`: string — Path to the search results Markdown file
 - \`totalResults\`: number — Number of search results
 
-**Inputs:** The keywords field supports {{}} template variables and can reference upstream string outputs.
+**Inputs:** The params values and keywords field support {{}} template variables and can reference upstream string outputs.
 **Outputs:** markdownPath (markdownFile), totalResults (number)
 **Downstream reference examples:** {{search_result.markdownPath}}
 
@@ -131,38 +138,51 @@ Web search node that calls the globally configured search engine to search for k
 - Search engine type and parameters are configured in global settings; the node itself does not need search engine configuration
 - The output Markdown file can be passed to downstream LLM nodes via {{webSearchNode.markdownPath}}`;
 
-const NODE_TYPE_GUIDES: Record<string, string> = {
-  sql: NODE_TYPE_SQL,
-  python: NODE_TYPE_PYTHON,
-  llm: NODE_TYPE_LLM,
-  email: NODE_TYPE_EMAIL,
-  branch: NODE_TYPE_BRANCH,
-  web_search: NODE_TYPE_WEB_SEARCH,
+type SharedNodeEntry = {
+  content: string;
+  enabled: (configStatus: ConfigStatusResponse) => boolean;
+  type: string;
 };
 
+const SHARED_NODE_ENTRIES: SharedNodeEntry[] = [
+  { type: 'sql', content: NODE_TYPE_SQL, enabled: () => true },
+  { type: 'python', content: NODE_TYPE_PYTHON, enabled: () => true },
+  { type: 'llm', content: NODE_TYPE_LLM, enabled: (configStatus) => configStatus.llm },
+  { type: 'email', content: NODE_TYPE_EMAIL, enabled: (configStatus) => configStatus.smtp },
+  { type: 'branch', content: NODE_TYPE_BRANCH, enabled: () => true },
+  {
+    type: 'web_search',
+    content: NODE_TYPE_WEB_SEARCH,
+    enabled: (configStatus) => configStatus.webSearch,
+  },
+];
+
+const SHARED_NODE_GUIDES = new Map(SHARED_NODE_ENTRIES.map((entry) => [entry.type, entry.content]));
+
 export function buildSharedTempWorkdirGuidelines(tempWorkdir: string): string {
+  const workFolderRoot = dirname(tempWorkdir);
+
   return `## Temp Workdir
 
 - Current temp directory: \`${tempWorkdir}\`
 - generated files must be written under this directory
-- Do not write directly under \`${config.work_folder}\`
+- Do not write directly under \`${workFolderRoot}\`
 - Use short English snake_case filenames such as \`query_result.csv\`, \`report.md\`, or \`chart.png\`
 - Python \`WORKSPACE\` points to the node execution temp directory at runtime and should be used for file writes in Python nodes
 - Build file paths with \`os.path.join(WORKSPACE, 'filename')\` so files stay inside the runtime workspace`;
 }
 
 export function getSharedNodeTypeGuide(nodeType: string): string {
-  return NODE_TYPE_GUIDES[nodeType] ?? `### Node Guide
+  return (
+    SHARED_NODE_GUIDES.get(nodeType) ??
+    `### Node Guide
 
-No specific guide available for node type "${nodeType}".`;
+No specific guide available for node type "${nodeType}".`
+  );
 }
 
 export function getSharedNodeTypeDescriptions(configStatus: ConfigStatusResponse): string {
-  const sections = [NODE_TYPE_SQL, NODE_TYPE_PYTHON];
-  if (configStatus.llm) sections.push(NODE_TYPE_LLM);
-  if (configStatus.smtp) sections.push(NODE_TYPE_EMAIL);
-  sections.push(NODE_TYPE_BRANCH);
-  if (configStatus.webSearch) sections.push(NODE_TYPE_WEB_SEARCH);
-
-  return ['## Node Type Reference', ...sections].join('\n\n---\n\n');
+  return SHARED_NODE_ENTRIES.filter((entry) => entry.enabled(configStatus))
+    .map((entry) => entry.content)
+    .join('\n\n');
 }
