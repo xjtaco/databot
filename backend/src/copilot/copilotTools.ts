@@ -1,3 +1,4 @@
+import { rm } from 'fs/promises';
 // backend/src/copilot/copilotTools.ts
 
 import { resolve, sep } from 'path';
@@ -18,6 +19,7 @@ import * as templateRepository from '../workflow/customNodeTemplate.repository';
 import * as templateService from '../workflow/customNodeTemplate.service';
 import type { WsWorkflowEvent } from '../workflow/workflow.types';
 import { DbWorkflowAccessor } from './workflowAccessor';
+import { createExecutionWorkFolder } from './workflowAccessor';
 import type { WorkflowAccessor } from './workflowAccessor';
 import { getUpstreamNodes, getDownstreamNodes } from '../workflow/dagValidator';
 import {
@@ -876,25 +878,44 @@ class WfExecuteTool extends Tool {
   };
   private workflowId: string;
   private onProgress?: (event: WsWorkflowEvent) => void;
+  private tempWorkdir?: string;
 
-  constructor(workflowId: string, onProgress?: (event: WsWorkflowEvent) => void) {
+  constructor(
+    workflowId: string,
+    onProgress?: (event: WsWorkflowEvent) => void,
+    tempWorkdir?: string
+  ) {
     super();
     this.workflowId = workflowId;
     this.onProgress = onProgress;
+    this.tempWorkdir = tempWorkdir;
   }
 
   async execute(params: ToolParams): Promise<ToolResult> {
     try {
       const runParams = (params.params ?? undefined) as Record<string, string> | undefined;
-      const handle = await executionEngine.executeWorkflow(this.workflowId, runParams);
-      if (this.onProgress) {
-        executionEngine.registerProgressCallback(handle.runId, this.onProgress);
-      }
+      const workFolder = createExecutionWorkFolder(this.tempWorkdir);
+      let handle: Awaited<ReturnType<typeof executionEngine.executeWorkflow>> | undefined;
       try {
+        handle = await executionEngine.executeWorkflow(this.workflowId, runParams, {
+          workFolder,
+        });
+        if (this.onProgress) {
+          executionEngine.registerProgressCallback(handle.runId, this.onProgress);
+        }
         const runDetail = await handle.promise;
         return { success: true, data: sanitizeForLlm(runDetail) };
+      } catch (error) {
+        if (!handle) {
+          await rm(workFolder, { recursive: true, force: true }).catch(() => {
+            // Ignore cleanup failures for throwaway temp workdirs.
+          });
+        }
+        throw error;
       } finally {
-        executionEngine.unregisterProgressCallback(handle.runId);
+        if (this.onProgress && handle) {
+          executionEngine.unregisterProgressCallback(handle.runId);
+        }
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
@@ -1315,10 +1336,11 @@ export class WfSearchCustomNodesTool extends Tool {
 export function createCopilotToolRegistry(
   workflowId: string,
   onProgress?: (event: WsWorkflowEvent) => void,
-  configStatus?: ConfigStatusResponse
+  configStatus?: ConfigStatusResponse,
+  tempWorkdir?: string
 ): ToolRegistryClass {
   const registry = new ToolRegistryClass();
-  const accessor = new DbWorkflowAccessor(workflowId);
+  const accessor = new DbWorkflowAccessor(workflowId, tempWorkdir);
 
   // Build allowed node types based on config status
   const allTypes = ['sql', 'python', 'llm', 'email', 'branch', 'web_search'];
@@ -1341,7 +1363,7 @@ export function createCopilotToolRegistry(
   registry.register(new WfDisconnectNodesTool(workflowId));
   registry.register(new WfGetUpstreamTool(workflowId));
   registry.register(new WfGetDownstreamTool(workflowId));
-  registry.register(new WfExecuteTool(workflowId, onProgress));
+  registry.register(new WfExecuteTool(workflowId, onProgress, tempWorkdir));
   registry.register(new WfExecuteNodeTool(accessor, onProgress));
   registry.register(new WfGetRunResultTool(accessor));
   registry.register(new ScopedGlobTool());

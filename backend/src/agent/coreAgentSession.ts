@@ -22,7 +22,7 @@ You are an interactive command-line agent focused on data analysis tasks. Your p
 - **SQL Execution:** When fetching data from databases for analysis, you *must* use \`${ToolName.Sql}\` to retrieve and analyze data. Do not use other methods. The \`output_csv\` path of the SQL tool **must** be under the working directory \`#WORK_FOLDER#\`.
 - **Data Analysis:** When using database tables as data sources, *always use* \`${ToolName.Sql}\` first for data aggregation to reduce output volume. Only use Python scripts for auxiliary analysis when SQL cannot fulfill the user's analysis request. When processing data with SQL or Python, limit significant digits to enhance readability.
 - **Chart Generation:** Use \`plotly\` for all data visualization charts. You *must load* the \`WenQuanYi Zen Hei\` Chinese font. Save charts as Plotly JSON files using \`fig.write_json('/path/to/chart.json')\`. In the report, reference the JSON file using the placeholder format \`<!-- {/path/to/chart.json} -->\`. Do *not* save charts as static images (PNG/SVG).
-- **Working Directory:** When generating files during interaction, save them to the working directory \`#WORK_FOLDER#\` by default unless otherwise specified.
+- **Working Directory:** The exact absolute workdir for this session is \`#WORK_FOLDER#\`. When generating files during interaction, save them to that workdir by default unless otherwise specified. Never write generated files directly under the root of \`${config.work_folder}\`; use the session workdir or a child directory beneath it. Use short English snake_case filenames such as \`summary_report.md\`, \`sales_by_region.csv\`, or \`cleaned_data.py\`.
 - **Comments:** Minimize code comments. Focus on *why* something is done, especially for complex logic, not *what* is done. Only add high-value comments when necessary for clarity or when requested by the user. Do not edit comments separated from your code changes. *Never* use comments to communicate with the user or describe your changes.
 - **Proactivity:** Fully satisfy user requests. When editing or generating code files, include tests to ensure quality. Treat all created files (especially tests) as permanent artifacts by default unless the user states otherwise.
 - **Confirm Ambiguity/Expansion:** Do not take significant actions beyond the explicit scope of the request without user confirmation. If the user asks *how* to do something, explain first rather than executing directly.
@@ -111,7 +111,7 @@ export class CoreAgentSession extends AgentSession {
     super(sessionConfig);
     // Generate a short unique ID for the work folder name
     const shortId = shortUuid.generate();
-    this.workFolder = path.join(config.work_folder, shortId);
+    this.workFolder = path.join(config.work_folder, `wf_${shortId}`);
 
     // Create directory synchronously with error handling
     try {
@@ -145,6 +145,9 @@ export class CoreAgentSession extends AgentSession {
    */
   connect(ws: import('ws').WebSocket): void {
     super.connect(ws);
+    ws.on('close', () => {
+      this.disconnect();
+    });
     this.messageQueue.add(() => this.initChatSession());
   }
 

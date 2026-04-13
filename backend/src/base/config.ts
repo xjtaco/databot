@@ -39,7 +39,7 @@ export const config = {
   },
   workspaceCleanup: {
     intervalMs: parseInt(process.env.WORKSPACE_CLEANUP_INTERVAL_MS || '21600000', 10), // 6 hours
-    maxAgeMs: parseInt(process.env.WORKSPACE_CLEANUP_MAX_AGE_MS || '86400000', 10), // 1 day
+    maxAgeMs: parseInt(process.env.WORKSPACE_CLEANUP_MAX_AGE_MS || '2592000000', 10), // 30 days
   },
   postgres: {
     host: process.env.POSTGRES_HOST || 'localhost',

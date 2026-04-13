@@ -1,7 +1,7 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { WebSearchNodeExecutor } from '../../../src/workflow/nodeExecutors/webSearchNodeExecutor';
 import type { WebSearchNodeConfig } from '../../../src/workflow/workflow.types';
-import { mkdtempSync, existsSync, readFileSync } from 'fs';
+import { mkdtempSync, existsSync, readFileSync, rmSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
 
@@ -19,14 +19,19 @@ import { createWebSearchProviderFromConfig } from '../../../src/infrastructure/t
 const mockGetConfig = vi.mocked(getWebSearchConfig);
 const mockCreateProvider = vi.mocked(createWebSearchProviderFromConfig);
 
-function makeContext(keywords: string, workFolder: string) {
+function makeContext(
+  keywords: string,
+  workFolder: string,
+  nodeName = 'web_search_1',
+  nodeId = 'n1'
+) {
   const config: WebSearchNodeConfig = {
     nodeType: 'web_search',
     params: {},
     keywords,
     outputVariable: 'search_result',
   };
-  return { workFolder, nodeId: 'n1', nodeName: 'web_search_1', resolvedConfig: config };
+  return { workFolder, nodeId, nodeName, resolvedConfig: config };
 }
 
 describe('WebSearchNodeExecutor', () => {
@@ -36,6 +41,10 @@ describe('WebSearchNodeExecutor', () => {
   beforeEach(() => {
     workFolder = mkdtempSync(join(tmpdir(), 'wf-test-'));
     vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    rmSync(workFolder, { recursive: true, force: true });
   });
 
   it('should have type "web_search"', () => {
@@ -66,6 +75,74 @@ describe('WebSearchNodeExecutor', () => {
     expect(content).toContain('test query');
     expect(content).toContain('Result 1');
     expect(content).toContain('https://example.com/1');
+  });
+
+  it('should use a readable fallback filename for Chinese node names', async () => {
+    mockGetConfig.mockResolvedValue({
+      type: 'ali_iqs',
+      apiKey: 'test-key',
+      numResults: 3,
+      timeout: 60,
+    });
+    mockCreateProvider.mockReturnValue({
+      searchStructured: vi
+        .fn()
+        .mockResolvedValue([
+          { title: 'Result 1', url: 'https://example.com/1', snippet: 'First result' },
+        ]),
+    } as never);
+
+    const result = await executor.execute(makeContext('test query', workFolder, '搜索节点'));
+
+    expect(result.totalResults).toBe(1);
+    expect(result.markdownPath).toBe(join(workFolder, 'web_search_results_n1.md'));
+    expect(existsSync(result.markdownPath)).toBe(true);
+  });
+
+  it('should use the fallback filename for low-information sanitized node names', async () => {
+    mockGetConfig.mockResolvedValue({
+      type: 'ali_iqs',
+      apiKey: 'test-key',
+      numResults: 3,
+      timeout: 60,
+    });
+    mockCreateProvider.mockReturnValue({
+      searchStructured: vi
+        .fn()
+        .mockResolvedValue([
+          { title: 'Result 1', url: 'https://example.com/1', snippet: 'First result' },
+        ]),
+    } as never);
+
+    const result = await executor.execute(makeContext('test query', workFolder, '__1'));
+
+    expect(result.markdownPath).toBe(join(workFolder, 'web_search_results_n1.md'));
+    expect(existsSync(result.markdownPath)).toBe(true);
+  });
+
+  it('should not overwrite fallback output for two low-information nodes in one workFolder', async () => {
+    mockGetConfig.mockResolvedValue({
+      type: 'ali_iqs',
+      apiKey: 'test-key',
+      numResults: 3,
+      timeout: 60,
+    });
+    mockCreateProvider.mockReturnValue({
+      searchStructured: vi
+        .fn()
+        .mockResolvedValue([
+          { title: 'Result 1', url: 'https://example.com/1', snippet: 'First result' },
+        ]),
+    } as never);
+
+    const first = await executor.execute(makeContext('test query', workFolder, '__1', 'n1'));
+    const second = await executor.execute(makeContext('test query', workFolder, '__2', 'n2'));
+
+    expect(first.markdownPath).toBe(join(workFolder, 'web_search_results_n1.md'));
+    expect(second.markdownPath).toBe(join(workFolder, 'web_search_results_n2.md'));
+    expect(first.markdownPath).not.toBe(second.markdownPath);
+    expect(existsSync(first.markdownPath)).toBe(true);
+    expect(existsSync(second.markdownPath)).toBe(true);
   });
 
   it('should handle empty results', async () => {

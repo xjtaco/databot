@@ -164,7 +164,10 @@ export interface AsyncExecutionHandle {
  */
 export async function executeWorkflow(
   workflowId: string,
-  params?: Record<string, string>
+  params?: Record<string, string>,
+  options?: {
+    workFolder?: string;
+  }
 ): Promise<AsyncExecutionHandle> {
   if (activeExecutions.has(workflowId)) {
     throw new WorkflowExecutionError('Workflow is already executing');
@@ -183,7 +186,7 @@ export async function executeWorkflow(
   const sortedIds = topologicalSort(nodeIds, edges);
 
   // Create run record eagerly so runId is available before execution starts
-  const workFolder = join(appConfig.work_folder, `wf_${generateShortId()}`);
+  const workFolder = options?.workFolder ?? join(appConfig.work_folder, `wf_${generateShortId()}`);
   mkdirSync(workFolder, { recursive: true });
   const run = await repository.createRun(workflow.id, RunStatus.Running, workFolder);
 
@@ -199,6 +202,7 @@ export interface ExecuteNodeOptions {
   params?: Record<string, string>;
   mockInputs?: Record<string, unknown>;
   cascade?: boolean;
+  workFolder?: string;
 }
 
 /**
@@ -233,7 +237,7 @@ export async function executeNode(
   const mockInputs = options?.mockInputs;
   const cascade = options?.cascade ?? false;
 
-  const workFolder = join(appConfig.work_folder, `wf_${generateShortId()}`);
+  const workFolder = options?.workFolder ?? join(appConfig.work_folder, `wf_${generateShortId()}`);
   mkdirSync(workFolder, { recursive: true });
   const run = await repository.createRun(workflow.id, RunStatus.Running, workFolder);
 

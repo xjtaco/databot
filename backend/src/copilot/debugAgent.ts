@@ -14,6 +14,10 @@ import { buildToolStartSummary, buildToolDoneSummary } from './toolSummaries';
 
 const DEBUG_MAX_TOOL_CALLS_PER_TURN = 100;
 
+function buildTempWorkdir(accessor: InMemoryWorkflowAccessor): string {
+  return accessor.getTempWorkdir();
+}
+
 export class DebugAgent {
   private templateId: string;
   private locale: string;
@@ -112,7 +116,7 @@ export class DebugAgent {
 
     // Initialize system prompt on first message
     if (this.context.getTotalTokens() === 0) {
-      const systemPrompt = buildDebugSystemPrompt(this.node);
+      const systemPrompt = buildDebugSystemPrompt(this.node, buildTempWorkdir(this.accessor));
       this.context.addSystemMessage(systemPrompt);
     }
 

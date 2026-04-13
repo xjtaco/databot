@@ -7,9 +7,9 @@ const WORKFLOW_DIR_PREFIX = 'wf_';
 
 /**
  * Clean up old workflow workspace folders.
- * Only removes directories with the workflow prefix (wf_*) older than 1 day.
+ * Only removes directories with the workflow prefix (wf_*) older than 30 days.
  */
-async function cleanupWorkspaces(): Promise<void> {
+export async function cleanupWorkspaces(): Promise<void> {
   const workFolder = appConfig.work_folder;
 
   try {
@@ -76,7 +76,7 @@ export function startWorkspaceCleanup(): void {
 
   logger.info('Workspace cleanup scheduled', {
     intervalHours: intervalMs / (60 * 60 * 1000),
-    maxAgeDays: appConfig.workspaceCleanup.maxAgeMs / (24 * 60 * 60 * 1000),
+    retentionDays: appConfig.workspaceCleanup.maxAgeMs / (24 * 60 * 60 * 1000),
   });
 }
 

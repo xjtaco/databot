@@ -1,12 +1,13 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { WebSocketServer } from 'ws';
+import http from 'http';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+
 import { AgentSessionManager } from '../../../src/agent';
 import { CoreAgentSession } from '../../../src/agent';
 import type { SessionConfig } from '../../../src/agent';
-import http from 'http';
-import fs from 'node:fs';
-import path from 'node:path';
-import os from 'node:os';
 import { config } from '../../../src/base/config';
 
 /* eslint-disable no-undef */

@@ -6,7 +6,7 @@ import { WorkflowExecutionError } from '../../errors/types';
 import logger from '../../utils/logger';
 import { PythonNodeConfig, PythonNodeOutput } from '../workflow.types';
 import { NodeExecutionContext, NodeExecutor } from './types';
-import { sanitizeNodeName } from './utils';
+import { buildNodeIdSuffix, resolveReadableNodeBaseName } from './utils';
 
 /**
  * Wraps user script with params dict and JSON output.
@@ -47,15 +47,18 @@ export class PythonNodeExecutor implements NodeExecutor {
   async execute(context: NodeExecutionContext): Promise<PythonNodeOutput> {
     const config = context.resolvedConfig as PythonNodeConfig;
     const { workFolder, nodeId } = context;
-    const safeName = sanitizeNodeName(context.nodeName);
+    const { baseName, usedFallback } = resolveReadableNodeBaseName(context.nodeName, 'python');
+    const fallbackSuffix = usedFallback ? `_${buildNodeIdSuffix(nodeId)}` : '';
 
     // Write params to a separate JSON file for safe deserialization
-    const paramsFileName = `${safeName}_params.json`;
+    const paramsFileName = usedFallback
+      ? `python_params${fallbackSuffix}.json`
+      : `${baseName}_params.json`;
     const paramsPath = join(workFolder, paramsFileName);
     await fs.writeFile(paramsPath, JSON.stringify(config.params), 'utf-8');
 
     // Write wrapped Python script
-    const scriptFileName = `${safeName}.py`;
+    const scriptFileName = usedFallback ? `python_script${fallbackSuffix}.py` : `${baseName}.py`;
     const scriptPath = join(workFolder, scriptFileName);
     const wrappedScript = buildWrappedScript(paramsFileName, config.script);
     await fs.writeFile(scriptPath, wrappedScript, 'utf-8');
@@ -92,7 +95,10 @@ export class PythonNodeExecutor implements NodeExecutor {
     const result = extractResult(stdout);
 
     // Check for CSV output file
-    const csvPath = join(workFolder, `${safeName}_output.csv`);
+    const csvPath = join(
+      workFolder,
+      usedFallback ? `python_output${fallbackSuffix}.csv` : `${baseName}_output.csv`
+    );
     let csvExists = false;
     try {
       await fs.access(csvPath);

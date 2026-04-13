@@ -54,8 +54,8 @@ function createEditorWorkflow() {
         },
         positionX: 0,
         positionY: 0,
-        },
-      ],
+      },
+    ],
     edges: [],
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z',
@@ -104,7 +104,9 @@ describe('copilotStore', () => {
     store.sendMessage('first');
     store.sendMessage('second');
 
-    const payloadsBeforeTurnDone = ws.send.mock.calls.map(([payload]) => JSON.parse(String(payload)));
+    const payloadsBeforeTurnDone = ws.send.mock.calls.map(([payload]) =>
+      JSON.parse(String(payload))
+    );
 
     expect(payloadsBeforeTurnDone).toEqual([
       { type: 'layout_session', hasManualLayoutEdits: false },
@@ -114,7 +116,9 @@ describe('copilotStore', () => {
 
     store.handleServerMessage({ type: 'turn_done' });
 
-    const payloadsAfterTurnDone = ws.send.mock.calls.map(([payload]) => JSON.parse(String(payload)));
+    const payloadsAfterTurnDone = ws.send.mock.calls.map(([payload]) =>
+      JSON.parse(String(payload))
+    );
 
     expect(payloadsAfterTurnDone).toEqual([
       { type: 'layout_session', hasManualLayoutEdits: false },
