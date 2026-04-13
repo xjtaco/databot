@@ -179,6 +179,16 @@ export type NodeOutput =
   | BranchNodeOutput
   | WebSearchNodeOutput;
 
+// ── Layout Types ──────────────────────────────────────────
+export interface WorkflowLayoutPosition {
+  x: number;
+  y: number;
+}
+
+export interface WorkflowLayoutResult {
+  positions: Map<string, WorkflowLayoutPosition>;
+}
+
 // ── API DTOs ──────────────────────────────────────────────
 export interface WorkflowListItem {
   id: string;
