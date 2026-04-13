@@ -6,6 +6,7 @@ import { ToolParams, ToolResult, JSONSchemaObject } from '../infrastructure/tool
 import { GlobTool } from '../infrastructure/tools/globTool';
 import { GrepTool } from '../infrastructure/tools/grepTool';
 import { ReadFileTool } from '../infrastructure/tools/readFileTool';
+import { sanitizeForLlm } from '../infrastructure/tools/objectSanitizer';
 import { WebSearch } from '../infrastructure/tools/webSearch';
 import { SqlTool } from '../infrastructure/tools/sqlTool';
 import { TodosWriter } from '../infrastructure/tools/todosWriter';
@@ -631,7 +632,7 @@ export class WfGetNodeTool extends Tool {
         return { success: false, data: null, error: `Node '${nodeId}' not found` };
       }
 
-      return { success: true, data: node };
+      return { success: true, data: sanitizeForLlm(node) };
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       logger.error('wf_get_node failed', { workflowId: this.accessor.workflowId, error: msg });
