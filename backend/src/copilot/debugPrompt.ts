@@ -1,11 +1,25 @@
 // backend/src/copilot/debugPrompt.ts
 
 import { config } from '../base/config';
+import { buildSharedTempWorkdirGuidelines, getSharedNodeTypeGuide } from './nodePromptShared';
 import type { WorkflowNodeInfo } from '../workflow/workflow.types';
-import {
-  buildSharedTempWorkdirGuidelines,
-  getSharedNodeTypeGuide,
-} from './nodePromptShared';
+
+function getDebugTroubleshootingGuide(type: string): string {
+  switch (type) {
+    case 'sql':
+      return `**Common issues**: Wrong datasourceId, SQL syntax errors, missing template variables`;
+    case 'python':
+      return `**Common issues**: Missing params, import errors, non-serializable result, hardcoded absolute paths`;
+    case 'llm':
+      return `**Common issues**: Non-JSON output from LLM, overly large params input, vague prompt`;
+    case 'email':
+      return `**Common issues**: Invalid email address, SMTP not configured, missing body/upstreamField`;
+    case 'web_search':
+      return `**Common issues**: Search engine not configured, empty keywords`;
+    default:
+      return '';
+  }
+}
 
 /**
  * Build the system prompt for the debug agent, focused on a single node.
@@ -27,7 +41,8 @@ You are a single-node debug assistant. Your job is to help the user edit, test, 
 
   const nodeTypeRef = `## Node Type Reference
 
-${getSharedNodeTypeGuide(node.type)}`;
+${getSharedNodeTypeGuide(node.type)}
+${getDebugTroubleshootingGuide(node.type) ? `\n\n${getDebugTroubleshootingGuide(node.type)}` : ''}`;
 
   const toolsList = `## Available Tools
 

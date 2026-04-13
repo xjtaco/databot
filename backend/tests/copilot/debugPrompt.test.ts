@@ -46,4 +46,29 @@ describe('buildDebugSystemPrompt', () => {
     expect(prompt).not.toContain('debug workspace');
     expect(prompt).not.toContain('do not assume it is the same');
   });
+
+  it('includes shared Python large-result guidance', () => {
+    const node: WorkflowNodeInfo = {
+      id: 'node-1',
+      workflowId: 'wf-1',
+      name: 'debug_python',
+      description: null,
+      type: 'python',
+      config: {
+        nodeType: 'python',
+        params: {},
+        script: 'result = {}',
+        outputVariable: 'result',
+      },
+      positionX: 0,
+      positionY: 0,
+    };
+
+    const prompt = buildDebugSystemPrompt(node, TEMP_WORKDIR);
+
+    expect(prompt).toContain('Small structured outputs can still be returned directly in `result`');
+    expect(prompt).toContain('prefer writing files under `WORKSPACE`');
+    expect(prompt).toContain('prefer returning a file path');
+    expect(prompt).toContain('final user-facing answer');
+  });
 });
