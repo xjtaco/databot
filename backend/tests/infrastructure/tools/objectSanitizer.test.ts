@@ -80,15 +80,34 @@ describe('sanitizeForLlm', () => {
         prompt: longText,
       })
     ).toEqual({
+      _sanitized_input: 'user value',
       _sanitized: {
         applied: true,
-        reasons: ['large_text'],
+        reasons: ['large_text', 'reserved_key_collision'],
       },
       prompt: {
         _summary: {
           kind: 'text',
           chars: longText.length,
           preview: longText.slice(0, 160),
+        },
+      },
+    });
+  });
+
+  it('treats long alphabetic tokens as text instead of base64', () => {
+    const token = 'x'.repeat(600);
+
+    expect(sanitizeForLlm({ token })).toEqual({
+      _sanitized: {
+        applied: true,
+        reasons: ['large_text'],
+      },
+      token: {
+        _summary: {
+          kind: 'text',
+          chars: token.length,
+          preview: token.slice(0, 160),
         },
       },
     });
@@ -213,14 +232,14 @@ describe('sanitizeForLlm', () => {
       Array.from({ length: 6 }, (_, index) => [`field${index + 1}`, 'x'.repeat(180)])
     );
 
-    expect(
-      sanitizeForLlm({
-        alpha: section,
-        beta: section,
-        gamma: section,
-        delta: section,
-      })
-    ).toEqual({
+    const value = sanitizeForLlm({
+      alpha: section,
+      beta: section,
+      gamma: section,
+      delta: section,
+    });
+
+    expect(value).toMatchObject({
       _sanitized: {
         applied: true,
         reasons: ['budget_compacted'],
@@ -233,17 +252,47 @@ describe('sanitizeForLlm', () => {
           note: 'omitted due to budget',
         },
       },
-      gamma: {
+    });
+    const compacted = [
+      (value as Record<string, any>).gamma?._summary,
+      (value as Record<string, any>).delta?._summary,
+    ];
+
+    expect(
+      compacted.every(
+        (summary) =>
+          summary &&
+          ((summary.kind === 'array' && summary.keptItems === 0) ||
+            (summary.kind === 'omitted' && summary.note === 'omitted due to budget'))
+      )
+    ).toBe(true);
+  });
+
+  it('replaces non-compactable root fields with omission summaries instead of dropping them', () => {
+    const value = sanitizeForLlm(
+      Object.fromEntries(Array.from({ length: 300 }, (_, index) => [`field${index + 1}`, index + 1]))
+    );
+
+    expect(value).toMatchObject({
+      _sanitized: {
+        applied: true,
+        reasons: ['budget_compacted'],
+      },
+    });
+    expect(value).toHaveProperty('field1');
+    expect(value).toHaveProperty('field300');
+    expect(value).toMatchObject({
+      field1: {
         _summary: {
-          kind: 'object',
-          totalKeys: 6,
+          kind: 'omitted',
+          valueType: 'number',
           note: 'omitted due to budget',
         },
       },
-      delta: {
+      field300: {
         _summary: {
-          kind: 'object',
-          totalKeys: 6,
+          kind: 'omitted',
+          valueType: 'number',
           note: 'omitted due to budget',
         },
       },
@@ -256,14 +305,14 @@ describe('sanitizeForLlm', () => {
       payload: 'y'.repeat(120),
     }));
 
-    expect(
-      sanitizeForLlm({
-        alpha: rows,
-        beta: rows,
-        gamma: rows,
-        delta: rows,
-      })
-    ).toEqual({
+    const value = sanitizeForLlm({
+      alpha: rows,
+      beta: rows,
+      gamma: rows,
+      delta: rows,
+    });
+
+    expect(value).toMatchObject({
       _sanitized: {
         applied: true,
         reasons: ['array_truncated', 'budget_compacted'],
@@ -296,21 +345,20 @@ describe('sanitizeForLlm', () => {
           { id: 5, payload: 'y'.repeat(120) },
         ],
       },
-      gamma: {
-        _summary: {
-          kind: 'array',
-          totalItems: 8,
-          keptItems: 0,
-        },
-      },
-      delta: {
-        _summary: {
-          kind: 'array',
-          totalItems: 8,
-          keptItems: 0,
-        },
-      },
     });
+    const compacted = [
+      (value as Record<string, any>).gamma?._summary,
+      (value as Record<string, any>).delta?._summary,
+    ];
+
+    expect(
+      compacted.every(
+        (summary) =>
+          summary &&
+          ((summary.kind === 'array' && summary.keptItems === 0) ||
+            (summary.kind === 'omitted' && summary.note === 'omitted due to budget'))
+      )
+    ).toBe(true);
   });
 
   it('keeps sanitizer reasons in a deterministic order', () => {

@@ -6,6 +6,8 @@ const DEFAULT_ARRAY_LIMIT = 5;
 const DEFAULT_MAX_DEPTH = 8;
 const DEFAULT_TOTAL_BUDGET = 2000;
 const BUDGET_COMPACTION_NOTE = 'omitted due to budget';
+const ROOT_METADATA_KEY = '_sanitized';
+const ROOT_METADATA_ESCAPE_PREFIX = '_sanitized_input';
 
 type SanitizationReason =
   | 'large_text'
@@ -15,6 +17,7 @@ type SanitizationReason =
   | 'unsupported_value'
   | 'circular_reference'
   | 'max_depth'
+  | 'reserved_key_collision'
   | 'budget_compacted';
 
 const REASON_ORDER: SanitizationReason[] = [
@@ -25,6 +28,7 @@ const REASON_ORDER: SanitizationReason[] = [
   'unsupported_value',
   'circular_reference',
   'max_depth',
+  'reserved_key_collision',
   'budget_compacted',
 ];
 
@@ -46,6 +50,12 @@ export interface SanitizedObjectSummary {
   note: string;
 }
 
+export interface SanitizedOmittedSummary {
+  kind: 'omitted';
+  valueType: string;
+  note: string;
+}
+
 export interface SanitizedUnsupportedSummary {
   kind: 'unsupported';
   valueType: string;
@@ -57,6 +67,7 @@ export type SanitizedSummary =
   | SanitizedTextSummary
   | SanitizedArraySummary
   | SanitizedObjectSummary
+  | SanitizedOmittedSummary
   | SanitizedUnsupportedSummary;
 
 export interface SanitizedSummaryEnvelope {
@@ -159,6 +170,16 @@ function summarizeObject(totalKeys: number, note: string): SanitizedSummaryEnvel
   };
 }
 
+function summarizeOmitted(value: unknown, note: string): SanitizedSummaryEnvelope {
+  return {
+    _summary: {
+      kind: 'omitted',
+      valueType: describeValueType(value),
+      note,
+    },
+  };
+}
+
 function collectReasons(reasons: Set<SanitizationReason>): SanitizationReason[] {
   return REASON_ORDER.filter((reason) => reasons.has(reason));
 }
@@ -172,8 +193,12 @@ function isSummaryEnvelope(value: unknown): value is SanitizedSummaryEnvelope {
 }
 
 function compactSummaryEnvelopeForBudget(value: SanitizedSummaryEnvelope): SanitizedSummaryEnvelope | undefined {
-  if (value._summary.kind !== 'array' || !value.items || value._summary.keptItems === 0) {
+  if (value._summary.kind === 'omitted') {
     return undefined;
+  }
+
+  if (value._summary.kind !== 'array' || !value.items || value._summary.keptItems === 0) {
+    return summarizeOmitted(value, BUDGET_COMPACTION_NOTE);
   }
 
   return {
@@ -203,10 +228,41 @@ function summarizeValueForBudget(
   }
 
   if (!isPlainObjectRoot(value)) {
-    return undefined;
+    return summarizeOmitted(value, BUDGET_COMPACTION_NOTE);
   }
 
   return summarizeObject(Object.keys(value).length, BUDGET_COMPACTION_NOTE);
+}
+
+function findEscapedRootMetadataKey(
+  value: Record<string, SanitizedValue | SanitizedSummaryEnvelope>
+): string {
+  let candidate = ROOT_METADATA_ESCAPE_PREFIX;
+  let suffix = 2;
+
+  while (candidate in value) {
+    candidate = `${ROOT_METADATA_ESCAPE_PREFIX}_${suffix}`;
+    suffix += 1;
+  }
+
+  return candidate;
+}
+
+function reserveRootMetadataKey(
+  value: Record<string, SanitizedValue | SanitizedSummaryEnvelope>,
+  reasons: Set<SanitizationReason>
+): Record<string, SanitizedValue | SanitizedSummaryEnvelope> {
+  if (!(ROOT_METADATA_KEY in value)) {
+    return value;
+  }
+
+  const escapedKey = findEscapedRootMetadataKey(value);
+  const escapedValue = value[ROOT_METADATA_KEY];
+  const nextValue = { ...value };
+  delete nextValue[ROOT_METADATA_KEY];
+  nextValue[escapedKey] = escapedValue;
+  reasons.add('reserved_key_collision');
+  return nextValue;
 }
 
 function compactRootObjectToBudget(
@@ -251,7 +307,7 @@ function compactRootObjectToBudget(
     }
 
     if (!compacted) {
-      entries.pop();
+      break;
     }
   }
 
@@ -364,18 +420,19 @@ export function sanitizeForLlm(value: unknown): SanitizedValue | SanitizedSummar
     sanitized as Record<string, SanitizedValue | SanitizedSummaryEnvelope>,
     ctx.reasons
   );
+  const reservedRoot = reserveRootMetadataKey(compactedRoot.output, ctx.reasons);
 
   if (compactedRoot.changed) {
     ctx.reasons.add('budget_compacted');
   }
 
   if (ctx.reasons.size === 0) {
-    return compactedRoot.output;
+    return reservedRoot;
   }
 
   return {
-    ...compactedRoot.output,
-    _sanitized: {
+    ...reservedRoot,
+    [ROOT_METADATA_KEY]: {
       applied: true,
       reasons: collectReasons(ctx.reasons),
     },

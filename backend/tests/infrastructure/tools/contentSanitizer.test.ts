@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { sanitizeBase64 } from '../../../src/infrastructure/tools/contentSanitizer';
+import {
+  sanitizeBase64,
+  summarizeBase64String,
+} from '../../../src/infrastructure/tools/contentSanitizer';
 
 /** Helper: generate a string of repeating base64-safe characters */
 function b64(length: number): string {
@@ -93,6 +96,12 @@ describe('sanitizeBase64', () => {
 
       expect(result).toContain('[base64 content, 300 chars]');
       expect(result).not.toContain(payload);
+    });
+
+    it('should NOT classify long single-class tokens as standalone base64', () => {
+      const payload = 'x'.repeat(600);
+
+      expect(summarizeBase64String(payload)).toBeNull();
     });
 
     it('should NOT match when preceded and followed by underscores (word boundary)', () => {

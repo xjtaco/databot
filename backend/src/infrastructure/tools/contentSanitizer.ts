@@ -20,6 +20,23 @@ export interface Base64Summary {
   chars: number;
 }
 
+function countBase64CharClasses(value: string): number {
+  let classes = 0;
+  if (/[A-Z]/.test(value)) classes += 1;
+  if (/[a-z]/.test(value)) classes += 1;
+  if (/[0-9]/.test(value)) classes += 1;
+  if (/[+/=]/.test(value)) classes += 1;
+  return classes;
+}
+
+function isLikelyStandaloneBase64(value: string): boolean {
+  if (value.length < BASE64_MIN_LENGTH || value.length % 4 !== 0) {
+    return false;
+  }
+
+  return countBase64CharClasses(value) >= 3;
+}
+
 /**
  * Detect a full-string base64 payload, either as a data URI or a standalone blob.
  */
@@ -36,7 +53,7 @@ export function summarizeBase64String(value: string): Base64Summary | null {
   }
 
   const standaloneMatch = value.match(new RegExp(`^([A-Za-z0-9+/]{${BASE64_MIN_LENGTH},}={0,2})$`));
-  if (standaloneMatch) {
+  if (standaloneMatch && isLikelyStandaloneBase64(standaloneMatch[1])) {
     return {
       kind: 'base64',
       chars: standaloneMatch[1].length,
