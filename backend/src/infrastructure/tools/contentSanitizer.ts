@@ -20,21 +20,14 @@ export interface Base64Summary {
   chars: number;
 }
 
-function countBase64CharClasses(value: string): number {
-  let classes = 0;
-  if (/[A-Z]/.test(value)) classes += 1;
-  if (/[a-z]/.test(value)) classes += 1;
-  if (/[0-9]/.test(value)) classes += 1;
-  if (/[+/=]/.test(value)) classes += 1;
-  return classes;
-}
-
 function isLikelyStandaloneBase64(value: string): boolean {
   if (value.length < BASE64_MIN_LENGTH || value.length % 4 !== 0) {
     return false;
   }
 
-  return countBase64CharClasses(value) >= 3;
+  // Be conservative for standalone blobs: require non-alphanumeric base64 markers
+  // so long tokens/slugs are not misclassified as base64.
+  return /[+/=]/.test(value);
 }
 
 /**
@@ -98,6 +91,9 @@ export function sanitizeBase64(line: string): string {
 
   // 2. Standalone blobs (only on parts not already replaced)
   result = result.replace(STANDALONE_BASE64_RE, (_match, payload: string) => {
+    if (!isLikelyStandaloneBase64(payload)) {
+      return payload;
+    }
     return `[base64 content, ${payload.length} chars]`;
   });
 

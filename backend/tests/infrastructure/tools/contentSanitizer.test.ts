@@ -104,6 +104,12 @@ describe('sanitizeBase64', () => {
       expect(summarizeBase64String(payload)).toBeNull();
     });
 
+    it('should NOT classify long mixed alphanumeric tokens as standalone base64', () => {
+      const payload = 'Abc123'.repeat(100);
+
+      expect(summarizeBase64String(payload)).toBeNull();
+    });
+
     it('should NOT match when preceded and followed by underscores (word boundary)', () => {
       // Underscore is \w but NOT in [A-Za-z0-9+/], so it breaks
       // the character-class run and the lookbehind/lookahead prevent the match
@@ -168,6 +174,13 @@ describe('sanitizeBase64', () => {
 
       expect(result).toContain('[base64 image/png, 300 chars]');
       expect(result).toContain('[base64 content, 500 chars]');
+    });
+
+    it('should leave long token-like strings untouched in line sanitization', () => {
+      const payload = 'Abc123'.repeat(100);
+      const line = `const token = "${payload}";`;
+
+      expect(sanitizeBase64(line)).toBe(line);
     });
   });
 });
