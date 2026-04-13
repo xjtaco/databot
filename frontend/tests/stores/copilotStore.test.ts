@@ -4,6 +4,7 @@ import { setActivePinia, createPinia } from 'pinia';
 import { useCopilotStore } from '@/stores/copilotStore';
 import { useWorkflowStore } from '@/stores/workflowStore';
 import * as workflowApi from '@/api/workflow';
+import type { WorkflowDetail } from '@/types/workflow';
 
 vi.mock('@/api/workflow');
 
@@ -33,7 +34,7 @@ class InspectableWebSocket {
 }
 
 function createEditorWorkflow() {
-  return {
+  const workflow: WorkflowDetail = {
     id: 'wf-1',
     name: 'Test Workflow',
     description: null,
@@ -53,12 +54,14 @@ function createEditorWorkflow() {
         },
         positionX: 0,
         positionY: 0,
-      },
-    ],
+        },
+      ],
     edges: [],
-    createdAt: new Date('2026-01-01T00:00:00.000Z'),
-    updatedAt: new Date('2026-01-01T00:00:00.000Z'),
-  } as const;
+    createdAt: '2026-01-01T00:00:00.000Z',
+    updatedAt: '2026-01-01T00:00:00.000Z',
+  };
+
+  return workflow;
 }
 
 describe('copilotStore', () => {
@@ -187,7 +190,7 @@ describe('copilotStore', () => {
 
     vi.mocked(workflowApi.getWorkflow).mockResolvedValue({
       ...createEditorWorkflow(),
-      updatedAt: new Date('2026-01-02T00:00:00.000Z'),
+      updatedAt: '2026-01-02T00:00:00.000Z',
     });
     vi.mocked(workflowApi.listRuns).mockResolvedValue([]);
 
