@@ -68,6 +68,7 @@ Thumbs.db
 
 .playwright-mcp/
 .superpowers/
+.worktrees/
 bridge/target/
 bridge/dependency-reduced-pom.xml
 
