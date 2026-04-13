@@ -4,6 +4,8 @@ const DEFAULT_TEXT_LIMIT = 500;
 const DEFAULT_TEXT_PREVIEW = 160;
 const DEFAULT_ARRAY_LIMIT = 5;
 const DEFAULT_MAX_DEPTH = 8;
+const DEFAULT_TOTAL_BUDGET = 2000;
+const BUDGET_COMPACTION_NOTE = 'omitted due to budget';
 
 type SanitizationReason =
   | 'large_text'
@@ -12,7 +14,19 @@ type SanitizationReason =
   | 'non_plain_object'
   | 'unsupported_value'
   | 'circular_reference'
-  | 'max_depth';
+  | 'max_depth'
+  | 'budget_compacted';
+
+const REASON_ORDER: SanitizationReason[] = [
+  'large_text',
+  'base64',
+  'array_truncated',
+  'non_plain_object',
+  'unsupported_value',
+  'circular_reference',
+  'max_depth',
+  'budget_compacted',
+];
 
 export interface SanitizedTextSummary {
   kind: 'text';
@@ -26,13 +40,24 @@ export interface SanitizedArraySummary {
   keptItems: number;
 }
 
+export interface SanitizedObjectSummary {
+  kind: 'object';
+  totalKeys: number;
+  note: string;
+}
+
 export interface SanitizedUnsupportedSummary {
   kind: 'unsupported';
   valueType: string;
   reason: Exclude<SanitizationReason, 'large_text' | 'base64' | 'array_truncated'>;
 }
 
-export type SanitizedSummary = Base64Summary | SanitizedTextSummary | SanitizedArraySummary | SanitizedUnsupportedSummary;
+export type SanitizedSummary =
+  | Base64Summary
+  | SanitizedTextSummary
+  | SanitizedArraySummary
+  | SanitizedObjectSummary
+  | SanitizedUnsupportedSummary;
 
 export interface SanitizedSummaryEnvelope {
   _summary: SanitizedSummary;
@@ -121,6 +146,100 @@ function summarizeArray(
       keptItems: DEFAULT_ARRAY_LIMIT,
     },
     items: items.slice(0, DEFAULT_ARRAY_LIMIT).map((item) => visit(item, ctx, depth + 1)),
+  };
+}
+
+function summarizeObject(totalKeys: number, note: string): SanitizedSummaryEnvelope {
+  return {
+    _summary: {
+      kind: 'object',
+      totalKeys,
+      note,
+    },
+  };
+}
+
+function collectReasons(reasons: Set<SanitizationReason>): SanitizationReason[] {
+  return REASON_ORDER.filter((reason) => reasons.has(reason));
+}
+
+function estimateSerializedSize(value: unknown): number {
+  return JSON.stringify(value).length;
+}
+
+function isSummaryEnvelope(value: unknown): value is SanitizedSummaryEnvelope {
+  return isPlainObjectRoot(value) && Object.prototype.hasOwnProperty.call(value, '_summary');
+}
+
+function summarizeValueForBudget(
+  value: SanitizedValue | SanitizedSummaryEnvelope
+): SanitizedValue | SanitizedSummaryEnvelope | undefined {
+  if (Array.isArray(value)) {
+    return {
+      _summary: {
+        kind: 'array',
+        totalItems: value.length,
+        keptItems: 0,
+      },
+    };
+  }
+
+  if (!isPlainObjectRoot(value) || isSummaryEnvelope(value)) {
+    return undefined;
+  }
+
+  return summarizeObject(Object.keys(value).length, BUDGET_COMPACTION_NOTE);
+}
+
+function compactRootObjectToBudget(
+  value: Record<string, SanitizedValue | SanitizedSummaryEnvelope>,
+  reasons: Set<SanitizationReason>
+): { output: Record<string, SanitizedValue | SanitizedSummaryEnvelope>; changed: boolean } {
+  const entries = Object.entries(value);
+  let changed = false;
+
+  const buildCandidate = (candidateEntries: Array<[string, SanitizedValue | SanitizedSummaryEnvelope]>) => {
+    const candidate = Object.fromEntries(candidateEntries);
+    if (!changed && reasons.size === 0) {
+      return candidate;
+    }
+
+    const candidateReasons = new Set(reasons);
+    if (changed) {
+      candidateReasons.add('budget_compacted');
+    }
+
+    return {
+      ...candidate,
+      _sanitized: {
+        applied: true as const,
+        reasons: collectReasons(candidateReasons),
+      },
+    };
+  };
+
+  while (estimateSerializedSize(buildCandidate(entries)) > DEFAULT_TOTAL_BUDGET && entries.length > 0) {
+    changed = true;
+
+    let compacted = false;
+    for (let index = entries.length - 1; index >= 0; index -= 1) {
+      const [key, nested] = entries[index];
+      const summary = summarizeValueForBudget(nested);
+      if (summary) {
+        entries[index] = [key, summary];
+        compacted = true;
+        break;
+      }
+    }
+
+    if (!compacted) {
+      entries.pop();
+    }
+  }
+
+  return {
+    output: Object.fromEntries(entries),
+    changed,
   };
 }
 
@@ -215,15 +334,28 @@ export function sanitizeForLlm(value: unknown): SanitizedValue | SanitizedSummar
 
   const sanitized = visit(value, ctx, 0);
 
-  if (!isPlainObjectRoot(value) || ctx.reasons.size === 0) {
+  if (!isPlainObjectRoot(value)) {
     return sanitized;
   }
 
+  const compactedRoot = compactRootObjectToBudget(
+    sanitized as Record<string, SanitizedValue | SanitizedSummaryEnvelope>,
+    ctx.reasons
+  );
+
+  if (compactedRoot.changed) {
+    ctx.reasons.add('budget_compacted');
+  }
+
+  if (ctx.reasons.size === 0) {
+    return compactedRoot.output;
+  }
+
   return {
-    ...(sanitized as Record<string, SanitizedValue | SanitizedSummaryEnvelope>),
+    ...compactedRoot.output,
     _sanitized: {
       applied: true,
-      reasons: Array.from(ctx.reasons),
+      reasons: collectReasons(ctx.reasons),
     },
   };
 }

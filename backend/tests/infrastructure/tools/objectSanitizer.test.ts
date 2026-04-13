@@ -167,4 +167,96 @@ describe('sanitizeForLlm', () => {
       },
     });
   });
+
+  it('summarizes deep objects after the max depth', () => {
+    expect(
+      sanitizeForLlm({
+        a: {
+          b: {
+            c: {
+              d: {
+                e: {
+                  f: {
+                    g: {
+                      h: {
+                        label: 'too deep',
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      })
+    ).toEqual({
+      _sanitized: {
+        applied: true,
+        reasons: ['max_depth'],
+      },
+      a: {
+        b: {
+          c: {
+            d: {
+              e: {
+                f: {
+                  g: {
+                    h: {
+                      _summary: {
+                        kind: 'unsupported',
+                        valueType: 'Object',
+                        reason: 'max_depth',
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+  });
+
+  it('compacts nested objects when the sanitized root would exceed the total budget', () => {
+    const section = Object.fromEntries(
+      Array.from({ length: 6 }, (_, index) => [`field${index + 1}`, 'x'.repeat(180)])
+    );
+
+    expect(
+      sanitizeForLlm({
+        alpha: section,
+        beta: section,
+        gamma: section,
+        delta: section,
+      })
+    ).toEqual({
+      _sanitized: {
+        applied: true,
+        reasons: ['budget_compacted'],
+      },
+      alpha: section,
+      beta: {
+        _summary: {
+          kind: 'object',
+          totalKeys: 6,
+          note: 'omitted due to budget',
+        },
+      },
+      gamma: {
+        _summary: {
+          kind: 'object',
+          totalKeys: 6,
+          note: 'omitted due to budget',
+        },
+      },
+      delta: {
+        _summary: {
+          kind: 'object',
+          totalKeys: 6,
+          note: 'omitted due to budget',
+        },
+      },
+    });
+  });
 });
