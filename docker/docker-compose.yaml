@@ -96,7 +96,7 @@ services:
       SANDBOX_TIMEOUT: "120000"
       BRIDGE_URL: http://bridge:8080
       JWT_SECRET: ${JWT_SECRET:-change-this-jwt-secret-in-production}
-      ADMIN_INITIAL_PASSWORD: ${ADMIN_INITIAL_PASSWORD:-Admin@123}
+      ADMIN_INITIAL_PASSWORD: ${ADMIN_INITIAL_PASSWORD:-Admin@1234}
       ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@localhost}
       INTERNAL_PORT: 3001
     volumes:
