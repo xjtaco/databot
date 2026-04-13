@@ -25,6 +25,7 @@ This design covers:
 - Prompt-level path and filename rules for `CopilotAgent`, `DebugAgent`, and `CoreAgentSession`
 - Runtime temp directory naming alignment
 - Runtime filename fallback logic in workflow node executors
+- Periodic backend cleanup of expired `wf_*` temp directories
 - Tests for prompt content, temp directory naming, and filename fallback behavior
 
 This design does not cover:
@@ -47,6 +48,7 @@ This design does not cover:
 4. Python node guidance must continue to instruct the model to use `WORKSPACE`, and the prompt must clarify that `WORKSPACE` maps to the current execution temp directory.
 5. SQL, Web Search, and Python node executors must avoid degraded filenames when node names are non-English or sanitize poorly.
 6. Executor-generated files must remain inside the current execution `workFolder`.
+7. The backend must periodically delete `wf_*` temporary directories older than 30 days, including all nested files and subdirectories.
 
 ### Non-Functional Requirements
 
@@ -220,6 +222,24 @@ Runtime behavior should continue to ensure executor-generated files are always w
 
 No new user-facing error type is required for this change.
 
+### 6. Periodic Cleanup Retention
+
+The backend already contains a periodic workspace cleanup job for `wf_*` directories. This change should standardize retention rather than introduce a second cleanup mechanism.
+
+Required behavior:
+
+- keep the existing scheduled cleanup model
+- continue targeting only directories whose names start with `wf_`
+- delete directories older than 30 days
+- delete the full directory tree recursively
+
+Configuration changes:
+
+- change the default `WORKSPACE_CLEANUP_MAX_AGE_MS` from 1 day to 30 days
+- update comments and log wording so retention policy matches behavior
+
+This keeps cleanup operationally simple and avoids duplicate schedulers.
+
 ## Implementation Outline
 
 1. Update `copilotPrompt.ts` to accept and render the current temp workdir and filename rules.
@@ -228,7 +248,8 @@ No new user-facing error type is required for this change.
 4. Update `debugAgent.ts` and/or `InMemoryWorkflowAccessor` so the prompt and runtime use the same `wf_<id>` temp directory convention.
 5. Update `coreAgentSession.ts` to create `wf_<id>` directories and strengthen prompt wording.
 6. Update SQL, Web Search, and Python executors with English fallback filename generation.
-7. Add or update tests.
+7. Update workspace cleanup retention defaults and comments from 1 day to 30 days.
+8. Add or update tests.
 
 ## Files Expected To Change
 
@@ -241,6 +262,8 @@ No new user-facing error type is required for this change.
 - `backend/src/workflow/nodeExecutors/sqlNodeExecutor.ts`
 - `backend/src/workflow/nodeExecutors/webSearchNodeExecutor.ts`
 - `backend/src/workflow/nodeExecutors/pythonNodeExecutor.ts`
+- `backend/src/base/config.ts`
+- `backend/src/workflow/workspaceCleanup.ts`
 - prompt and agent tests under `backend/tests/...`
 
 ## Testing Strategy
@@ -277,12 +300,22 @@ Verify for Chinese or non-ASCII node names:
 - Python generated artifact filenames are not degraded to only underscores
 - all generated files remain within `context.workFolder`
 
+### Workspace Cleanup Tests
+
+Verify:
+
+- only directories with the `wf_` prefix are considered
+- directories newer than 30 days are retained
+- directories older than 30 days are deleted recursively
+- non-matching sibling directories are not removed
+
 ## Acceptance Criteria
 
 - Copilot-generated workflow artifacts are guided to the current `wf_<id>` temp directory rather than `/app/databot/workfolder` root.
 - DebugAgent uses the same `wf_<id>` temp directory convention and prompt rules.
 - CoreAgentSession uses the same `wf_<id>` temp directory convention and prompt rules.
 - Executor-generated filenames no longer degrade into forms like `_______output.csv` or `_______search.md`.
+- The backend periodically removes `wf_*` directories older than 30 days and leaves newer ones intact.
 - Existing workflow execution flow continues to work without new path regressions.
 
 ## Risks
@@ -307,4 +340,3 @@ Mitigation:
 
 - Treat prompt changes and temp directory naming changes as one unit of work
 - Land executor fallback in the same implementation batch
-
