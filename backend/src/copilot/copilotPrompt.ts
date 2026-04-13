@@ -143,9 +143,12 @@ Respond in the same language the user uses. Briefly state your intent before ope
  * @returns The system prompt string
  */
 export function buildSystemPrompt(configStatus: ConfigStatusResponse, tempWorkdir: string): string {
+  const nodeTypeDescriptions =
+    '## Node Type Reference\n\n' + getSharedNodeTypeDescriptions(configStatus);
+
   return [
     ROLE,
-    getSharedNodeTypeDescriptions(configStatus),
+    nodeTypeDescriptions,
     buildSharedTempWorkdirGuidelines(tempWorkdir),
     WORKFLOW_BUILD_GUIDELINES,
     buildToolUsageGuidelines(configStatus),

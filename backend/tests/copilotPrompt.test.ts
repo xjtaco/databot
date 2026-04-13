@@ -121,9 +121,24 @@ describe('buildSystemPrompt', () => {
     expect(prompt).not.toContain('do not assume it is the same');
   });
 
+  it('includes large-result file guidance for Python nodes', () => {
+    const prompt = buildSystemPrompt(ALL_CONFIGURED, TEMP_WORKDIR);
+    expect(prompt).toContain('Small structured outputs can still be returned directly in `result`');
+    expect(prompt).toContain('prefer writing files under `WORKSPACE`');
+    expect(prompt).toContain('prefer returning a file path');
+    expect(prompt).toContain('final user-facing answer');
+  });
+
   it('contains branch node description', () => {
     const prompt = buildSystemPrompt(ALL_CONFIGURED, TEMP_WORKDIR);
     expect(prompt).toContain('branch');
+  });
+
+  it('does not inject separators inside shared node guide bodies', () => {
+    const prompt = buildSystemPrompt(ALL_CONFIGURED, TEMP_WORKDIR);
+    expect(prompt).toContain('## Node Type Reference\n\n### SQL Query (sql)');
+    expect(prompt).not.toContain('### SQL Query (sql)\n\n---\n\n- **Description**');
+    expect(prompt).not.toContain('### Branch (branch)\n\n---\n\nConditional branch node');
   });
 
   it('mentions sourceHandle for branch connections', () => {
