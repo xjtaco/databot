@@ -7,7 +7,7 @@ import logger from '../../utils/logger';
 
 let prismaClient: PrismaClientType | null = null;
 let pool: Pool | null = null;
-const loadModule = createRequire(import.meta.url);
+const loadModule = createRequire(__filename);
 
 function loadPrismaClientConstructor(): typeof import('@prisma/client').PrismaClient {
   try {

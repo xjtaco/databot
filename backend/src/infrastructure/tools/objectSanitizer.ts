@@ -72,7 +72,7 @@ export type SanitizedSummary =
 
 export interface SanitizedSummaryEnvelope {
   _summary: SanitizedSummary;
-  items?: SanitizedValue[];
+  items?: SanitizedContent[];
 }
 
 export interface SanitizedRootMetadata {
@@ -80,20 +80,23 @@ export interface SanitizedRootMetadata {
   reasons: SanitizationReason[];
 }
 
-export type SanitizedValue =
-  | string
-  | number
-  | boolean
-  | null
-  | SanitizedValue[]
-  | {
-      [key: string]: SanitizedValue | SanitizedSummaryEnvelope | SanitizedRootResult;
-    };
+type SanitizedPrimitive = string | number | boolean | null;
 
-export interface SanitizedRootResult {
-  _sanitized: SanitizedRootMetadata;
-  [key: string]: SanitizedValue | SanitizedSummaryEnvelope | SanitizedRootResult;
+export interface SanitizedObject {
+  [key: string]: SanitizedContent;
 }
+
+export type SanitizedContent =
+  | SanitizedPrimitive
+  | SanitizedContent[]
+  | SanitizedObject
+  | SanitizedSummaryEnvelope;
+
+export type SanitizedValue = SanitizedPrimitive | SanitizedContent[] | SanitizedObject;
+
+export type SanitizedRootResult = SanitizedObject & {
+  _sanitized: SanitizedRootMetadata;
+};
 
 type PlainObject = Record<string, unknown>;
 
@@ -215,9 +218,7 @@ function compactSummaryEnvelopeForBudget(
   };
 }
 
-function summarizeValueForBudget(
-  value: SanitizedValue | SanitizedSummaryEnvelope
-): SanitizedValue | SanitizedSummaryEnvelope | undefined {
+function summarizeValueForBudget(value: SanitizedContent): SanitizedContent | undefined {
   if (Array.isArray(value)) {
     return {
       _summary: {
@@ -239,9 +240,7 @@ function summarizeValueForBudget(
   return summarizeObject(Object.keys(value).length, BUDGET_COMPACTION_NOTE);
 }
 
-function findEscapedRootMetadataKey(
-  value: Record<string, SanitizedValue | SanitizedSummaryEnvelope>
-): string {
+function findEscapedRootMetadataKey(value: Record<string, SanitizedContent>): string {
   let candidate = ROOT_METADATA_ESCAPE_PREFIX;
   let suffix = 2;
 
@@ -254,9 +253,9 @@ function findEscapedRootMetadataKey(
 }
 
 function reserveRootMetadataKey(
-  value: Record<string, SanitizedValue | SanitizedSummaryEnvelope>,
+  value: Record<string, SanitizedContent>,
   reasons: Set<SanitizationReason>
-): Record<string, SanitizedValue | SanitizedSummaryEnvelope> {
+): Record<string, SanitizedContent> {
   if (!(ROOT_METADATA_KEY in value)) {
     return value;
   }
@@ -271,15 +270,13 @@ function reserveRootMetadataKey(
 }
 
 function compactRootObjectToBudget(
-  value: Record<string, SanitizedValue | SanitizedSummaryEnvelope>,
+  value: Record<string, SanitizedContent>,
   reasons: Set<SanitizationReason>
-): { output: Record<string, SanitizedValue | SanitizedSummaryEnvelope>; changed: boolean } {
+): { output: Record<string, SanitizedContent>; changed: boolean } {
   const entries = Object.entries(value);
   let changed = false;
 
-  const buildCandidate = (
-    candidateEntries: Array<[string, SanitizedValue | SanitizedSummaryEnvelope]>
-  ) => {
+  const buildCandidate = (candidateEntries: Array<[string, SanitizedContent]>) => {
     const candidate = Object.fromEntries(candidateEntries);
     if (!changed && reasons.size === 0) {
       return candidate;
@@ -327,11 +324,7 @@ function compactRootObjectToBudget(
   };
 }
 
-function visit(
-  value: unknown,
-  ctx: TraversalContext,
-  depth: number
-): SanitizedValue | SanitizedSummaryEnvelope {
+function visit(value: unknown, ctx: TraversalContext, depth: number): SanitizedContent {
   if (value === null) {
     return null;
   }
@@ -404,7 +397,7 @@ function visit(
 
   ctx.visiting.add(value);
   try {
-    const output: Record<string, SanitizedValue | SanitizedSummaryEnvelope> = {};
+    const output: Record<string, SanitizedContent> = {};
     for (const [key, nested] of Object.entries(value)) {
       output[key] = visit(nested, ctx, depth + 1);
     }
@@ -420,9 +413,7 @@ function isPlainObjectRoot(value: unknown): value is PlainObject {
   );
 }
 
-export function sanitizeForLlm(
-  value: unknown
-): SanitizedValue | SanitizedSummaryEnvelope | SanitizedRootResult {
+export function sanitizeForLlm(value: unknown): SanitizedContent | SanitizedRootResult {
   const ctx: TraversalContext = {
     reasons: new Set<SanitizationReason>(),
     visiting: new WeakSet<object>(),
@@ -435,7 +426,7 @@ export function sanitizeForLlm(
   }
 
   const compactedRoot = compactRootObjectToBudget(
-    sanitized as Record<string, SanitizedValue | SanitizedSummaryEnvelope>,
+    sanitized as Record<string, SanitizedContent>,
     ctx.reasons
   );
   const reservedRoot = reserveRootMetadataKey(compactedRoot.output, ctx.reasons);

@@ -26,7 +26,11 @@ import {
   WfSearchCustomNodesTool,
 } from '../../src/copilot/copilotTools';
 import { InMemoryWorkflowAccessor } from '../../src/copilot/workflowAccessor';
-import type { CustomNodeTemplateInfo, WorkflowDetail } from '../../src/workflow/workflow.types';
+import type {
+  CustomNodeTemplateInfo,
+  WorkflowDetail,
+  WorkflowRunDetail,
+} from '../../src/workflow/workflow.types';
 
 function makeBase64(length: number): string {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
@@ -82,6 +86,19 @@ function makeTemplate(
     createdAt: new Date(),
     updatedAt: new Date(),
     creatorName: null,
+  };
+}
+
+function makeRunDetail(overrides: Partial<WorkflowRunDetail> = {}): WorkflowRunDetail {
+  return {
+    id: 'run-1',
+    workflowId: 'wf-1',
+    status: 'completed',
+    startedAt: new Date('2026-04-13T00:00:00.000Z'),
+    completedAt: new Date('2026-04-13T00:01:00.000Z'),
+    errorMessage: null,
+    nodeRuns: [],
+    ...overrides,
   };
 }
 
@@ -310,15 +327,20 @@ describe('WfExecuteTool', () => {
     const base64Payload = makeBase64(600);
     const startedAt = new Date('2026-04-13T01:02:03.456Z');
     const completedAt = new Date('2026-04-13T01:05:06.789Z');
-
-    vi.mocked(executionEngine.executeWorkflow).mockResolvedValue({
-      runId: 'run-789',
-      promise: Promise.resolve({
-        output: longOutput,
-        image: `data:image/png;base64,${base64Payload}`,
+    const runDetail = {
+      ...makeRunDetail({
+        id: 'run-789',
+        workflowId: 'wf-execute',
         startedAt,
         completedAt,
       }),
+      output: longOutput,
+      image: `data:image/png;base64,${base64Payload}`,
+    } as WorkflowRunDetail & { output: string; image: string };
+
+    vi.mocked(executionEngine.executeWorkflow).mockResolvedValue({
+      runId: 'run-789',
+      promise: Promise.resolve(runDetail),
     } as Awaited<ReturnType<typeof executionEngine.executeWorkflow>>);
 
     const registry = createCopilotToolRegistry(
