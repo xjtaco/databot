@@ -6,6 +6,7 @@ import {
 import logger from '../utils/logger';
 import * as repository from './workflow.repository';
 import { validateDag } from './dagValidator';
+import { autoLayout, validateAutoLayout } from './layout/autoLayout';
 import {
   WorkflowListItem,
   WorkflowDetail,
@@ -97,6 +98,39 @@ export async function saveWorkflow(id: string, input: SaveWorkflowInput): Promis
   const workflow = await repository.saveWorkflow(id, input);
   logger.info('Saved workflow', { workflowId: id, nodeCount: input.nodes.length });
   return workflow;
+}
+
+export async function reflowWorkflowLayout(id: string): Promise<WorkflowDetail> {
+  const workflow = await getWorkflow(id);
+  const layout = autoLayout(workflow.nodes, workflow.edges);
+
+  if (!validateAutoLayout(layout, workflow.nodes)) {
+    return workflow;
+  }
+
+  const input: SaveWorkflowInput = {
+    name: workflow.name,
+    description: workflow.description ?? undefined,
+    nodes: workflow.nodes.map((node) => {
+      const position = layout.positions.get(node.id)!;
+      return {
+        id: node.id,
+        name: node.name,
+        description: node.description ?? undefined,
+        type: node.type,
+        config: node.config,
+        positionX: position.x,
+        positionY: position.y,
+      };
+    }),
+    edges: workflow.edges.map((edge) => ({
+      sourceNodeId: edge.sourceNodeId,
+      targetNodeId: edge.targetNodeId,
+      sourceHandle: edge.sourceHandle,
+    })),
+  };
+
+  return saveWorkflow(id, input);
 }
 
 export async function deleteWorkflow(id: string): Promise<void> {

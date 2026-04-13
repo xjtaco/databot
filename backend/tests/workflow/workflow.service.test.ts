@@ -24,6 +24,8 @@ const mockSaveWorkflow = vi.fn();
 const mockDeleteWorkflow = vi.fn();
 const mockFindRunsByWorkflowId = vi.fn();
 const mockFindRunById = vi.fn();
+const mockAutoLayout = vi.fn();
+const mockValidateAutoLayout = vi.fn();
 
 vi.mock('../../src/workflow/workflow.repository', () => ({
   createWorkflow: (...args: unknown[]) => mockCreateWorkflow(...args),
@@ -35,10 +37,16 @@ vi.mock('../../src/workflow/workflow.repository', () => ({
   findRunById: (...args: unknown[]) => mockFindRunById(...args),
 }));
 
+vi.mock('../../src/workflow/layout/autoLayout', () => ({
+  autoLayout: (...args: unknown[]) => mockAutoLayout(...args),
+  validateAutoLayout: (...args: unknown[]) => mockValidateAutoLayout(...args),
+}));
+
 import {
   createWorkflow,
   listWorkflows,
   getWorkflow,
+  reflowWorkflowLayout,
   saveWorkflow,
   deleteWorkflow,
   listRuns,
@@ -109,6 +117,7 @@ function makeSaveInput(overrides: Partial<SaveWorkflowInput> = {}): SaveWorkflow
 describe('workflow.service', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockValidateAutoLayout.mockReturnValue(true);
   });
 
   // ── createWorkflow ──────────────────────────────────────
@@ -549,6 +558,174 @@ describe('workflow.service', () => {
         [{ id: 'n1' }, { id: 'n2' }],
         [{ sourceNodeId: 'n1', targetNodeId: 'n2' }]
       );
+    });
+  });
+
+  describe('reflowWorkflowLayout', () => {
+    it('persists updated node positions for a simple chain', async () => {
+      const workflow = makeWorkflowDetail({
+        nodes: [
+          {
+            id: 'node-1',
+            workflowId: 'wf-1',
+            name: 'Start',
+            description: null,
+            type: 'sql',
+            config: makeSqlConfig(),
+            positionX: 400,
+            positionY: 200,
+          },
+          {
+            id: 'node-2',
+            workflowId: 'wf-1',
+            name: 'Transform',
+            description: null,
+            type: 'python',
+            config: makePythonConfig(),
+            positionX: 420,
+            positionY: 260,
+          },
+          {
+            id: 'node-3',
+            workflowId: 'wf-1',
+            name: 'Finish',
+            description: null,
+            type: 'llm',
+            config: { nodeType: 'llm', params: {}, prompt: 'done', outputVariable: 'out' },
+            positionX: 440,
+            positionY: 320,
+          },
+        ],
+        edges: [
+          {
+            id: 'edge-1',
+            workflowId: 'wf-1',
+            sourceNodeId: 'node-1',
+            targetNodeId: 'node-2',
+          },
+          {
+            id: 'edge-2',
+            workflowId: 'wf-1',
+            sourceNodeId: 'node-2',
+            targetNodeId: 'node-3',
+          },
+        ],
+      });
+
+      const reflowed = makeWorkflowDetail({
+        nodes: workflow.nodes.map((node, index) => ({
+          ...node,
+          positionX: 0,
+          positionY: index * 220,
+        })),
+        edges: workflow.edges,
+      });
+
+      mockFindWorkflowById.mockResolvedValue(workflow);
+      mockAutoLayout.mockReturnValue({
+        positions: new Map([
+          ['node-1', { x: 0, y: 0 }],
+          ['node-2', { x: 0, y: 220 }],
+          ['node-3', { x: 0, y: 440 }],
+        ]),
+      });
+      mockValidateAutoLayout.mockReturnValue(true);
+      mockSaveWorkflow.mockResolvedValue(reflowed);
+
+      const result = await reflowWorkflowLayout('wf-1');
+
+      expect(mockSaveWorkflow).toHaveBeenCalledWith('wf-1', {
+        name: workflow.name,
+        description: workflow.description ?? undefined,
+        nodes: [
+          {
+            id: 'node-1',
+            name: 'Start',
+            description: undefined,
+            type: 'sql',
+            config: workflow.nodes[0].config,
+            positionX: 0,
+            positionY: 0,
+          },
+          {
+            id: 'node-2',
+            name: 'Transform',
+            description: undefined,
+            type: 'python',
+            config: workflow.nodes[1].config,
+            positionX: 0,
+            positionY: 220,
+          },
+          {
+            id: 'node-3',
+            name: 'Finish',
+            description: undefined,
+            type: 'llm',
+            config: workflow.nodes[2].config,
+            positionX: 0,
+            positionY: 440,
+          },
+        ],
+        edges: [
+          {
+            sourceNodeId: 'node-1',
+            targetNodeId: 'node-2',
+            sourceHandle: undefined,
+          },
+          {
+            sourceNodeId: 'node-2',
+            targetNodeId: 'node-3',
+            sourceHandle: undefined,
+          },
+        ],
+      });
+      expect(result).toEqual(reflowed);
+    });
+
+    it('returns the original workflow unchanged when layout validation fails', async () => {
+      const workflow = makeWorkflowDetail({
+        nodes: [
+          {
+            id: 'node-1',
+            workflowId: 'wf-1',
+            name: 'Start',
+            description: null,
+            type: 'sql',
+            config: makeSqlConfig(),
+            positionX: 10,
+            positionY: 20,
+          },
+          {
+            id: 'node-2',
+            workflowId: 'wf-1',
+            name: 'Finish',
+            description: null,
+            type: 'python',
+            config: makePythonConfig(),
+            positionX: 30,
+            positionY: 40,
+          },
+        ],
+        edges: [
+          {
+            id: 'edge-1',
+            workflowId: 'wf-1',
+            sourceNodeId: 'node-1',
+            targetNodeId: 'node-2',
+          },
+        ],
+      });
+
+      mockFindWorkflowById.mockResolvedValue(workflow);
+      mockAutoLayout.mockReturnValue({
+        positions: new Map([['node-1', { x: Number.NaN, y: 0 }]]),
+      });
+      mockValidateAutoLayout.mockReturnValue(false);
+
+      const result = await reflowWorkflowLayout('wf-1');
+
+      expect(mockSaveWorkflow).not.toHaveBeenCalled();
+      expect(result).toEqual(workflow);
     });
   });
 

@@ -16,6 +16,23 @@ interface LayoutEdge {
   targetNodeId: string;
 }
 
+export function validateAutoLayout(
+  result: WorkflowLayoutResult,
+  nodes: LayoutNode[]
+): boolean {
+  for (const node of nodes) {
+    const position = result.positions.get(node.id);
+    if (!position) {
+      return false;
+    }
+    if (!Number.isFinite(position.x) || !Number.isFinite(position.y)) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 export function autoLayout(nodes: LayoutNode[], edges: LayoutEdge[]): WorkflowLayoutResult {
   const nodeIds = new Set(nodes.map((node) => node.id));
   const nodesById = new Map(nodes.map((node) => [node.id, node]));
