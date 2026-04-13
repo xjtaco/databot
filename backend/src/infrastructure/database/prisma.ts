@@ -1,13 +1,25 @@
-import { PrismaClient } from '@prisma/client';
+import type { PrismaClient as PrismaClientType } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { Pool } from 'pg';
 import { config } from '../../base/config';
 import logger from '../../utils/logger';
 
-let prismaClient: PrismaClient | null = null;
+let prismaClient: PrismaClientType | null = null;
 let pool: Pool | null = null;
 
-export function getPrismaClient(): PrismaClient {
+function loadPrismaClientConstructor(): typeof import('@prisma/client').PrismaClient {
+  try {
+    const prismaModule = require('@prisma/client') as typeof import('@prisma/client');
+    return prismaModule.PrismaClient;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(
+      `Prisma Client is not available. Run 'pnpm --dir backend run prisma:generate' first. Original error: ${message}`
+    );
+  }
+}
+
+export function getPrismaClient(): PrismaClientType {
   if (!prismaClient) {
     pool = new Pool({
       host: config.postgres.host,
@@ -29,6 +41,7 @@ export function getPrismaClient(): PrismaClient {
     });
 
     const adapter = new PrismaPg(pool);
+    const PrismaClient = loadPrismaClientConstructor();
 
     prismaClient = new PrismaClient({
       adapter,

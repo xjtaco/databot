@@ -1,11 +1,72 @@
 // backend/tests/copilot/copilotTools.test.ts
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-vi.mock('../../src/workflow/customNodeTemplate.repository');
+vi.mock('../../src/workflow/workflow.repository', () => ({
+  findWorkflowById: vi.fn(),
+}));
+vi.mock('../../src/workflow/nodeExecutors', () => ({
+  getNodeExecutor: vi.fn(),
+}));
+vi.mock('../../src/workflow/customNodeTemplate.repository', () => ({
+  findAllTemplates: vi.fn(),
+}));
+vi.mock('../../src/workflow/executionEngine', () => ({
+  executeWorkflow: vi.fn(),
+  registerProgressCallback: vi.fn(),
+  unregisterProgressCallback: vi.fn(),
+}));
 
 import * as templateRepository from '../../src/workflow/customNodeTemplate.repository';
-import { WfSearchCustomNodesTool } from '../../src/copilot/copilotTools';
-import type { CustomNodeTemplateInfo } from '../../src/workflow/workflow.types';
+import * as executionEngine from '../../src/workflow/executionEngine';
+import {
+  createCopilotToolRegistry,
+  WfExecuteNodeTool,
+  WfGetNodeTool,
+  WfGetRunResultTool,
+  WfSearchCustomNodesTool,
+} from '../../src/copilot/copilotTools';
+import { InMemoryWorkflowAccessor } from '../../src/copilot/workflowAccessor';
+import type { CustomNodeTemplateInfo, WorkflowDetail } from '../../src/workflow/workflow.types';
+
+function makeBase64(length: number): string {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+  let result = '';
+  for (let index = 0; index < length; index++) {
+    result += chars[index % chars.length];
+  }
+  return result;
+}
+
+function expectRunResultSanitized(
+  data: unknown,
+  rawOutput: string,
+  rawBase64Payload: string,
+  expectedMimeType: string
+): void {
+  const serialized = JSON.stringify(data);
+
+  expect(serialized).not.toContain(rawOutput);
+  expect(serialized).not.toContain(rawBase64Payload);
+  expect(data).toMatchObject({
+    _sanitized: {
+      applied: true,
+      reasons: expect.arrayContaining(['large_text', 'base64']),
+    },
+    output: {
+      _summary: {
+        kind: 'text',
+        chars: rawOutput.length,
+      },
+    },
+    image: {
+      _summary: {
+        kind: 'base64',
+        mimeType: expectedMimeType,
+        chars: rawBase64Payload.length,
+      },
+    },
+  });
+}
 
 function makeTemplate(
   id: string,
@@ -36,6 +97,7 @@ describe('WfSearchCustomNodesTool', () => {
 
   beforeEach(() => {
     tool = new WfSearchCustomNodesTool();
+    vi.resetAllMocks();
     vi.mocked(templateRepository.findAllTemplates).mockResolvedValue(SAMPLE_TEMPLATES);
   });
 
@@ -142,5 +204,155 @@ describe('WfSearchCustomNodesTool', () => {
     expect(result.success).toBe(true);
     const data = result.data as { id: string }[];
     expect(data.some((d) => d.id === 't4')).toBe(true);
+  });
+});
+
+describe('WfGetNodeTool', () => {
+  function makeWorkflow(): WorkflowDetail {
+    const oversizedPrompt = 'abc '.repeat(400);
+
+    return {
+      id: 'wf-node-sanitize',
+      name: 'Node sanitize workflow',
+      description: null,
+      nodes: [
+        {
+          id: 'node-1',
+          workflowId: 'wf-node-sanitize',
+          name: 'Large LLM node',
+          description: null,
+          type: 'llm',
+          config: {
+            nodeType: 'llm',
+            params: {},
+            prompt: oversizedPrompt,
+            outputVariable: 'result',
+          },
+          positionX: 0,
+          positionY: 0,
+        },
+      ],
+      edges: [],
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+  }
+
+  it('sanitizes successful node responses with oversized config fields', async () => {
+    const workflow = makeWorkflow();
+    const accessor = new InMemoryWorkflowAccessor(workflow);
+    const tool = new WfGetNodeTool(accessor);
+    const oversizedPrompt = 'abc '.repeat(400);
+
+    const result = await tool.execute({ nodeId: 'node-1' });
+
+    expect(result.success).toBe(true);
+    expect(JSON.stringify(result.data)).not.toContain(oversizedPrompt);
+    expect(result.data).toEqual({
+      _sanitized: {
+        applied: true,
+        reasons: ['large_text'],
+      },
+      id: 'node-1',
+      workflowId: 'wf-node-sanitize',
+      name: 'Large LLM node',
+      description: null,
+      type: 'llm',
+      config: {
+        nodeType: 'llm',
+        params: {},
+        prompt: {
+          _summary: {
+            kind: 'text',
+            chars: 'abc '.repeat(400).length,
+            preview: 'abc '.repeat(40),
+          },
+        },
+        outputVariable: 'result',
+      },
+      positionX: 0,
+      positionY: 0,
+    });
+  });
+});
+
+describe('WfGetRunResultTool', () => {
+  it('sanitizes base64 and long output fields from run results', async () => {
+    const longOutput = 'debug output '.repeat(80);
+    const base64Payload = makeBase64(600);
+    const accessor = {
+      workflowId: 'wf-run-result',
+      getWorkflow: vi.fn(),
+      getNode: vi.fn(),
+      updateNode: vi.fn(),
+      executeNode: vi.fn(),
+      getRunResult: vi.fn().mockResolvedValue({
+        output: longOutput,
+        image: `data:image/png;base64,${base64Payload}`,
+      }),
+    };
+    const tool = new WfGetRunResultTool(accessor);
+
+    const result = await tool.execute({ runId: 'run-123' });
+
+    expect(result.success).toBe(true);
+    expectRunResultSanitized(result.data, longOutput, base64Payload, 'image/png');
+  });
+});
+
+describe('WfExecuteTool', () => {
+  beforeEach(() => {
+    vi.resetAllMocks();
+  });
+
+  it('sanitizes successful run details and preserves timestamp dates as ISO strings', async () => {
+    const longOutput = 'debug output '.repeat(80);
+    const base64Payload = makeBase64(600);
+    const startedAt = new Date('2026-04-13T01:02:03.456Z');
+    const completedAt = new Date('2026-04-13T01:05:06.789Z');
+
+    vi.mocked(executionEngine.executeWorkflow).mockResolvedValue({
+      runId: 'run-789',
+      promise: Promise.resolve({
+        output: longOutput,
+        image: `data:image/png;base64,${base64Payload}`,
+        startedAt,
+        completedAt,
+      }),
+    } as Awaited<ReturnType<typeof executionEngine.executeWorkflow>>);
+
+    const registry = createCopilotToolRegistry('wf-execute');
+    const result = await registry.execute('wf_execute', {});
+
+    expect(result.success).toBe(true);
+    expectRunResultSanitized(result.data, longOutput, base64Payload, 'image/png');
+    expect(result.data).toMatchObject({
+      startedAt: startedAt.toISOString(),
+      completedAt: completedAt.toISOString(),
+    });
+  });
+});
+
+describe('WfExecuteNodeTool', () => {
+  it('sanitizes fetched run results before returning them', async () => {
+    const longOutput = 'debug output '.repeat(80);
+    const base64Payload = makeBase64(600);
+    const accessor = {
+      workflowId: 'wf-exec-node',
+      getWorkflow: vi.fn(),
+      getNode: vi.fn(),
+      updateNode: vi.fn(),
+      executeNode: vi.fn().mockResolvedValue({ runId: 'run-456' }),
+      getRunResult: vi.fn().mockResolvedValue({
+        output: longOutput,
+        image: `data:image/png;base64,${base64Payload}`,
+      }),
+    };
+
+    const tool = new WfExecuteNodeTool(accessor);
+    const result = await tool.execute({ nodeId: 'node-exec' });
+
+    expect(result.success).toBe(true);
+    expectRunResultSanitized(result.data, longOutput, base64Payload, 'image/png');
   });
 });
