@@ -35,7 +35,7 @@ describe('sanitizeForLlm', () => {
     });
   });
 
-  it('summarizes unsupported values explicitly', () => {
+  it('preserves Date values as ISO strings while summarizing other unsupported values explicitly', () => {
     expect(
       sanitizeForLlm({
         createdAt: new Date('2024-01-01T00:00:00Z'),
@@ -47,13 +47,7 @@ describe('sanitizeForLlm', () => {
         applied: true,
         reasons: ['non_plain_object', 'unsupported_value'],
       },
-      createdAt: {
-        _summary: {
-          kind: 'unsupported',
-          valueType: 'Date',
-          reason: 'non_plain_object',
-        },
-      },
+      createdAt: '2024-01-01T00:00:00.000Z',
       failure: {
         _summary: {
           kind: 'unsupported',
@@ -71,14 +65,10 @@ describe('sanitizeForLlm', () => {
     });
   });
 
-  it('summarizes unsupported root values explicitly', () => {
-    expect(sanitizeForLlm(new Date('2024-01-01T00:00:00Z'))).toEqual({
-      _summary: {
-        kind: 'unsupported',
-        valueType: 'Date',
-        reason: 'non_plain_object',
-      },
-    });
+  it('returns root Date values as ISO strings', () => {
+    expect(sanitizeForLlm(new Date('2024-01-01T00:00:00Z'))).toEqual(
+      '2024-01-01T00:00:00.000Z'
+    );
   });
 
   it('keeps reserved root metadata stable when the input has a _sanitized key', () => {
@@ -341,7 +331,7 @@ describe('sanitizeForLlm', () => {
     ).toMatchObject({
       _sanitized: {
         applied: true,
-        reasons: ['large_text', 'array_truncated', 'non_plain_object', 'budget_compacted'],
+        reasons: ['large_text', 'array_truncated', 'budget_compacted'],
       },
     });
   });

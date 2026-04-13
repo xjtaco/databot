@@ -10,9 +10,16 @@ vi.mock('../../src/workflow/nodeExecutors', () => ({
 vi.mock('../../src/workflow/customNodeTemplate.repository', () => ({
   findAllTemplates: vi.fn(),
 }));
+vi.mock('../../src/workflow/executionEngine', () => ({
+  executeWorkflow: vi.fn(),
+  registerProgressCallback: vi.fn(),
+  unregisterProgressCallback: vi.fn(),
+}));
 
 import * as templateRepository from '../../src/workflow/customNodeTemplate.repository';
+import * as executionEngine from '../../src/workflow/executionEngine';
 import {
+  createCopilotToolRegistry,
   WfExecuteNodeTool,
   WfGetNodeTool,
   WfGetRunResultTool,
@@ -290,6 +297,39 @@ describe('WfGetRunResultTool', () => {
 
     expect(result.success).toBe(true);
     expectRunResultSanitized(result.data, longOutput, base64Payload, 'image/png');
+  });
+});
+
+describe('WfExecuteTool', () => {
+  beforeEach(() => {
+    vi.resetAllMocks();
+  });
+
+  it('sanitizes successful run details and preserves timestamp dates as ISO strings', async () => {
+    const longOutput = 'debug output '.repeat(80);
+    const base64Payload = makeBase64(600);
+    const startedAt = new Date('2026-04-13T01:02:03.456Z');
+    const completedAt = new Date('2026-04-13T01:05:06.789Z');
+
+    vi.mocked(executionEngine.executeWorkflow).mockResolvedValue({
+      runId: 'run-789',
+      promise: Promise.resolve({
+        output: longOutput,
+        image: `data:image/png;base64,${base64Payload}`,
+        startedAt,
+        completedAt,
+      }),
+    } as Awaited<ReturnType<typeof executionEngine.executeWorkflow>>);
+
+    const registry = createCopilotToolRegistry('wf-execute');
+    const result = await registry.execute('wf_execute', {});
+
+    expect(result.success).toBe(true);
+    expectRunResultSanitized(result.data, longOutput, base64Payload, 'image/png');
+    expect(result.data).toMatchObject({
+      startedAt: startedAt.toISOString(),
+      completedAt: completedAt.toISOString(),
+    });
   });
 });
 

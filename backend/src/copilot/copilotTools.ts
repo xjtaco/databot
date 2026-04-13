@@ -892,7 +892,7 @@ class WfExecuteTool extends Tool {
       }
       try {
         const runDetail = await handle.promise;
-        return { success: true, data: runDetail };
+        return { success: true, data: sanitizeForLlm(runDetail) };
       } finally {
         executionEngine.unregisterProgressCallback(handle.runId);
       }

@@ -290,6 +290,10 @@ function visit(value: unknown, ctx: TraversalContext, depth: number): SanitizedV
     return value;
   }
 
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? 'Invalid Date' : value.toISOString();
+  }
+
   if (typeof value === 'bigint' || typeof value === 'symbol' || typeof value === 'function') {
     ctx.reasons.add('unsupported_value');
     return summarizeUnsupported(value, 'unsupported_value');
