@@ -1,11 +1,14 @@
 // backend/tests/copilotTools.test.ts
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { join } from 'path';
+import { existsSync } from 'fs';
 
 vi.mock('../src/workflow/workflow.repository');
 vi.mock('../src/workflow/workflow.service');
 vi.mock('../src/workflow/executionEngine');
 
 import * as service from '../src/workflow/workflow.service';
+import * as executionEngine from '../src/workflow/executionEngine';
 import { createCopilotToolRegistry, COPILOT_TOOL_NAMES } from '../src/copilot/copilotTools';
 import type { WorkflowDetail } from '../src/workflow/workflow.types';
 
@@ -60,6 +63,80 @@ describe('copilotTools', () => {
       const result = await registry.execute('scoped_glob', { pattern: '*.md', path: '/etc' });
       expect(result.success).toBe(false);
       expect(result.error).toContain('not allowed');
+    });
+  });
+
+  describe('wf_execute work folder forwarding', () => {
+    it('passes a fresh child workFolder under the explicit temp workdir to executeWorkflow', async () => {
+      const tempWorkdir = '/tmp/copilot-run';
+      vi.mocked(executionEngine.executeWorkflow).mockResolvedValue({
+        runId: 'run-1',
+        promise: Promise.resolve({ id: 'run-1' } as never),
+      });
+
+      const registry = createCopilotToolRegistry(
+        'test-workflow-id',
+        undefined,
+        undefined,
+        tempWorkdir
+      );
+      const result = await registry.execute('wf_execute', { params: { foo: 'bar' } });
+
+      expect(result.success).toBe(true);
+      const workFolder = vi.mocked(executionEngine.executeWorkflow).mock.calls[0][2]?.workFolder;
+      expect(executionEngine.executeWorkflow).toHaveBeenCalledWith(
+        'test-workflow-id',
+        { foo: 'bar' },
+        expect.objectContaining({ workFolder })
+      );
+      expect(workFolder).toMatch(new RegExp(`^${join(tempWorkdir, 'wf_')}`));
+      expect(workFolder).not.toBe(tempWorkdir);
+    });
+
+    it('creates a fresh child workFolder for repeated wf_execute calls', async () => {
+      const tempWorkdir = '/tmp/copilot-run';
+      vi.mocked(executionEngine.executeWorkflow).mockResolvedValue({
+        runId: 'run-1',
+        promise: Promise.resolve({ id: 'run-1' } as never),
+      });
+
+      const registry = createCopilotToolRegistry(
+        'test-workflow-id',
+        undefined,
+        undefined,
+        tempWorkdir
+      );
+      await registry.execute('wf_execute', { params: { foo: 'bar' } });
+      await registry.execute('wf_execute', { params: { foo: 'baz' } });
+
+      const firstWorkFolder = vi.mocked(executionEngine.executeWorkflow).mock.calls[0][2]
+        ?.workFolder;
+      const secondWorkFolder = vi.mocked(executionEngine.executeWorkflow).mock.calls[1][2]
+        ?.workFolder;
+
+      expect(firstWorkFolder).toMatch(new RegExp(`^${join(tempWorkdir, 'wf_')}`));
+      expect(secondWorkFolder).toMatch(new RegExp(`^${join(tempWorkdir, 'wf_')}`));
+      expect(firstWorkFolder).not.toBe(secondWorkFolder);
+    });
+
+    it('cleans up an orphaned workFolder when executeWorkflow rejects early', async () => {
+      const tempWorkdir = '/tmp/copilot-run';
+      vi.mocked(executionEngine.executeWorkflow).mockRejectedValueOnce(
+        new Error('executeWorkflow rejected before handle creation')
+      );
+
+      const registry = createCopilotToolRegistry(
+        'test-workflow-id',
+        undefined,
+        undefined,
+        tempWorkdir
+      );
+      const result = await registry.execute('wf_execute', { params: { foo: 'bar' } });
+
+      expect(result.success).toBe(false);
+      const workFolder = vi.mocked(executionEngine.executeWorkflow).mock.calls[0][2]?.workFolder;
+      expect(workFolder).toMatch(new RegExp(`^${join(tempWorkdir, 'wf_')}`));
+      expect(existsSync(workFolder as string)).toBe(false);
     });
   });
 

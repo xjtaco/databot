@@ -1,4 +1,6 @@
 // backend/src/copilot/copilotAgent.ts
+import { join } from 'path';
+import { mkdirSync, mkdtempSync, rmSync, existsSync } from 'fs';
 import { LLMProviderFactory } from '../infrastructure/llm/factory';
 import { ToolCall, ToolCallResult } from '../infrastructure/llm/types';
 import { ToolRegistryClass } from '../infrastructure/tools/tools';
@@ -7,6 +9,7 @@ import logger from '../utils/logger';
 import { buildSystemPrompt } from './copilotPrompt';
 import { createCopilotToolRegistry } from './copilotTools';
 import { getConfigStatus } from '../globalConfig/globalConfig.service';
+import { config } from '../base/config';
 import * as workflowService from '../workflow/workflow.service';
 import {
   CopilotLayoutOwnership,
@@ -18,15 +21,22 @@ import { autoLayout } from '../workflow/layout/autoLayout';
 import { NodeConfig, WorkflowDetail } from '../workflow/workflow.types';
 import { buildToolStartSummary, buildToolDoneSummary } from './toolSummaries';
 
+function createTempWorkdir(): string {
+  mkdirSync(config.work_folder, { recursive: true });
+  return mkdtempSync(join(config.work_folder, 'wf_'));
+}
+
 export class CopilotAgent {
   private context: Context;
   private workflowId: string;
+  private tempWorkdir: string;
   private locale: string;
   private sendEvent: (event: CopilotServerMessage) => void;
   private hasManualLayoutEdits: boolean;
   private aborted: boolean;
   private isProcessing: boolean;
   private toolRegistry: ToolRegistryClass;
+  private tempWorkdirCleaned: boolean;
 
   constructor(
     workflowId: string,
@@ -35,18 +45,45 @@ export class CopilotAgent {
   ) {
     this.context = new Context();
     this.workflowId = workflowId;
+    this.tempWorkdir = createTempWorkdir();
     this.locale = locale;
     this.sendEvent = sendEvent;
     this.hasManualLayoutEdits = false;
     this.aborted = false;
     this.isProcessing = false;
-    this.toolRegistry = createCopilotToolRegistry(workflowId, (event) => {
-      this.sendEvent({ type: 'execution_event', event });
-    });
+    this.tempWorkdirCleaned = false;
+    this.toolRegistry = createCopilotToolRegistry(
+      workflowId,
+      (event) => {
+        this.sendEvent({ type: 'execution_event', event });
+      },
+      undefined,
+      this.tempWorkdir
+    );
   }
 
   abort(): void {
     this.aborted = true;
+  }
+
+  dispose(): void {
+    this.abort();
+    if (this.tempWorkdirCleaned) {
+      return;
+    }
+
+    try {
+      if (existsSync(this.tempWorkdir)) {
+        rmSync(this.tempWorkdir, { recursive: true, force: true });
+      }
+      this.tempWorkdirCleaned = true;
+    } catch (error) {
+      logger.warn('Failed to clean up copilot temp workdir', {
+        workflowId: this.workflowId,
+        tempWorkdir: this.tempWorkdir,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
   }
 
   setHasManualLayoutEdits(hasManualLayoutEdits: boolean): void {
@@ -80,7 +117,7 @@ export class CopilotAgent {
     // Initialize system prompt on first message
     if (this.context.getTotalTokens() === 0) {
       const configStatus = await getConfigStatus();
-      const systemPrompt = buildSystemPrompt(configStatus);
+      const systemPrompt = buildSystemPrompt(configStatus, this.tempWorkdir);
       this.context.addSystemMessage(systemPrompt);
 
       // Rebuild tool registry with config-aware filtering
@@ -89,7 +126,8 @@ export class CopilotAgent {
         (event) => {
           this.sendEvent({ type: 'execution_event', event });
         },
-        configStatus
+        configStatus,
+        this.tempWorkdir
       );
     }
 

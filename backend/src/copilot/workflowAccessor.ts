@@ -1,4 +1,5 @@
-import { mkdir, rm } from 'fs/promises';
+import { rm } from 'fs/promises';
+import { mkdirSync, mkdtempSync } from 'fs';
 import { join } from 'path';
 import { randomBytes } from 'crypto';
 import { config as appConfig } from '../base/config';
@@ -49,9 +50,11 @@ export interface WorkflowAccessor {
  */
 export class DbWorkflowAccessor implements WorkflowAccessor {
   readonly workflowId: string;
+  private readonly tempWorkdir?: string;
 
-  constructor(workflowId: string) {
+  constructor(workflowId: string, tempWorkdir?: string) {
     this.workflowId = workflowId;
+    this.tempWorkdir = tempWorkdir;
   }
 
   async getWorkflow(): Promise<WorkflowDetail> {
@@ -98,21 +101,31 @@ export class DbWorkflowAccessor implements WorkflowAccessor {
       onProgress?: (event: WsWorkflowEvent) => void;
     }
   ): Promise<{ runId: string }> {
-    const handle = await executionEngine.executeNode(this.workflowId, nodeId, {
-      mockInputs: options.mockInputs,
-      cascade: options.cascade,
-    });
-    if (options.onProgress) {
-      executionEngine.registerProgressCallback(handle.runId, options.onProgress);
-    }
+    const workFolder = createExecutionWorkFolder(this.tempWorkdir);
+    let handle: Awaited<ReturnType<typeof executionEngine.executeNode>> | undefined;
     try {
-      await handle.promise;
-    } finally {
+      handle = await executionEngine.executeNode(this.workflowId, nodeId, {
+        mockInputs: options.mockInputs,
+        cascade: options.cascade,
+        workFolder,
+      });
       if (options.onProgress) {
+        executionEngine.registerProgressCallback(handle.runId, options.onProgress);
+      }
+      await handle.promise;
+      return { runId: handle.runId };
+    } catch (error) {
+      if (!handle) {
+        await rm(workFolder, { recursive: true, force: true }).catch(() => {
+          // Ignore cleanup failures for throwaway temp workdirs.
+        });
+      }
+      throw error;
+    } finally {
+      if (options.onProgress && handle) {
         executionEngine.unregisterProgressCallback(handle.runId);
       }
     }
-    return { runId: handle.runId };
   }
 
   async getRunResult(runId: string): Promise<Record<string, unknown>> {
@@ -197,6 +210,18 @@ function generateShortId(): string {
   return randomBytes(6).toString('hex');
 }
 
+const WF_TEMP_DIR_PREFIX = 'wf_';
+
+function createDebugTempWorkdir(): string {
+  mkdirSync(appConfig.work_folder, { recursive: true });
+  return mkdtempSync(join(appConfig.work_folder, WF_TEMP_DIR_PREFIX));
+}
+
+export function createExecutionWorkFolder(parentWorkdir: string = appConfig.work_folder): string {
+  mkdirSync(parentWorkdir, { recursive: true });
+  return mkdtempSync(join(parentWorkdir, WF_TEMP_DIR_PREFIX));
+}
+
 /**
  * In-memory implementation — holds a workflow object without DB persistence.
  * Used by DebugAgent for single-node editing and testing.
@@ -206,10 +231,19 @@ export class InMemoryWorkflowAccessor implements WorkflowAccessor {
   private workflow: WorkflowDetail;
   private readonly runResults = new Map<string, Record<string, unknown>>();
   private readonly tempDirs: string[] = [];
+  private tempWorkdir?: string;
 
   constructor(workflow: WorkflowDetail) {
     this.workflowId = workflow.id;
     this.workflow = workflow;
+  }
+
+  getTempWorkdir(): string {
+    if (!this.tempWorkdir) {
+      this.tempWorkdir = createDebugTempWorkdir();
+      this.tempDirs.push(this.tempWorkdir);
+    }
+    return this.tempWorkdir;
   }
 
   async getWorkflow(): Promise<WorkflowDetail> {
@@ -253,11 +287,6 @@ export class InMemoryWorkflowAccessor implements WorkflowAccessor {
       }
     }
 
-    // Create a temp work folder
-    const workFolder = join(appConfig.work_folder, `databot_debug_${generateShortId()}`);
-    await mkdir(workFolder, { recursive: true });
-    this.tempDirs.push(workFolder);
-
     // Notify progress: node_start
     options.onProgress?.({
       type: 'node_start',
@@ -272,6 +301,8 @@ export class InMemoryWorkflowAccessor implements WorkflowAccessor {
 
       // Execute via the registered executor
       const executor = getNodeExecutor(node.type);
+      const workFolder = createExecutionWorkFolder(this.getTempWorkdir());
+      this.tempDirs.push(workFolder);
       const output = await executor.execute({
         workFolder,
         nodeId,

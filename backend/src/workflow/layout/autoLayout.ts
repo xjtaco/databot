@@ -16,10 +16,7 @@ interface LayoutEdge {
   targetNodeId: string;
 }
 
-export function validateAutoLayout(
-  result: WorkflowLayoutResult,
-  nodes: LayoutNode[]
-): boolean {
+export function validateAutoLayout(result: WorkflowLayoutResult, nodes: LayoutNode[]): boolean {
   for (const node of nodes) {
     const position = result.positions.get(node.id);
     if (!position) {
@@ -238,7 +235,9 @@ export function autoLayout(nodes: LayoutNode[], edges: LayoutEdge[]): WorkflowLa
 
     for (const depth of sortedDepths) {
       const layer = (layers.get(depth) ?? []).slice();
-      const orderedLayer = layer.sort((leftId, rightId) => compareNodes(leftId, rightId, targetPositions));
+      const orderedLayer = layer.sort((leftId, rightId) =>
+        compareNodes(leftId, rightId, targetPositions)
+      );
       const y = startY + depth * LAYER_GAP;
       const centerOffset = (orderedLayer.length - 1) / 2;
 

@@ -1,9 +1,88 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, beforeAll, afterAll, vi } from 'vitest';
 import { WebSocketServer } from 'ws';
+import http from 'http';
+import { existsSync, mkdirSync, rmSync } from 'node:fs';
+import path from 'node:path';
+
+vi.mock('../../../src/base/config', () => ({
+  config: (() => {
+    const testWorkDir = path.join(process.env.TMPDIR || '/tmp', 'databot-websocket-test');
+    return {
+    port: 3000,
+    env: 'test',
+    base_url: '/api',
+    data_dictionary_folder: '',
+    work_folder: testWorkDir,
+    knowledge_folder: path.join(testWorkDir, 'knowledge'),
+    context_compress_ratio: 0.7,
+    log: {
+      dir: path.join(testWorkDir, 'logs'),
+      file: 'app.log',
+      maxFiles: 5,
+      maxSize: '20m',
+    },
+    websocket: {
+      enabled: true,
+      path: '/ws',
+      heartbeatInterval: 30000,
+      heartbeatTimeout: 30000,
+      maxMissedHeartbeats: 3,
+    },
+    sandbox: {
+      containerName: 'test-container',
+      defaultWorkDir: '/tmp',
+      user: 'agent',
+      timeout: 120000,
+    },
+    upload: {
+      directory: path.join(testWorkDir, 'uploads'),
+      maxFileSize: 52428800,
+    },
+    postgres: {
+      host: 'localhost',
+      port: 5432,
+      database: 'databot',
+      user: 'databot',
+      password: 'databot',
+    },
+    encryption: {
+      key: '',
+    },
+    datasource: {
+      defaultQueryTimeout: 120000,
+    },
+    llm: {
+      requestTimeout: 180000,
+    },
+    bridge: {
+      url: 'http://localhost:8080',
+    },
+    jwt: {
+      secret: 'test-secret',
+      accessExpires: '2h',
+      refreshExpires: '7d',
+      cookieSecure: false,
+    },
+    admin: {
+      initialPassword: 'Admin@123',
+      email: 'admin@localhost',
+    },
+    internal: {
+      port: 3001,
+    },
+    workspaceCleanup: {
+      intervalMs: 21600000,
+      maxAgeMs: 2592000000,
+    },
+    };
+  })(),
+}));
+
 import { AgentSessionManager } from '../../../src/agent';
 import { CoreAgentSession } from '../../../src/agent';
 import type { SessionConfig } from '../../../src/agent';
-import http from 'http';
+
+const TEST_WORK_DIR = path.join(process.env.TMPDIR || '/tmp', 'databot-websocket-test');
 
 /* eslint-disable no-undef */
 // WebSocket is a browser API used in these tests
@@ -13,6 +92,10 @@ describe('WebSocket Integration', () => {
   let wss: WebSocketServer;
   let port: number;
   let wsUrl: string;
+
+  beforeAll(() => {
+    mkdirSync(TEST_WORK_DIR, { recursive: true });
+  });
 
   beforeEach(async () => {
     // Create HTTP server
@@ -47,6 +130,12 @@ describe('WebSocket Integration', () => {
         });
       });
     });
+  });
+
+  afterAll(() => {
+    if (existsSync(TEST_WORK_DIR)) {
+      rmSync(TEST_WORK_DIR, { recursive: true, force: true });
+    }
   });
 
   describe('WebSocket Connection', () => {

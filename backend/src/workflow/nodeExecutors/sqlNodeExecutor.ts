@@ -10,7 +10,7 @@ import { config as appConfig } from '../../base/config';
 import logger from '../../utils/logger';
 import { SqlNodeConfig, SqlNodeOutput } from '../workflow.types';
 import { NodeExecutionContext, NodeExecutor } from './types';
-import { sanitizeNodeName } from './utils';
+import { buildNodeIdSuffix, resolveReadableNodeBaseName } from './utils';
 
 export class SqlNodeExecutor implements NodeExecutor {
   readonly type = 'sql';
@@ -81,8 +81,10 @@ export class SqlNodeExecutor implements NodeExecutor {
 
     // Write CSV output
     const csvContent = queryResultToCSV(queryResult);
-    const safeName = sanitizeNodeName(context.nodeName);
-    const csvFileName = `${safeName}_output.csv`;
+    const { baseName, usedFallback } = resolveReadableNodeBaseName(context.nodeName, 'sql');
+    const csvFileName = usedFallback
+      ? `sql_output_${buildNodeIdSuffix(context.nodeId)}.csv`
+      : `${baseName}_output.csv`;
     const csvPath = join(context.workFolder, csvFileName);
     await fs.writeFile(csvPath, csvContent, 'utf-8');
 

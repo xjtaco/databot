@@ -146,11 +146,7 @@ describe('authService', () => {
 
       await changePassword('u1', 'OldPass@1', 'NewPass@1', policy);
 
-      expect(mockUpdateUserPassword).toHaveBeenCalledWith(
-        'u1',
-        expect.any(String),
-        false
-      );
+      expect(mockUpdateUserPassword).toHaveBeenCalledWith('u1', expect.any(String), false);
       expect(mockDeleteUserRefreshTokens).toHaveBeenCalledWith('u1');
     });
   });

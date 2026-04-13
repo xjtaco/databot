@@ -190,6 +190,46 @@ describe('CoreAgentSession', () => {
       expect(history.length).toBeGreaterThan(0);
       expect(history[0].role).toBe('system');
     });
+
+    it('should create a wf_ work folder and include the exact path in the system prompt', () => {
+      const workFolder = (session as any).workFolder as string;
+      const context = (session as any).context;
+      const systemPrompt = context.validHistory()[0].content as string;
+
+      expect(path.basename(workFolder)).toMatch(/^wf_/);
+      expect(systemPrompt).toContain(workFolder);
+      expect(systemPrompt).toContain(
+        `Never write generated files directly under the root of \`${TEST_WORK_DIR}\``
+      );
+      expect(systemPrompt).toContain('Use short English snake_case filenames such as');
+    });
+
+    it('should remove the session work folder when disconnected', () => {
+      const workFolder = (session as any).workFolder as string;
+
+      expect(existsSync(workFolder)).toBe(true);
+
+      session.disconnect();
+
+      expect(existsSync(workFolder)).toBe(false);
+    });
+
+    it('should remove the session work folder when the websocket closes', () => {
+      const mockWs = new MockWebSocket();
+      const workFolder = (session as any).workFolder as string;
+
+      session.connect(mockWs as any);
+
+      const closeCalls = mockWs.on.mock.calls.filter(([event]) => event === 'close');
+      const closeHandler = closeCalls[closeCalls.length - 1]?.[1] as (() => void) | undefined;
+
+      expect(closeHandler).toBeDefined();
+      expect(existsSync(workFolder)).toBe(true);
+
+      closeHandler?.();
+
+      expect(existsSync(workFolder)).toBe(false);
+    });
   });
 
   describe('handleUserMessage', () => {

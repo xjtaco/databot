@@ -94,6 +94,7 @@ export function initCopilotWebSocket(app: Application): void {
 
         ws.on('close', () => {
           agent.abort();
+          agent.dispose();
           logger.info('Copilot WebSocket disconnected', { workflowId });
         });
 

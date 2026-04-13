@@ -1,10 +1,11 @@
 // backend/tests/copilot/debugAgent.test.ts
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterAll } from 'vitest';
 
 vi.mock('../../src/workflow/customNodeTemplate.service');
 
 import * as templateService from '../../src/workflow/customNodeTemplate.service';
 import { createDebugAgent, DebugAgent } from '../../src/copilot/debugAgent';
+import { config } from '../../src/base/config';
 import type { CopilotServerMessage } from '../../src/copilot/copilot.types';
 import type { CustomNodeTemplateInfo, SqlNodeConfig } from '../../src/workflow/workflow.types';
 
@@ -26,8 +27,16 @@ const SAMPLE_TEMPLATE: CustomNodeTemplateInfo = {
 };
 
 describe('createDebugAgent', () => {
+  const ORIGINAL_WORK_FOLDER = config.work_folder;
+  const TEMP_ROOT = '/tmp/databot-test-workfolder-debug-agent';
+
   beforeEach(() => {
+    config.work_folder = TEMP_ROOT;
     vi.mocked(templateService.getTemplate).mockResolvedValue(SAMPLE_TEMPLATE);
+  });
+
+  afterAll(() => {
+    config.work_folder = ORIGINAL_WORK_FOLDER;
   });
 
   it('constructs a DebugAgent from a template', async () => {

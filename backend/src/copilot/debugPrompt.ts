@@ -18,7 +18,7 @@ function getNodeTypeGuide(type: string): string {
 
 - **Config fields**: params (key-value pairs, supports \`{{}}\` templates), script (required), timeout (optional), outputVariable (required)
 - **Output**: result (Record — JSON from the script's \`result\` variable), csvPath (string | undefined), stderr (string)
-- **Tips**: Access inputs via the \`params\` dict; \`result\` must be a JSON-serializable dict; the script has a predefined \`WORKSPACE\` variable pointing to the current run's working directory — use \`os.path.join(WORKSPACE, 'filename')\` for file paths
+- **Tips**: Access inputs via the \`params\` dict; \`result\` must be a JSON-serializable dict; the script has a predefined \`WORKSPACE\` variable pointing to the node execution temp directory at runtime — use \`os.path.join(WORKSPACE, 'filename')\` for file paths
 - **Common issues**: Missing params, import errors, non-serializable result, hardcoded absolute paths`;
 
     case 'llm':
@@ -55,7 +55,7 @@ No specific guide available for node type "${type}".`;
 /**
  * Build the system prompt for the debug agent, focused on a single node.
  */
-export function buildDebugSystemPrompt(node: WorkflowNodeInfo): string {
+export function buildDebugSystemPrompt(node: WorkflowNodeInfo, tempWorkdir: string): string {
   const outputVariable =
     'outputVariable' in node.config ? String(node.config.outputVariable) : 'unknown';
 
@@ -73,6 +73,15 @@ You are a single-node debug assistant. Your job is to help the user edit, test, 
   const nodeTypeRef = `## Node Type Reference
 
 ${getNodeTypeGuide(node.type)}`;
+
+  const tempWorkdirSection = `## Temp Workdir
+
+- Current temp directory: \`${tempWorkdir}\`
+- generated files must be written under this directory
+- Do not write directly under \`${config.work_folder}\`
+- Use short English snake_case filenames such as \`query_result.csv\`, \`report.md\`, or \`chart.png\`
+- Python \`WORKSPACE\` points to the node execution temp directory at runtime and should be used for file writes in Python nodes
+- Build file paths with \`os.path.join(WORKSPACE, 'filename')\` so files stay inside the runtime workspace`;
 
   const toolsList = `## Available Tools
 
@@ -141,6 +150,7 @@ Respond in the same language the user uses. Before making changes, briefly expla
     role,
     currentNode,
     nodeTypeRef,
+    tempWorkdirSection,
     toolsList,
     dataContext,
     debugWorkflow,

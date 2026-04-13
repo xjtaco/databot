@@ -1,5 +1,7 @@
 // backend/tests/copilotAgent.test.ts
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterAll } from 'vitest';
+import { basename } from 'path';
+import { existsSync, rmSync } from 'node:fs';
 
 // Mock dependencies before import
 vi.mock('../src/infrastructure/llm/factory');
@@ -20,6 +22,7 @@ vi.mock('../src/copilot/copilot.types', async (importOriginal) => {
 });
 
 import { CopilotAgent } from '../src/copilot/copilotAgent';
+import { buildSystemPrompt } from '../src/copilot/copilotPrompt';
 import type { CopilotServerMessage } from '../src/copilot/copilot.types';
 import { LLMProviderFactory } from '../src/infrastructure/llm/factory';
 import { createCopilotToolRegistry } from '../src/copilot/copilotTools';
@@ -29,6 +32,7 @@ import type { ToolResult } from '../src/infrastructure/tools/types';
 import * as workflowService from '../src/workflow/workflow.service';
 import type { WorkflowDetail } from '../src/workflow/workflow.types';
 import { autoLayout } from '../src/workflow/layout/autoLayout';
+import { config } from '../src/base/config';
 
 /**
  * Wrap a mock chat fn so it invokes callbacks when toolCalls are present.
@@ -85,6 +89,9 @@ function wrapWithCallbacks(
 }
 
 describe('CopilotAgent', () => {
+  const ORIGINAL_WORK_FOLDER = config.work_folder;
+  const TEMP_ROOT = '/tmp/databot-test-workfolder-copilot-agent';
+
   let events: CopilotServerMessage[];
   let agent: CopilotAgent;
   let baseMockChat: ReturnType<typeof vi.fn>;
@@ -148,6 +155,7 @@ describe('CopilotAgent', () => {
   };
 
   beforeEach(() => {
+    config.work_folder = TEMP_ROOT;
     events = [];
     baseMockChat = vi.fn();
     mockToolExecute = vi.fn();
@@ -192,6 +200,13 @@ describe('CopilotAgent', () => {
     });
   });
 
+  afterAll(() => {
+    if (existsSync(TEMP_ROOT)) {
+      rmSync(TEMP_ROOT, { recursive: true, force: true });
+    }
+    config.work_folder = ORIGINAL_WORK_FOLDER;
+  });
+
   it('sends text_delta, text_done, turn_done for simple text response', async () => {
     baseMockChat.mockResolvedValue({
       content: 'Hello',
@@ -204,6 +219,35 @@ describe('CopilotAgent', () => {
     expect(types).toContain('text_delta');
     expect(types).toContain('text_done');
     expect(types[types.length - 1]).toBe('turn_done');
+  });
+
+  it('passes a real temp workdir to the system prompt', async () => {
+    baseMockChat.mockResolvedValue({
+      content: 'Hello',
+      finishReason: 'stop',
+    } as ChatResponse);
+
+    await agent.handleUserMessage('Hi');
+
+    expect(createCopilotToolRegistry).toHaveBeenCalled();
+    const registryCall = vi.mocked(createCopilotToolRegistry).mock.calls[0];
+    expect(registryCall[3]).toMatch(/^\/.+/);
+    expect(basename(registryCall[3] as string)).toMatch(/^wf_/);
+    expect(buildSystemPrompt).toHaveBeenCalledTimes(1);
+    const tempWorkdir = vi.mocked(buildSystemPrompt).mock.calls[0][1];
+    expect(tempWorkdir).toMatch(/^\/.+/);
+    expect(basename(tempWorkdir)).toMatch(/^wf_/);
+    expect(tempWorkdir).not.toContain('test-workflow-id');
+  });
+
+  it('removes the temp workdir when disposed', () => {
+    const tempWorkdir = (agent as any).tempWorkdir as string;
+
+    expect(existsSync(tempWorkdir)).toBe(true);
+
+    agent.dispose();
+
+    expect(existsSync(tempWorkdir)).toBe(false);
   });
 
   it('executes tool calls and sends tool events via callbacks', async () => {
@@ -418,9 +462,10 @@ describe('CopilotAgent', () => {
     };
     baseMockChat.mockResolvedValueOnce(toolResponse).mockResolvedValueOnce(textResponse);
     mockToolExecute.mockImplementation(async () => {
-      currentWorkflow = createAutoLaidWorkflow(['node-1', 'node-2', 'node-3'], [
-        { sourceNodeId: 'node-1', targetNodeId: 'node-2' },
-      ]);
+      currentWorkflow = createAutoLaidWorkflow(
+        ['node-1', 'node-2', 'node-3'],
+        [{ sourceNodeId: 'node-1', targetNodeId: 'node-2' }]
+      );
 
       return {
         success: true,

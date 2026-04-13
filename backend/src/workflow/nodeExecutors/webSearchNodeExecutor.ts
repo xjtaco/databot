@@ -8,7 +8,7 @@ import {
   createWebSearchProviderFromConfig,
   type WebSearchResult,
 } from '../../infrastructure/tools/webSearch';
-import { sanitizeNodeName } from './utils';
+import { buildNodeIdSuffix, resolveReadableNodeBaseName } from './utils';
 import logger from '../../utils/logger';
 
 export class WebSearchNodeExecutor implements NodeExecutor {
@@ -29,8 +29,13 @@ export class WebSearchNodeExecutor implements NodeExecutor {
     const results = await provider.searchStructured(keywords);
 
     const markdown = this.formatMarkdown(keywords, results);
-    const safeName = sanitizeNodeName(context.nodeName);
-    const filePath = join(context.workFolder, `${safeName}_search.md`);
+    const { baseName, usedFallback } = resolveReadableNodeBaseName(context.nodeName, 'web_search');
+    const filePath = join(
+      context.workFolder,
+      usedFallback
+        ? `web_search_results_${buildNodeIdSuffix(context.nodeId)}.md`
+        : `${baseName}_search.md`
+    );
     writeFileSync(filePath, markdown, 'utf-8');
 
     logger.info(`Web search saved ${results.length} results to ${filePath}`);

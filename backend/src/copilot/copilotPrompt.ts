@@ -41,7 +41,7 @@ const NODE_TYPE_PYTHON = `### Python Script (python)
 - **Inputs:** Values in the params dict support {{}} template variables. The script field also supports {{}} templates. Can accept outputs from multiple upstream nodes.
 - **Outputs:** result (object), csvPath (csvFile, optional), stderr (text)
 - **Downstream reference examples:** {{result.key}}, {{result.csvPath}}
-- **Tips**: Access inputs via the \`params\` dict; \`result\` must be a JSON-serializable dict; use pandas for CSV processing; the script has a predefined \`WORKSPACE\` variable pointing to the current run's working directory — always use \`os.path.join(WORKSPACE, 'filename')\` to build file paths; never hardcode absolute paths
+- **Tips**: Access inputs via the \`params\` dict; \`result\` must be a JSON-serializable dict; use pandas for CSV processing; the script has a predefined \`WORKSPACE\` variable pointing to the node execution temp directory at runtime — always use \`os.path.join(WORKSPACE, 'filename')\` to build file paths; never hardcode absolute paths
 - **Report generation**: When generating data analysis reports, the Python node handles chart generation, data embedding, and Markdown file assembly:
   - Charts: Use matplotlib; must set \`plt.rcParams['font.sans-serif'] = ['WenQuanYi Zen Hei']\` and \`plt.rcParams['axes.unicode_minus'] = False\`; save PNG with \`fig.savefig(os.path.join(WORKSPACE, 'chart.png'), dpi=150, bbox_inches='tight')\`
   - Image embedding: Read PNG as base64 and embed in Markdown as \`![description](data:image/png;base64,{base64_str})\`
@@ -166,6 +166,17 @@ Do not build SQL queries or data processing logic from memory or guesswork — a
 
 After every node addition (wf_add_node) or modification (wf_update_node / wf_patch_node), you must use wf_execute_node to execute the node and verify it runs correctly. If execution fails, analyze the error and fix the configuration, then re-validate until execution succeeds.`;
 
+function buildTempWorkdirGuidelines(tempWorkdir: string): string {
+  return `## Temp Workdir
+
+- Current temp directory: \`${tempWorkdir}\`
+- generated files must be written under this directory
+- Do not write directly under \`${config.work_folder}\`
+- Use short English snake_case filenames such as \`query_result.csv\`, \`report.md\`, or \`chart.png\`
+- Python \`WORKSPACE\` points to the node execution temp directory at runtime and should be used for file writes in Python nodes
+- Build file paths with \`os.path.join(WORKSPACE, 'filename')\` so files stay inside the runtime workspace`;
+}
+
 function buildToolUsageGuidelines(configStatus: ConfigStatusResponse): string {
   const webSearchLine = configStatus.webSearch ? '\n- web_search: Search external resources' : '';
 
@@ -265,9 +276,10 @@ Respond in the same language the user uses. Briefly state your intent before ope
 /**
  * Build the system prompt for the copilot agent.
  * @param configStatus - Current configuration status for LLM, web search, and SMTP
+ * @param tempWorkdir - Absolute path to the current run temp directory
  * @returns The system prompt string
  */
-export function buildSystemPrompt(configStatus: ConfigStatusResponse): string {
+export function buildSystemPrompt(configStatus: ConfigStatusResponse, tempWorkdir: string): string {
   const nodeTypeSections = [NODE_TYPE_SQL, NODE_TYPE_PYTHON];
   if (configStatus.llm) nodeTypeSections.push(NODE_TYPE_LLM);
   if (configStatus.smtp) nodeTypeSections.push(NODE_TYPE_EMAIL);
@@ -278,6 +290,7 @@ export function buildSystemPrompt(configStatus: ConfigStatusResponse): string {
   return [
     ROLE,
     nodeTypeDescriptions,
+    buildTempWorkdirGuidelines(tempWorkdir),
     WORKFLOW_BUILD_GUIDELINES,
     buildToolUsageGuidelines(configStatus),
     AUTO_FIX_INSTRUCTIONS,

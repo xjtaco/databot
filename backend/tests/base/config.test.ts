@@ -21,6 +21,7 @@ describe('validateConfig', () => {
     delete process.env.JWT_SECRET;
     delete process.env.ADMIN_INITIAL_PASSWORD;
     delete process.env.ENCRYPTION_KEY;
+    delete process.env.WORKSPACE_CLEANUP_MAX_AGE_MS;
   });
 
   it('throws in production when JWT_SECRET uses fallback value', async () => {
@@ -54,5 +55,13 @@ describe('validateConfig', () => {
     });
 
     expect(() => validateConfig()).toThrow(/ENCRYPTION_KEY/i);
+  });
+
+  it('defaults workspace cleanup retention to 30 days when unset', async () => {
+    const { config } = await loadConfigWithEnv({
+      WORKSPACE_CLEANUP_MAX_AGE_MS: undefined,
+    });
+
+    expect(config.workspaceCleanup.maxAgeMs).toBe(30 * 24 * 60 * 60 * 1000);
   });
 });

@@ -1,6 +1,7 @@
+/* eslint-disable vue/one-component-per-file */
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { defineComponent, h, nextTick } from 'vue';
+import { PropType, defineComponent, h, nextTick } from 'vue';
 import { createPinia, setActivePinia } from 'pinia';
 import { createI18n } from 'vue-i18n';
 import ElementPlus from 'element-plus';
@@ -12,7 +13,16 @@ import enUS from '@/locales/en-US';
 vi.mock('@vue-flow/core', () => ({
   VueFlow: defineComponent({
     name: 'VueFlow',
-    props: ['nodes', 'edges'],
+    props: {
+      nodes: {
+        type: Array as PropType<unknown[]>,
+        default: () => [],
+      },
+      edges: {
+        type: Array as PropType<unknown[]>,
+        default: () => [],
+      },
+    },
     emits: ['nodes-change'],
     setup(_props, { slots }) {
       return () => h('div', { class: 'vue-flow-stub' }, slots.default?.());
