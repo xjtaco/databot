@@ -7,7 +7,13 @@ import logger from '../utils/logger';
 import { buildSystemPrompt } from './copilotPrompt';
 import { createCopilotToolRegistry } from './copilotTools';
 import { getConfigStatus } from '../globalConfig/globalConfig.service';
-import { CopilotServerMessage, COPILOT_MAX_TOOL_CALLS_PER_TURN } from './copilot.types';
+import * as workflowService from '../workflow/workflow.service';
+import {
+  CopilotLayoutOwnership,
+  CopilotRoundMutationSummary,
+  CopilotServerMessage,
+  COPILOT_MAX_TOOL_CALLS_PER_TURN,
+} from './copilot.types';
 import { NodeConfig } from '../workflow/workflow.types';
 import { buildToolStartSummary, buildToolDoneSummary } from './toolSummaries';
 
@@ -101,6 +107,7 @@ export class CopilotAgent {
         }
 
         const allMessages = this.context.validHistory();
+        const roundMutations = this.createRoundMutationSummary();
 
         // Call LLM with copilot tool registry + UI callbacks
         const response = await provider.chat(allMessages, {
@@ -145,6 +152,9 @@ export class CopilotAgent {
             const toolData = this.parseToolData(result.content);
             this.emitWorkflowChanged(tc.function.name, { success: isSuccess, data: toolData });
             this.emitNodeConfigCard(tc.function.name, { success: isSuccess, data: toolData });
+            if (isSuccess) {
+              this.recordRoundMutation(roundMutations, tc.function.name);
+            }
 
             // Forward todos_writer metadata to frontend
             if (tc.function.name === 'todos_writer' && result.metadata?.todos) {
@@ -198,6 +208,7 @@ export class CopilotAgent {
 
           // Compress context if token usage exceeds limit
           await this.maybeCompressContext(response.usage?.totalTokens);
+          await this.maybeReflowRound(roundMutations);
 
           // Check abort after completing this round
           if (this.aborted) break;
@@ -257,6 +268,83 @@ export class CopilotAgent {
       this.sendEvent({
         type: 'text_delta',
         content: text.slice(i, i + CHUNK_SIZE),
+      });
+    }
+  }
+
+  private createRoundMutationSummary(): CopilotRoundMutationSummary {
+    return {
+      addedNodes: 0,
+      deletedNodes: 0,
+      addedEdges: 0,
+      deletedEdges: 0,
+      replacedNodes: 0,
+      updatedNodes: 0,
+    };
+  }
+
+  private recordRoundMutation(summary: CopilotRoundMutationSummary, toolName: string): void {
+    if (toolName === 'wf_add_node') {
+      summary.addedNodes += 1;
+    } else if (toolName === 'wf_delete_node') {
+      summary.deletedNodes += 1;
+    } else if (toolName === 'wf_connect_nodes') {
+      summary.addedEdges += 1;
+    } else if (toolName === 'wf_disconnect_nodes') {
+      summary.deletedEdges += 1;
+    } else if (toolName === 'wf_replace_node') {
+      summary.replacedNodes += 1;
+    } else if (toolName === 'wf_update_node' || toolName === 'wf_patch_node') {
+      summary.updatedNodes += 1;
+    }
+  }
+
+  private detectLayoutOwnership(): CopilotLayoutOwnership {
+    return 'copilot';
+  }
+
+  private shouldReflowRound(
+    summary: CopilotRoundMutationSummary,
+    ownership: CopilotLayoutOwnership
+  ): boolean {
+    const structuralChanges =
+      summary.addedNodes +
+      summary.deletedNodes +
+      summary.addedEdges +
+      summary.deletedEdges +
+      summary.replacedNodes;
+
+    if (structuralChanges === 0) {
+      return false;
+    }
+
+    if (ownership === 'copilot') {
+      return structuralChanges > 0;
+    }
+
+    if (ownership === 'mixed') {
+      return structuralChanges >= 2 || summary.replacedNodes > 0;
+    }
+
+    return structuralChanges >= 4;
+  }
+
+  private async maybeReflowRound(summary: CopilotRoundMutationSummary): Promise<void> {
+    const ownership = this.detectLayoutOwnership();
+    if (!this.shouldReflowRound(summary, ownership)) {
+      return;
+    }
+
+    try {
+      await workflowService.reflowWorkflowLayout(this.workflowId);
+      this.sendEvent({ type: 'workflow_changed', changeType: 'node_updated' });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      logger.warn('Copilot workflow reflow failed', {
+        workflowId: this.workflowId,
+        ownership,
+        summary,
+        error: message,
       });
     }
   }

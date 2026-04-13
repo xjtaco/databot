@@ -107,6 +107,17 @@ export interface CopilotErrorEvent {
   configType?: 'llm';
 }
 
+export type CopilotLayoutOwnership = 'copilot' | 'mixed' | 'user';
+
+export interface CopilotRoundMutationSummary {
+  addedNodes: number;
+  deletedNodes: number;
+  addedEdges: number;
+  deletedEdges: number;
+  replacedNodes: number;
+  updatedNodes: number;
+}
+
 export type CopilotServerMessage =
   | CopilotTextDelta
   | CopilotTextDone

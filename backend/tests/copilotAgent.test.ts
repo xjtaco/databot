@@ -10,6 +10,9 @@ vi.mock('../src/copilot/copilotPrompt', () => ({
 vi.mock('../src/globalConfig/globalConfig.service', () => ({
   getConfigStatus: vi.fn().mockResolvedValue({ llm: true, webSearch: true, smtp: true }),
 }));
+vi.mock('../src/workflow/workflow.service', () => ({
+  reflowWorkflowLayout: vi.fn(),
+}));
 vi.mock('../src/copilot/copilot.types', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../src/copilot/copilot.types')>();
   return { ...actual, COPILOT_MAX_TOOL_CALLS_PER_TURN: 20 };
@@ -22,6 +25,7 @@ import { createCopilotToolRegistry } from '../src/copilot/copilotTools';
 import type { ChatOptions, ChatResponse, ToolCallResult } from '../src/infrastructure/llm/types';
 import type { Message } from '../src/infrastructure/llm/types';
 import type { ToolResult } from '../src/infrastructure/tools/types';
+import * as workflowService from '../src/workflow/workflow.service';
 
 /**
  * Wrap a mock chat fn so it invokes callbacks when toolCalls are present.
@@ -89,6 +93,8 @@ describe('CopilotAgent', () => {
     baseMockChat = vi.fn();
     mockToolExecute = vi.fn();
     mockChat = wrapWithCallbacks(baseMockChat, mockToolExecute);
+    vi.mocked(workflowService.reflowWorkflowLayout).mockReset();
+    vi.mocked(workflowService.reflowWorkflowLayout).mockResolvedValue({} as never);
 
     // Mock LLM provider
     vi.mocked(LLMProviderFactory.getProvider).mockReturnValue({
@@ -279,5 +285,63 @@ describe('CopilotAgent', () => {
     expect(types[types.length - 1]).toBe('turn_done');
     // LLM chat called only once (no compression call)
     expect(mockChat).toHaveBeenCalledTimes(1);
+  });
+
+  it('reflows workflow layout after a structurally mutating round', async () => {
+    const toolResponse: ChatResponse = {
+      content: '',
+      finishReason: 'tool_calls',
+      toolCalls: [
+        {
+          id: 'tc1',
+          type: 'function',
+          function: { name: 'wf_add_node', arguments: '{"type":"sql","name":"New Node"}' },
+        },
+      ],
+    };
+    const textResponse: ChatResponse = {
+      content: 'Added a node',
+      finishReason: 'stop',
+    };
+    baseMockChat.mockResolvedValueOnce(toolResponse).mockResolvedValueOnce(textResponse);
+    mockToolExecute.mockResolvedValue({
+      success: true,
+      data: { id: 'node-1', name: 'New Node', type: 'sql', config: {} },
+    });
+
+    await agent.handleUserMessage('Add a node');
+
+    expect(workflowService.reflowWorkflowLayout).toHaveBeenCalledWith('test-workflow-id');
+    expect(events).toContainEqual({ type: 'workflow_changed', changeType: 'node_updated' });
+  });
+
+  it('does not reflow workflow layout after a config-only update round', async () => {
+    const toolResponse: ChatResponse = {
+      content: '',
+      finishReason: 'tool_calls',
+      toolCalls: [
+        {
+          id: 'tc1',
+          type: 'function',
+          function: {
+            name: 'wf_patch_node',
+            arguments: '{"nodeId":"node-1","find":"SELECT *","replace":"SELECT id"}',
+          },
+        },
+      ],
+    };
+    const textResponse: ChatResponse = {
+      content: 'Patched the node',
+      finishReason: 'stop',
+    };
+    baseMockChat.mockResolvedValueOnce(toolResponse).mockResolvedValueOnce(textResponse);
+    mockToolExecute.mockResolvedValue({
+      success: true,
+      data: { id: 'node-1', patched: true },
+    });
+
+    await agent.handleUserMessage('Patch the node');
+
+    expect(workflowService.reflowWorkflowLayout).not.toHaveBeenCalled();
   });
 });
