@@ -71,4 +71,28 @@ describe('buildDebugSystemPrompt', () => {
     expect(prompt).toContain('prefer returning a file path');
     expect(prompt).toContain('final user-facing answer');
   });
+
+  it('includes shared web search params guidance', () => {
+    const node: WorkflowNodeInfo = {
+      id: 'node-1',
+      workflowId: 'wf-1',
+      name: 'debug_search',
+      description: null,
+      type: 'web_search',
+      config: {
+        nodeType: 'web_search',
+        params: {},
+        keywords: '{{query.result.keyword}}',
+        outputVariable: 'search_result',
+      },
+      positionX: 0,
+      positionY: 0,
+    };
+
+    const prompt = buildDebugSystemPrompt(node, TEMP_WORKDIR);
+
+    expect(prompt).toContain('`params`');
+    expect(prompt).toContain('custom text inputs');
+    expect(prompt).toContain('supports `{{}}` templates');
+  });
 });
