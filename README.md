@@ -1,19 +1,38 @@
 # DataBot
 
-A data research agent with a web chat interface that integrates LLMs to explore databases and generate reports.
+DataBot is an AI-native data workspace for teams that need to chat with data, generate reports, connect to heterogeneous databases, and automate repeatable analysis with visual workflows. It combines an LLM chat interface, rich database connectivity, knowledge context, and scheduled workflow execution in one web application.
 
 [中文](README_ZH.md)
 
+## Why DataBot
+
+DataBot is designed for analysts, data teams, and business users who want to move from asking questions to producing usable output quickly:
+
+- Chat with your data in natural language and turn answers into structured analysis or report-style output
+- Connect to a wide range of relational databases and uploaded files without switching between multiple tools
+- Build data tasks visually with `Vibe Flow`, combining SQL, Python, LLM, and search steps into reusable workflows
+- Run workflows on demand or on a schedule for recurring reporting, monitoring, and operational tasks
+- Add domain knowledge through data dictionaries and knowledge bases so the model can reason with better business context
+
 ## Features
 
-- **Intelligent Chat** — Interact with LLMs via a chat interface to query and analyze data using natural language
-- **Multiple Data Sources** — Support for PostgreSQL, MySQL and other relational databases, plus CSV/Excel file uploads
-- **Data Dictionary** — Manage metadata descriptions for tables and columns, helping the LLM accurately understand business semantics
-- **Knowledge Base** — Upload and manage reference documents to provide domain knowledge context for the LLM
-- **Workflow Engine** — Visual drag-and-drop orchestration of SQL, Python and other nodes with Cron scheduling support
-- **Sandbox Execution** — Safely execute Python code in isolated containers
-- **Responsive UI** — Adapts to both desktop and mobile browsers
+- **Chat to Insights and Reports** — Ask questions in natural language, explore data conversationally, and generate report-ready summaries or analysis output from the chat interface
+- **Rich Database Connectivity** — Connect to PostgreSQL, MySQL, SQL Server, Oracle, ClickHouse, Trino, Hive, Spark, TiDB, Dameng, KingBase, SQLite, and more through the built-in JDBC bridge
+- **File-Based Analysis** — Upload CSV and Excel files, inspect their structure, and analyze them alongside database-backed datasets
+- **`Vibe Flow` Workflow Builder** — Build workflows visually with drag-and-drop nodes for SQL, Python, LLM, web search, branching, and other execution steps
+- **Scheduling and Task Management** — Configure recurring jobs with daily, weekly, monthly, or raw Cron schedules and manage workflow execution as repeatable tasks
+- **Data Dictionary** — Maintain metadata for tables and columns so the LLM can map business terms to physical schema more accurately
+- **Knowledge Base** — Upload manuals, SOPs, and domain documents to provide business context during chat and workflow execution
+- **Sandbox Execution** — Run Python steps in isolated containers for safer automation and data processing
+- **Responsive UI** — Use the system on desktop or mobile browsers
 - **Internationalization** — Chinese and English interface support
+
+## Typical Use Cases
+
+- **Analyst Copilot** — Ask cross-table questions, inspect data, and produce draft reports or summaries for stakeholders without manually stitching together SQL and notes
+- **Data Team Automation** — Build reusable `Vibe Flow` pipelines for ETL-like tasks, enrichment, quality checks, web lookup, and LLM-assisted post-processing
+- **Scheduled Reporting** — Run recurring workflows for morning briefings, weekly KPI summaries, exception monitoring, or departmental report generation
+- **Business Knowledge + Data Reasoning** — Combine structured data, uploaded files, and reference documents so the model can answer questions with both numbers and context
 
 ## Architecture
 
@@ -32,6 +51,14 @@ A data research agent with a web chat interface that integrates LLMs to explore 
 - Java 22 + Maven
 - Docker & Docker Compose
 - PostgreSQL 13+
+
+## What You Can Do in 5 Minutes
+
+1. Connect an LLM provider and one or more databases
+2. Start a chat session and ask for a metric breakdown, anomaly explanation, or draft report
+3. Upload a CSV or Excel file if part of the analysis lives outside your database
+4. Save the logic as a `Vibe Flow` workflow with SQL, Python, and LLM nodes
+5. Add a schedule so the workflow runs automatically as a managed recurring task
 
 ## Getting Started
 
