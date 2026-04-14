@@ -1,31 +1,31 @@
 # DataBot
 
-一个具备网页聊天界面的数据研究代理，可通过集成大语言模型（LLM）来探索数据库并生成报告。
+A data research agent with a web chat interface that integrates LLMs to explore databases and generate reports.
 
-[English](README_EN.md)
+[中文](README_ZH.md)
 
-## 功能特性
+## Features
 
-- **智能对话** — 通过聊天界面与 LLM 交互，自然语言查询和分析数据
-- **多数据源** — 支持 PostgreSQL、MySQL 等关系型数据库，以及 CSV/Excel 文件上传
-- **数据字典** — 管理表和列的元数据描述，帮助 LLM 准确理解业务语义
-- **知识库** — 上传和管理参考文档，为 LLM 提供领域知识上下文
-- **工作流引擎** — 可视化拖拽编排 SQL、Python 等节点，支持 Cron 定时调度
-- **沙箱执行** — 在隔离的容器中安全执行 Python 代码
-- **响应式界面** — 同时适配桌面端和移动端浏览器
-- **国际化** — 支持中文和英文界面
+- **Intelligent Chat** — Interact with LLMs via a chat interface to query and analyze data using natural language
+- **Multiple Data Sources** — Support for PostgreSQL, MySQL and other relational databases, plus CSV/Excel file uploads
+- **Data Dictionary** — Manage metadata descriptions for tables and columns, helping the LLM accurately understand business semantics
+- **Knowledge Base** — Upload and manage reference documents to provide domain knowledge context for the LLM
+- **Workflow Engine** — Visual drag-and-drop orchestration of SQL, Python and other nodes with Cron scheduling support
+- **Sandbox Execution** — Safely execute Python code in isolated containers
+- **Responsive UI** — Adapts to both desktop and mobile browsers
+- **Internationalization** — Chinese and English interface support
 
-## 技术架构
+## Architecture
 
-| 组件 | 技术栈 | 说明 |
-|------|--------|------|
-| **Frontend** | Vue 3 + TypeScript + Vite + Element Plus | 单页应用，Pinia 状态管理，vue-i18n 国际化 |
-| **Backend** | Express.js v5 + Prisma v7 + PostgreSQL | REST API + WebSocket 实时通信 |
-| **Bridge** | Java 22 + Vert.x 4.5 + HikariCP | JDBC 数据库桥接服务，代理外部数据库连接和查询 |
-| **Sandbox** | Python | 隔离容器中执行用户代码 |
-| **Nginx** | nginx:alpine | 反向代理，前端静态资源托管 |
+| Component | Tech Stack | Description |
+|-----------|-----------|-------------|
+| **Frontend** | Vue 3 + TypeScript + Vite + Element Plus | SPA with Pinia state management and vue-i18n |
+| **Backend** | Express.js v5 + Prisma v7 + PostgreSQL | REST API + WebSocket real-time communication |
+| **Bridge** | Java 22 + Vert.x 4.5 + HikariCP | JDBC database bridge service proxying external DB connections and queries |
+| **Sandbox** | Python | Executes user code in isolated containers |
+| **Nginx** | nginx:alpine | Reverse proxy and static asset hosting |
 
-## 前置条件
+## Prerequisites
 
 - Node.js >= 18
 - pnpm
@@ -33,33 +33,33 @@
 - Docker & Docker Compose
 - PostgreSQL 13+
 
-## 快速开始
+## Getting Started
 
-### 1. 克隆仓库
+### 1. Clone the Repository
 
 ```bash
 git clone <repo-url>
 cd databot
 ```
 
-### 2. 后端配置
+### 2. Backend Configuration
 
 ```bash
 cd backend
 cp .env.example .env
-# 编辑 .env，配置 ENCRYPTION_KEY（openssl rand -hex 32 生成）
+# Edit .env, set ENCRYPTION_KEY (generate with: openssl rand -hex 32)
 ```
 
-### 3. 安装依赖并初始化
+### 3. Install Dependencies and Initialize
 
 ```bash
-# 后端
+# Backend
 cd backend
 pnpm install
 pnpm prisma generate
 pnpm prisma migrate dev
 
-# 前端
+# Frontend
 cd ../frontend
 pnpm install
 
@@ -68,88 +68,88 @@ cd ../bridge
 mvn package -DskipTests
 ```
 
-### 4. 开发模式启动
+### 4. Development Mode
 
 ```bash
-# 后端
+# Backend
 cd backend && pnpm run dev
 
-# 前端（另开终端）
+# Frontend (in another terminal)
 cd frontend && pnpm run dev
 ```
 
-### 5. Docker 部署
+### 5. Docker Deployment
 
 ```bash
 cd docker
 docker compose up -d
 ```
 
-服务默认运行在 `http://localhost:18080`。
+The application will be available at `http://localhost:18080`.
 
-### 6. 初始使用
+### 6. Initial Setup
 
-系统初始化后会创建默认管理员账号：
+A default admin account is created on first launch:
 
-- **用户名：** `admin`
-- **密码：** `Admin@123`
+- **Username:** `admin`
+- **Password:** `Admin@123`
 
-首次登录后，请前往 **设置** 页面完成以下全局配置：
+After logging in, go to **Settings** to complete the following global configuration:
 
-1. **LLM 模型** — 配置大语言模型连接参数（API Key、Base URL、模型名称等）
-2. **网络搜索引擎** — 配置搜索引擎（支持阿里云 IQS、百度搜索、Google 搜索）
-3. **SMTP 邮件服务**（可选） — 配置邮件发送服务，用于工作流邮件节点
+1. **LLM Model** — Configure LLM connection parameters (API Key, Base URL, model name, etc.)
+2. **Web Search Engine** — Configure a search provider (Alibaba Cloud IQS, Baidu Search, or Google Search)
+3. **SMTP Email Service** (optional) — Configure email sending for workflow email nodes
 
-> 至少需要配置 LLM 模型后才能正常使用对话和数据分析功能。
+> At minimum, the LLM model must be configured before chat and data analysis features can be used.
 
-## 支持的数据源
+## Supported Data Sources
 
-### 关系型数据库（通过 JDBC 桥接）
+### Relational Databases (via JDBC Bridge)
 
-| 数据库 | 默认端口 | 备注 |
-|--------|---------|------|
+| Database | Default Port | Notes |
+|----------|-------------|-------|
 | MySQL | 3306 | |
 | PostgreSQL | 5432 | |
 | MariaDB | 3306 | |
 | SQL Server | 1433 | |
-| Oracle | 1521 | 支持 SID 和 Service Name 两种连接方式 |
+| Oracle | 1521 | SID and Service Name supported |
 | IBM DB2 | 50000 | |
 | SAP HANA | 30015 | |
-| ClickHouse | 8123 | 列式 OLAP 数据库 |
-| StarRocks | 9030 | MySQL 协议兼容的分析引擎 |
-| Trino | 8080 | 分布式 SQL 查询引擎 |
-| Presto | 8080 | 分布式 SQL 查询引擎 |
-| Apache Spark | 10000 | 通过 HiveServer2 JDBC |
-| Apache Hive 2 | 10000 | 通过 HiveServer2 JDBC |
-| TiDB | 3306 | MySQL 兼容的分布式数据库 |
-| KingBase（人大金仓） | 54321 | PostgreSQL 兼容 |
-| Dameng（达梦） | 5236 | 国产数据库 |
+| ClickHouse | 8123 | Column-oriented OLAP database |
+| StarRocks | 9030 | MySQL-compatible analytics engine |
+| Trino | 8080 | Distributed SQL query engine |
+| Presto | 8080 | Distributed SQL query engine |
+| Apache Spark | 10000 | Via HiveServer2 JDBC |
+| Apache Hive 2 | 10000 | Via HiveServer2 JDBC |
+| TiDB | 3306 | MySQL-compatible distributed database |
+| KingBase | 54321 | PostgreSQL-compatible (KingbaseES) |
+| Dameng | 5236 | DM Database |
 
-### 嵌入式数据库
+### Embedded Database
 
-| 数据库 | 备注 |
-|--------|------|
-| SQLite | 基于文件或内存，使用 `better-sqlite3` |
+| Database | Notes |
+|----------|-------|
+| SQLite | File-based or in-memory, via `better-sqlite3` |
 
-### 文件上传
+### File Uploads
 
-| 格式 | 扩展名 | 备注 |
-|------|--------|------|
-| CSV | `.csv` | 直接导入 |
-| Excel | `.xls`、`.xlsx` | 支持多工作表，每个工作表转换为独立表 |
+| Format | Extensions | Notes |
+|--------|-----------|-------|
+| CSV | `.csv` | Direct import |
+| Excel | `.xls`, `.xlsx` | Multi-sheet support, each sheet converted to a separate table |
 
-## 开发命令
+## Development Commands
 
 ```bash
-# 前端静态检查 + 编译 + 测试
+# Frontend lint + build + test
 cd frontend && pnpm run preflight
 
-# 后端静态检查 + 编译 + 测试
+# Backend lint + build + test
 cd backend && pnpm run preflight
 
-# Bridge 静态检查 + 编译
+# Bridge lint + build
 cd bridge && mvn spotless:check checkstyle:check compile
 
-# Bridge 自动修复格式
+# Bridge auto-fix formatting
 cd bridge && mvn spotless:apply
 ```
