@@ -126,12 +126,6 @@ wf_execute_node({
 
 **Debugging workflow:** Locate failed node → construct mock inputs → run isolated test → fix configuration → run full workflow`;
 
-const COMMON_NODE_CHAINS = `## Common Node Chain Examples
-- SQL → Python: SQL outputs CSV, Python reads and processes it via {{query.csvPath}}
-- Python → LLM: Python outputs structured data, LLM references it via {{result.result.data}}
-- LLM → Email: LLM generates report text, Email sends it via {{llm.rawResponse}}
-- Python → Branch → (Yes/No branches): Python outputs a boolean value, Branch determines the path`;
-
 const OUTPUT_FORMAT_RULES = `## Output Format Rules
 
 Respond in the same language the user uses. Briefly state your intent before operations and summarize the result afterwards. When errors occur, provide clear root-cause analysis and fix suggestions.`;
@@ -154,7 +148,6 @@ export function buildSystemPrompt(configStatus: ConfigStatusResponse, tempWorkdi
     buildToolUsageGuidelines(configStatus),
     AUTO_FIX_INSTRUCTIONS,
     NODE_DEBUGGING,
-    COMMON_NODE_CHAINS,
     OUTPUT_FORMAT_RULES,
   ].join('\n\n');
 }

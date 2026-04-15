@@ -165,7 +165,7 @@ export function buildSharedTempWorkdirGuidelines(tempWorkdir: string): string {
   return `## Temp Workdir
 
 - Current temp directory: \`${tempWorkdir}\`
-- generated files must be written under this directory
+- generated files must be written under this directory or its execution subdirectories
 - Do not write directly under \`${workFolderRoot}\`
 - Use short English snake_case filenames such as \`query_result.csv\`, \`report.md\`, or \`chart.png\`
 - Python \`WORKSPACE\` points to the node execution temp directory at runtime and should be used for file writes in Python nodes

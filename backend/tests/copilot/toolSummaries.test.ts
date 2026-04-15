@@ -40,6 +40,7 @@ describe('toolSummaries', () => {
         'wf_add_node',
         'wf_update_node',
         'wf_patch_node',
+        'wf_replace_node',
         'wf_delete_node',
         'wf_connect_nodes',
         'wf_disconnect_nodes',
@@ -54,6 +55,9 @@ describe('toolSummaries', () => {
         'scoped_glob',
         'scoped_grep',
         'scoped_read_file',
+        'web_search',
+        'sql',
+        'todos_writer',
       ];
       for (const tool of tools) {
         expect(buildToolStartSummary('zh-CN', tool, {})).toBeTruthy();
@@ -106,6 +110,16 @@ describe('toolSummaries', () => {
     it('returns fallback for unknown tool name', () => {
       expect(buildToolDoneSummary('zh-CN', 'unknown_tool')).toBe('完成');
       expect(buildToolDoneSummary('en-US', 'unknown_tool')).toBe('Done');
+    });
+
+    it('returns dedicated summaries for extended tool set', () => {
+      expect(buildToolStartSummary('zh-CN', 'wf_replace_node', { nodeId: 'node-1' })).toContain(
+        '替换节点'
+      );
+      expect(buildToolStartSummary('en-US', 'web_search', {})).toBe('Searching the web');
+      expect(buildToolStartSummary('en-US', 'sql', {})).toBe('Running SQL query');
+      expect(buildToolDoneSummary('zh-CN', 'todos_writer')).toBe('任务列表已更新');
+      expect(buildToolDoneSummary('en-US', 'wf_replace_node')).toBe('Node replaced');
     });
   });
 });

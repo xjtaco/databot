@@ -98,6 +98,29 @@ describe('buildDebugSystemPrompt', () => {
     expect(prompt).toContain('hardcoded absolute paths');
   });
 
+  it('describes wf_update_node as a partial merge, not full replacement', () => {
+    const node: WorkflowNodeInfo = {
+      id: 'node-1',
+      workflowId: 'wf-1',
+      name: 'debug_python',
+      description: null,
+      type: 'python',
+      config: {
+        nodeType: 'python',
+        params: {},
+        script: 'result = {}',
+        outputVariable: 'result',
+      },
+      positionX: 0,
+      positionY: 0,
+    };
+
+    const prompt = buildDebugSystemPrompt(node, TEMP_WORKDIR);
+
+    expect(prompt).toContain('Merge partial config into the existing node config');
+    expect(prompt).not.toContain('Replace the node config entirely');
+  });
+
   it('includes shared web search params guidance', () => {
     const node: WorkflowNodeInfo = {
       id: 'node-1',
@@ -144,5 +167,31 @@ describe('buildDebugSystemPrompt', () => {
     expect(prompt).toContain('**Common issues**');
     expect(prompt).toContain('Search engine not configured');
     expect(prompt).toContain('empty keywords');
+  });
+
+  it('does not imply debug agent has standalone SQL tools', () => {
+    const node: WorkflowNodeInfo = {
+      id: 'node-1',
+      workflowId: 'wf-1',
+      name: 'debug_sql',
+      description: null,
+      type: 'sql',
+      config: {
+        nodeType: 'sql',
+        datasourceId: 'ds-1',
+        params: {},
+        sql: 'select 1',
+        outputVariable: 'query_result',
+      },
+      positionX: 0,
+      positionY: 0,
+    };
+
+    const prompt = buildDebugSystemPrompt(node, TEMP_WORKDIR);
+
+    expect(prompt).not.toContain('Do not use SQL tools on data files.');
+    expect(prompt).not.toContain('Database tables must be queried using SQL tools.');
+    expect(prompt).toContain('Do not use SQL nodes for data files.');
+    expect(prompt).toContain('SQL nodes');
   });
 });
