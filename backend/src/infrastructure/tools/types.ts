@@ -14,6 +14,7 @@ export const ToolName = {
   WriteFile: 'write_file',
   Sql: 'sql',
   WebSearch: 'web_search',
+  WebFetch: 'web_fetch',
   TodosWriter: 'todos_writer',
   OutputMd: 'output_md',
 } as const;
