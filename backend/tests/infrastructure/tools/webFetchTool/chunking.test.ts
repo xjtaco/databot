@@ -47,7 +47,8 @@ function mockHtmlResponse(html: string) {
 }
 
 function generateLongContent(charCount: number): string {
-  const sentence = 'This is a sentence of content used for testing the chunking behavior of the WebFetch tool. ';
+  const sentence =
+    'This is a sentence of content used for testing the chunking behavior of the WebFetch tool. ';
   const repeated = sentence.repeat(Math.ceil(charCount / sentence.length));
   return repeated.slice(0, charCount);
 }
@@ -115,7 +116,11 @@ describe('WebFetchTool.execute() - Chunking', () => {
 
     // Second call gets chunk 2
     mockHtmlResponse(html);
-    const result2 = await tool.execute({ url: 'https://example.com/chunked', offset: data1.nextOffset, maxChars: 100 });
+    const result2 = await tool.execute({
+      url: 'https://example.com/chunked',
+      offset: data1.nextOffset,
+      maxChars: 100,
+    });
     const data2 = result2.data as { hasMore: boolean; content: string };
 
     // Second chunk should not contain the beginning of the text
@@ -184,8 +189,8 @@ describe('WebFetchTool.execute() - Chunking', () => {
     `;
     mockHtmlResponse(html);
 
-    await expect(tool.execute({ url: 'https://example.com/beyond-offset', offset: 99999 })).rejects.toThrow(
-      'Page content is empty or could not be extracted',
-    );
+    await expect(
+      tool.execute({ url: 'https://example.com/beyond-offset', offset: 99999 })
+    ).rejects.toThrow('Page content is empty or could not be extracted');
   });
 });
