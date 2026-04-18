@@ -31,6 +31,10 @@ module.exports = [
         fetch: 'readonly',
         Response: 'readonly',
         RequestInit: 'readonly',
+        URL: 'readonly',
+        URLSearchParams: 'readonly',
+        AbortController: 'readonly',
+        AbortSignal: 'readonly',
       },
     },
     plugins: {

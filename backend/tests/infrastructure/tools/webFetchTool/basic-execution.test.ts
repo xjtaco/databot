@@ -94,7 +94,10 @@ describe('WebFetchTool.execute() - Basic Execution', () => {
   it('should fall back to body when no article/main found', async () => {
     const html = `
       <html><head><title>Plain Page</title></head>
-      <body><p>Body content here.</p></body></html>
+      <body>
+        <p>Body content here. This is a longer paragraph to ensure the extracted text exceeds the minimum content length threshold of fifty characters.</p>
+        <p>Additional paragraph to provide more context and make sure we have enough text for the test to pass reliably.</p>
+      </body></html>
     `;
 
     mockFetch.mockResolvedValueOnce({
@@ -160,7 +163,10 @@ describe('WebFetchTool.execute() - Basic Execution', () => {
     const html = `
       <html><head><title>中文标题</title></head>
       <body>
-        <article><p>这是一段中文内容。</p></article>
+        <article>
+          <p>这是一段中文内容。这里还有更多的文字，用来确保提取出来的文本长度超过五十个字符的最小内容长度限制。</p>
+          <p>第二段中文内容，进一步增加文本长度，保证测试可以顺利通过。</p>
+        </article>
       </body></html>
     `;
 

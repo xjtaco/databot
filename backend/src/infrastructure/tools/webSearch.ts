@@ -1,4 +1,3 @@
-/* eslint-disable no-undef */
 import { JSONSchemaObject, ToolName, ToolParams, ToolResult } from './types';
 import { Tool, ToolRegistry } from './tools';
 import logger from '../../utils/logger';

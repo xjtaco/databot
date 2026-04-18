@@ -202,8 +202,10 @@ describe('CoreAgentSession', () => {
         `Never write generated files directly under the root of \`${TEST_WORK_DIR}\``
       );
       expect(systemPrompt).toContain('Use short English snake_case filenames such as');
-      expect(systemPrompt).toContain('When using tools like `read_file` or `write_file`, always use absolute paths.');
-      expect(systemPrompt).not.toContain("do not provide a summary unless the user requests it");
+      expect(systemPrompt).toContain(
+        'When using tools like `read_file` or `write_file`, always use absolute paths.'
+      );
+      expect(systemPrompt).not.toContain('do not provide a summary unless the user requests it');
       expect(systemPrompt).not.toContain("Always concatenate the project root's absolute path");
     });
 

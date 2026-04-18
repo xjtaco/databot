@@ -1,7 +1,6 @@
-/* eslint-disable no-undef */
 import * as cheerio from 'cheerio';
-import type { AnyNode } from 'domhandler';
 import * as iconv from 'iconv-lite';
+import type { AnyNode, Element } from 'domhandler';
 import { Tool } from './tools';
 import { JSONSchemaObject, ToolName, ToolParams, ToolResult } from './types';
 import logger from '../../utils/logger';
@@ -23,7 +22,7 @@ interface WebFetchResult {
 
 const FETCH_TIMEOUT_MS = 10000;
 const DEFAULT_MAX_CHARS = 8000;
-const MIN_CONTENT_LENGTH = 1;
+const MIN_CONTENT_LENGTH = 50;
 
 const CONTENT_SELECTORS = [
   'article',
@@ -237,7 +236,8 @@ export class WebFetchTool extends Tool {
           return;
         }
         if (child.type !== 'tag') return;
-        const tagName = child.name?.toLowerCase() ?? '';
+        const elem = child as Element;
+        const tagName = elem.tagName.toLowerCase();
         if (tagName === 'a') {
           const href = $(child).attr('href');
           const text = $(child).text().trim();
