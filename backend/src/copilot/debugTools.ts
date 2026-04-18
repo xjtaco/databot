@@ -1,6 +1,7 @@
 // backend/src/copilot/debugTools.ts
 
 import { ToolRegistryClass } from '../infrastructure/tools/tools';
+import { WebFetchTool } from '../infrastructure/tools/webFetch';
 import type { WorkflowAccessor } from './workflowAccessor';
 import {
   WfGetNodeTool,
@@ -33,6 +34,7 @@ export function createDebugToolRegistry(accessor: WorkflowAccessor): ToolRegistr
   registry.register(new ScopedGlobTool());
   registry.register(new ScopedGrepTool());
   registry.register(new ScopedReadFileTool());
+  registry.register(new WebFetchTool());
 
   return registry;
 }

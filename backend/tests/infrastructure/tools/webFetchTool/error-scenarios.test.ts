@@ -49,7 +49,7 @@ describe('WebFetchTool.execute() - Error Scenarios', () => {
     });
 
     await expect(tool.execute({ url: 'https://example.com/not-found' })).rejects.toThrow(
-      'Failed to fetch page: HTTP 404',
+      'Failed to fetch page: HTTP 404'
     );
   });
 
@@ -62,7 +62,7 @@ describe('WebFetchTool.execute() - Error Scenarios', () => {
     });
 
     await expect(tool.execute({ url: 'https://example.com/server-error' })).rejects.toThrow(
-      'Failed to fetch page: HTTP 500',
+      'Failed to fetch page: HTTP 500'
     );
   });
 
@@ -76,7 +76,7 @@ describe('WebFetchTool.execute() - Error Scenarios', () => {
     });
 
     await expect(tool.execute({ url: 'https://example.com/data.json' })).rejects.toThrow(
-      'non-HTML content',
+      'non-HTML content'
     );
   });
 
@@ -106,26 +106,28 @@ describe('WebFetchTool.execute() - Error Scenarios', () => {
     });
 
     await expect(tool.execute({ url: 'https://example.com/empty' })).rejects.toThrow(
-      'Page content is empty or could not be extracted',
+      'Page content is empty or could not be extracted'
     );
   });
 
   it('should error on network timeout (AbortError)', async () => {
-    const abortError = new DOMException('The operation was aborted', 'AbortError');
+    const abortError = new globalThis.DOMException('The operation was aborted', 'AbortError');
     mockFetch.mockRejectedValueOnce(abortError);
 
     await expect(tool.execute({ url: 'https://example.com/timeout' })).rejects.toThrow(
-      'Request timeout',
+      'Request timeout'
     );
   });
 
   it('should error on fetch failure (ECONNREFUSED)', async () => {
     const connError = new TypeError('fetch failed');
-    (connError as TypeError & { cause?: Error }).cause = new Error('connect ECONNREFUSED 127.0.0.1:443');
+    (connError as TypeError & { cause?: Error }).cause = new Error(
+      'connect ECONNREFUSED 127.0.0.1:443'
+    );
     mockFetch.mockRejectedValueOnce(connError);
 
     await expect(tool.execute({ url: 'https://example.com/refused' })).rejects.toThrow(
-      'Failed to fetch page',
+      'Failed to fetch page'
     );
   });
 
@@ -138,6 +140,8 @@ describe('WebFetchTool.execute() - Error Scenarios', () => {
       arrayBuffer: async () => new ArrayBuffer(10),
     });
 
-    await expect(tool.execute({ url: 'https://example.com/no-ct' })).rejects.toThrow('non-HTML content');
+    await expect(tool.execute({ url: 'https://example.com/no-ct' })).rejects.toThrow(
+      'non-HTML content'
+    );
   });
 });

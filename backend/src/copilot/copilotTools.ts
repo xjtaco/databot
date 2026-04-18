@@ -9,6 +9,7 @@ import { GrepTool } from '../infrastructure/tools/grepTool';
 import { ReadFileTool } from '../infrastructure/tools/readFileTool';
 import { sanitizeForLlm } from '../infrastructure/tools/objectSanitizer';
 import { WebSearch } from '../infrastructure/tools/webSearch';
+import { WebFetchTool } from '../infrastructure/tools/webFetch';
 import { SqlTool } from '../infrastructure/tools/sqlTool';
 import { TodosWriter } from '../infrastructure/tools/todosWriter';
 import { config } from '../base/config';
@@ -59,6 +60,7 @@ export const COPILOT_TOOL_NAMES = [
   'scoped_grep',
   'scoped_read_file',
   'web_search',
+  'web_fetch',
   'sql',
   'todos_writer',
   'wf_search_custom_nodes',
@@ -1251,6 +1253,30 @@ class CopilotWebSearchTool extends Tool {
   }
 }
 
+class CopilotWebFetchTool extends Tool {
+  name = 'web_fetch';
+  description =
+    'Fetch a webpage and extract user-visible text content. Supports reading in chunks via offset. Returns up to 10 relevant sub-links.';
+  parameters: JSONSchemaObject = {
+    type: 'object',
+    properties: {
+      url: { type: 'string', description: 'The page URL to fetch' },
+      offset: { type: 'number', description: 'Character offset to start reading from', default: 0 },
+      maxChars: {
+        type: 'number',
+        description: 'Maximum characters to return in this chunk',
+        default: 8000,
+      },
+    },
+    required: ['url'],
+  };
+  private webFetchTool = new WebFetchTool();
+
+  async execute(params: ToolParams): Promise<ToolResult> {
+    return this.webFetchTool.execute(params);
+  }
+}
+
 class CopilotSqlTool extends Tool {
   name = 'sql';
   description =
@@ -1372,6 +1398,7 @@ export function createCopilotToolRegistry(
   if (!configStatus || configStatus.webSearch) {
     registry.register(new CopilotWebSearchTool());
   }
+  registry.register(new CopilotWebFetchTool());
   registry.register(new CopilotSqlTool());
   registry.register(new TodosWriter());
   registry.register(new WfSearchCustomNodesTool());

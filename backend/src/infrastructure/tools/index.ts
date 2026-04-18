@@ -47,5 +47,8 @@ export { TodosWriter } from './todosWriter';
 // Export WebSearch tool implementation
 export { WebSearch } from './webSearch';
 
+// Export WebFetch tool implementation
+export { WebFetchTool } from './webFetch';
+
 // Export OutputMd tool implementation
 export { OutputMdTool } from './outputMdTool';
