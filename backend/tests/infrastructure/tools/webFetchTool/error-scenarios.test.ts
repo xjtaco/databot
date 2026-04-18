@@ -24,6 +24,7 @@ vi.mock('../../../../src/base/config', () => ({
 }));
 
 import { WebFetchTool } from '../../../../src/infrastructure/tools/webFetch';
+import { ToolExecutionError } from '../../../../src/errors/types';
 
 const mockFetch = vi.fn();
 global.fetch = mockFetch;
@@ -40,6 +41,16 @@ describe('WebFetchTool.execute() - Error Scenarios', () => {
     vi.restoreAllMocks();
   });
 
+  it('should error on private/loopback URL (127.0.0.1)', async () => {
+    try {
+      await tool.execute({ url: 'http://127.0.0.1/admin' });
+      expect.unreachable('Should have thrown');
+    } catch (error) {
+      expect(error).toBeInstanceOf(ToolExecutionError);
+      expect((error as Error).message).toContain('private or internal network');
+    }
+  });
+
   it('should error on HTTP 404', async () => {
     mockFetch.mockResolvedValueOnce({
       ok: false,
@@ -48,9 +59,13 @@ describe('WebFetchTool.execute() - Error Scenarios', () => {
       headers: new Map([['content-type', 'text/html']]),
     });
 
-    await expect(tool.execute({ url: 'https://example.com/not-found' })).rejects.toThrow(
-      'Failed to fetch page: HTTP 404'
-    );
+    try {
+      await tool.execute({ url: 'https://example.com/not-found' });
+      expect.unreachable('Should have thrown');
+    } catch (error) {
+      expect(error).toBeInstanceOf(ToolExecutionError);
+      expect((error as Error).message).toContain('HTTP 404');
+    }
   });
 
   it('should error on HTTP 500', async () => {
@@ -61,9 +76,13 @@ describe('WebFetchTool.execute() - Error Scenarios', () => {
       headers: new Map([['content-type', 'text/html']]),
     });
 
-    await expect(tool.execute({ url: 'https://example.com/server-error' })).rejects.toThrow(
-      'Failed to fetch page: HTTP 500'
-    );
+    try {
+      await tool.execute({ url: 'https://example.com/server-error' });
+      expect.unreachable('Should have thrown');
+    } catch (error) {
+      expect(error).toBeInstanceOf(ToolExecutionError);
+      expect((error as Error).message).toContain('HTTP 500');
+    }
   });
 
   it('should error on non-HTML content type', async () => {
@@ -75,9 +94,13 @@ describe('WebFetchTool.execute() - Error Scenarios', () => {
       arrayBuffer: async () => new ArrayBuffer(10),
     });
 
-    await expect(tool.execute({ url: 'https://example.com/data.json' })).rejects.toThrow(
-      'non-HTML content'
-    );
+    try {
+      await tool.execute({ url: 'https://example.com/data.json' });
+      expect.unreachable('Should have thrown');
+    } catch (error) {
+      expect(error).toBeInstanceOf(ToolExecutionError);
+      expect((error as Error).message).toContain('non-HTML content');
+    }
   });
 
   it('should error on empty content after filtering', async () => {
@@ -105,18 +128,26 @@ describe('WebFetchTool.execute() - Error Scenarios', () => {
       },
     });
 
-    await expect(tool.execute({ url: 'https://example.com/empty' })).rejects.toThrow(
-      'Page content is empty or could not be extracted'
-    );
+    try {
+      await tool.execute({ url: 'https://example.com/empty' });
+      expect.unreachable('Should have thrown');
+    } catch (error) {
+      expect(error).toBeInstanceOf(ToolExecutionError);
+      expect((error as Error).message).toContain('Page content is empty or could not be extracted');
+    }
   });
 
   it('should error on network timeout (AbortError)', async () => {
     const abortError = new globalThis.DOMException('The operation was aborted', 'AbortError');
     mockFetch.mockRejectedValueOnce(abortError);
 
-    await expect(tool.execute({ url: 'https://example.com/timeout' })).rejects.toThrow(
-      'Request timeout'
-    );
+    try {
+      await tool.execute({ url: 'https://example.com/timeout' });
+      expect.unreachable('Should have thrown');
+    } catch (error) {
+      expect(error).toBeInstanceOf(ToolExecutionError);
+      expect((error as Error).message).toContain('Request timeout');
+    }
   });
 
   it('should error on fetch failure (ECONNREFUSED)', async () => {
@@ -126,9 +157,13 @@ describe('WebFetchTool.execute() - Error Scenarios', () => {
     );
     mockFetch.mockRejectedValueOnce(connError);
 
-    await expect(tool.execute({ url: 'https://example.com/refused' })).rejects.toThrow(
-      'Failed to fetch page'
-    );
+    try {
+      await tool.execute({ url: 'https://example.com/refused' });
+      expect.unreachable('Should have thrown');
+    } catch (error) {
+      expect(error).toBeInstanceOf(ToolExecutionError);
+      expect((error as Error).message).toContain('Failed to fetch page');
+    }
   });
 
   it('should error on missing content-type header', async () => {
@@ -140,8 +175,22 @@ describe('WebFetchTool.execute() - Error Scenarios', () => {
       arrayBuffer: async () => new ArrayBuffer(10),
     });
 
-    await expect(tool.execute({ url: 'https://example.com/no-ct' })).rejects.toThrow(
-      'non-HTML content'
-    );
+    try {
+      await tool.execute({ url: 'https://example.com/no-ct' });
+      expect.unreachable('Should have thrown');
+    } catch (error) {
+      expect(error).toBeInstanceOf(ToolExecutionError);
+      expect((error as Error).message).toContain('non-HTML content');
+    }
+  });
+
+  it('should error on ftp:// URL via execute()', async () => {
+    try {
+      await tool.execute({ url: 'ftp://example.com/file' });
+      expect.unreachable('Should have thrown');
+    } catch (error) {
+      expect(error).toBeInstanceOf(ToolExecutionError);
+      expect((error as Error).message).toContain('URL must use http or https protocol');
+    }
   });
 });

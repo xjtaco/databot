@@ -1,8 +1,9 @@
 import * as cheerio from 'cheerio';
 import * as iconv from 'iconv-lite';
 import type { AnyNode, Element } from 'domhandler';
-import { Tool } from './tools';
+import { Tool, ToolRegistry } from './tools';
 import { JSONSchemaObject, ToolName, ToolParams, ToolResult } from './types';
+import { ToolExecutionError } from '../../errors/types';
 import logger from '../../utils/logger';
 
 interface ExtractedLink {
@@ -22,6 +23,7 @@ interface WebFetchResult {
 
 const FETCH_TIMEOUT_MS = 10000;
 const DEFAULT_MAX_CHARS = 8000;
+const MAX_CHARS_LIMIT = 50000;
 const MIN_CONTENT_LENGTH = 50;
 
 const CONTENT_SELECTORS = [
@@ -81,7 +83,7 @@ const EXCLUDED_LINK_PATTERNS = [
   '/share/',
   'login',
   'signin',
-  'auth',
+  '/auth/',
   'register',
   'mailto:',
   'tel:',
@@ -116,23 +118,48 @@ export class WebFetchTool extends Tool {
   validate(params: ToolParams): boolean {
     const { url } = params;
     if (typeof url !== 'string' || url.trim().length === 0) {
-      throw new Error('url is required and must be a non-empty string');
+      throw new ToolExecutionError('url is required and must be a non-empty string');
     }
+    let parsed: URL;
     try {
-      new URL(url);
+      parsed = new URL(url);
     } catch {
-      throw new Error(`Invalid URL: ${url}`);
+      throw new ToolExecutionError(`Invalid URL: ${url}`);
+    }
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+      throw new ToolExecutionError('URL must use http or https protocol');
     }
     return true;
   }
 
+  private isPrivateHostSync(hostname: string): boolean {
+    const privateHosts = ['localhost', '127.0.0.1', '::1', '169.254.169.254'];
+    if (privateHosts.includes(hostname.toLowerCase())) return true;
+    // Check private IP ranges by simple pattern
+    if (/^10\.\d+\.\d+\.\d+$/.test(hostname)) return true;
+    if (/^172\.(1[6-9]|2\d|3[01])\.\d+\.\d+$/.test(hostname)) return true;
+    if (/^192\.168\.\d+\.\d+$/.test(hostname)) return true;
+    return false;
+  }
+
   async execute(params: ToolParams): Promise<ToolResult> {
+    this.validate(params);
+
     const url = (params.url as string).trim();
     const offset = typeof params.offset === 'number' ? Math.max(0, params.offset) : 0;
     const maxChars =
       typeof params.maxChars === 'number' && params.maxChars > 0
-        ? params.maxChars
+        ? Math.min(params.maxChars, MAX_CHARS_LIMIT)
         : DEFAULT_MAX_CHARS;
+
+    // SSRF protection: block private/internal network addresses
+    const parsedUrl = new URL(url);
+    if (this.isPrivateHostSync(parsedUrl.hostname)) {
+      throw new ToolExecutionError(
+        `URL points to a private or internal network: ${parsedUrl.hostname}`,
+        params
+      );
+    }
 
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
@@ -180,11 +207,15 @@ export class WebFetchTool extends Tool {
       };
     } catch (error) {
       clearTimeout(timeoutId);
+      if (error instanceof ToolExecutionError) throw error;
       const message = error instanceof Error ? error.message : String(error);
-      if (message.toLowerCase().includes('abort') || message.toLowerCase().includes('timeout')) {
-        throw new Error(`Failed to fetch page: Request timeout (${FETCH_TIMEOUT_MS}ms)`);
+      if (error instanceof Error && error.name === 'AbortError') {
+        throw new ToolExecutionError(
+          `Failed to fetch page: Request timeout (${FETCH_TIMEOUT_MS}ms)`,
+          params
+        );
       }
-      throw new Error(`Failed to fetch page: ${message}`);
+      throw new ToolExecutionError(`Failed to fetch page: ${message}`, params);
     }
   }
 
@@ -273,6 +304,7 @@ export class WebFetchTool extends Tool {
   ): ExtractedLink[] {
     const baseUrl = new URL(pageUrl);
     const scoredLinks: Array<{ text: string; url: string; score: number }> = [];
+    const seenUrls = new Set<string>();
     contentEl.find('a').each((_i: number, elem: AnyNode) => {
       const $a = $(elem);
       const href = $a.attr('href');
@@ -287,6 +319,8 @@ export class WebFetchTool extends Tool {
       } catch {
         return;
       }
+      if (seenUrls.has(resolvedUrl)) return;
+      seenUrls.add(resolvedUrl);
       let score = 0;
       const linkUrl = new URL(resolvedUrl);
       if (linkUrl.hostname === baseUrl.hostname) score += 10;
@@ -305,5 +339,4 @@ export class WebFetchTool extends Tool {
 }
 
 // Register the WebFetch tool
-import { ToolRegistry } from './tools';
 ToolRegistry.register(new WebFetchTool());

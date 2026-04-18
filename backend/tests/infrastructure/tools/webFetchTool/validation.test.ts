@@ -24,6 +24,7 @@ vi.mock('../../../../src/base/config', () => ({
 }));
 
 import { WebFetchTool } from '../../../../src/infrastructure/tools/webFetch';
+import { ToolExecutionError } from '../../../../src/errors/types';
 
 describe('WebFetchTool.validate()', () => {
   let tool: WebFetchTool;
@@ -37,23 +38,23 @@ describe('WebFetchTool.validate()', () => {
   });
 
   it('should reject missing url', () => {
-    expect(() => tool.validate({})).toThrow('url is required');
+    expect(() => tool.validate({})).toThrow(ToolExecutionError);
   });
 
   it('should reject empty string url', () => {
-    expect(() => tool.validate({ url: '' })).toThrow('url is required');
+    expect(() => tool.validate({ url: '' })).toThrow(ToolExecutionError);
   });
 
   it('should reject whitespace-only url', () => {
-    expect(() => tool.validate({ url: '   ' })).toThrow('url is required');
+    expect(() => tool.validate({ url: '   ' })).toThrow(ToolExecutionError);
   });
 
   it('should reject non-string url', () => {
-    expect(() => tool.validate({ url: 123 })).toThrow('url is required');
+    expect(() => tool.validate({ url: 123 })).toThrow(ToolExecutionError);
   });
 
   it('should reject invalid URL format', () => {
-    expect(() => tool.validate({ url: 'not-a-url' })).toThrow('Invalid URL');
+    expect(() => tool.validate({ url: 'not-a-url' })).toThrow(ToolExecutionError);
   });
 
   it('should accept valid http URL', () => {
@@ -62,5 +63,19 @@ describe('WebFetchTool.validate()', () => {
 
   it('should accept valid https URL', () => {
     expect(() => tool.validate({ url: 'https://example.com/page' })).not.toThrow();
+  });
+
+  it('should reject ftp:// URLs', () => {
+    expect(() => tool.validate({ url: 'ftp://example.com/file' })).toThrow(ToolExecutionError);
+  });
+
+  it('should reject file:// URLs', () => {
+    expect(() => tool.validate({ url: 'file:///etc/passwd' })).toThrow(ToolExecutionError);
+  });
+
+  it('should reject localhost URL (private host)', async () => {
+    await expect(tool.execute({ url: 'http://localhost/page' })).rejects.toThrow(
+      ToolExecutionError
+    );
   });
 });
