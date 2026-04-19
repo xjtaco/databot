@@ -25,6 +25,16 @@ describe('templateFields', () => {
     });
   });
 
+  it('summarizes flattened result fields that templates can reference', () => {
+    const summary = buildTemplateFieldSummary({
+      result: { months: ['2026-01'], total_cost: 100 },
+      stderr: '',
+    });
+
+    expect(summary.fields).toEqual(['stderr', 'months', 'total_cost']);
+    expect(summary.fields).not.toContain('result');
+  });
+
   it('marks raw_output as a structured template-field warning', () => {
     const summary = buildTemplateFieldSummary({
       csvPath: '/tmp/out.csv',

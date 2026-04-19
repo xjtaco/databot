@@ -399,6 +399,71 @@ describe('WfGetRunResultTool', () => {
     });
   });
 
+  it('reports flattened template fields for persisted node run result output', async () => {
+    const accessor = {
+      workflowId: 'wf-1',
+      getWorkflow: vi.fn().mockResolvedValue({
+        id: 'wf-1',
+        name: 'Workflow',
+        description: null,
+        createdAt: new Date('2026-04-19T00:00:00Z'),
+        updatedAt: new Date('2026-04-19T00:00:00Z'),
+        nodes: [
+          {
+            id: 'node-1',
+            workflowId: 'wf-1',
+            name: 'Analyze Ecommerce',
+            type: WorkflowNodeType.Python,
+            config: {
+              nodeType: 'python',
+              params: {},
+              script: 'result = {"months": ["2026-01"]}',
+              outputVariable: 'analysis',
+            },
+            positionX: 0,
+            positionY: 0,
+          },
+        ],
+        edges: [],
+      }),
+      getNode: vi.fn(),
+      updateNode: vi.fn(),
+      executeNode: vi.fn(),
+      getRunResult: vi.fn().mockResolvedValue({
+        id: 'run-1',
+        workflowId: 'wf-1',
+        status: 'completed',
+        startedAt: new Date('2026-04-19T00:00:00Z'),
+        completedAt: new Date('2026-04-19T00:01:00Z'),
+        errorMessage: null,
+        nodeRuns: [
+          {
+            id: 'nr-1',
+            runId: 'run-1',
+            nodeId: 'node-1',
+            status: 'completed',
+            inputs: null,
+            outputs: { result: { months: ['2026-01'] }, stderr: '' },
+            errorMessage: null,
+            startedAt: new Date('2026-04-19T00:00:00Z'),
+            completedAt: new Date('2026-04-19T00:01:00Z'),
+            nodeName: 'Analyze Ecommerce',
+            nodeType: 'python',
+          },
+        ],
+      }),
+    } satisfies WorkflowAccessor;
+
+    const tool = new WfGetRunResultTool(accessor);
+    const result = await tool.execute({ runId: 'run-1' });
+
+    expect(result.success).toBe(true);
+    const fields = (result.data as { nodeTemplateFields: Array<{ fields: string[] }> })
+      .nodeTemplateFields[0].fields;
+    expect(fields).toContain('months');
+    expect(fields).not.toContain('result');
+  });
+
   it('builds nodeTemplateFields from full run results with more than five node runs', async () => {
     const nodes = Array.from({ length: 6 }, (_, index) => ({
       id: `node-${index + 1}`,

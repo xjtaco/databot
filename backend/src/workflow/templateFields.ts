@@ -1,4 +1,5 @@
 import type { WorkflowNodeInfo, WorkflowNodeRunInfo, WorkflowNodeTypeValue } from './workflow.types';
+import { flattenResultField } from './templateResolver';
 
 const INTERNAL_TEMPLATE_FIELD_KEYS = new Set(['_sanitized']);
 
@@ -71,7 +72,7 @@ function toNodeOutputEntries(
 }
 
 export function buildTemplateFieldSummary(output: Record<string, unknown>): TemplateFieldSummary {
-  const fields = Object.entries(output)
+  const fields = Object.entries(flattenResultField(output))
     .filter(([key, value]) => !INTERNAL_TEMPLATE_FIELD_KEYS.has(key) && value !== undefined)
     .map(([key]) => key);
   const hasRawOutput = fields.includes('raw_output');
