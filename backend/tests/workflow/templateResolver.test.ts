@@ -443,6 +443,24 @@ describe('templateResolver', () => {
       expect('key' in record).toBe(false);
     });
 
+    it('should return a copy when result is an empty object', () => {
+      const record = { result: {}, stderr: '' };
+      const flattened = flattenResultField(record);
+      expect(flattened).toEqual({ result: {}, stderr: '' });
+      expect(flattened).not.toBe(record);
+    });
+
+    it('should not overwrite top-level TypedOutputValue wrappers from annotateOutputTypes', () => {
+      const record: Record<string, unknown> = {
+        result: { csvPath: '/result/path.csv', summary: 'text' },
+        csvPath: { value: '/node/path.csv', type: 'csvFile' },
+        stderr: '',
+      };
+      const flattened = flattenResultField(record);
+      expect(flattened['csvPath']).toEqual({ value: '/node/path.csv', type: 'csvFile' });
+      expect(flattened['summary']).toBe('text');
+    });
+
     it('should handle deeply nested result fields', () => {
       const record = {
         result: { analysis: { metrics: { accuracy: 0.95 } } },
