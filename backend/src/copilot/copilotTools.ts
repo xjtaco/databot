@@ -20,6 +20,12 @@ import * as executionEngine from '../workflow/executionEngine';
 import * as templateRepository from '../workflow/customNodeTemplate.repository';
 import * as templateService from '../workflow/customNodeTemplate.service';
 import type { WsWorkflowEvent } from '../workflow/workflow.types';
+import {
+  buildNodeTemplateFieldSummary,
+  buildTemplateFieldSummary,
+  type NodeTemplateFieldSummary,
+  type TemplateFieldSummary,
+} from '../workflow/templateFields';
 import { DbWorkflowAccessor } from './workflowAccessor';
 import { createExecutionWorkFolder } from './workflowAccessor';
 import type { WorkflowAccessor } from './workflowAccessor';
@@ -865,6 +871,100 @@ class WfGetDownstreamTool extends Tool {
   }
 }
 
+interface ToolRunTemplatePayload {
+  run: Record<string, unknown>;
+  nodeTemplateFields: NodeTemplateFieldSummary[];
+}
+
+interface ExecuteNodeTemplatePayload extends ToolRunTemplatePayload {
+  runId: string;
+  output: Record<string, unknown> | null;
+  templateFields: NodeTemplateFieldSummary | TemplateFieldSummary | null;
+}
+
+async function buildRunTemplatePayload(
+  accessor: WorkflowAccessor,
+  runDetail: Record<string, unknown>
+): Promise<ToolRunTemplatePayload> {
+  const nodeRuns = Array.isArray(runDetail.nodeRuns) ? runDetail.nodeRuns : [];
+  if (nodeRuns.length === 0) {
+    return {
+      run: runDetail,
+      nodeTemplateFields: [],
+    };
+  }
+
+  const workflow = await accessor.getWorkflow();
+  const nodesById = new Map(workflow.nodes.map((node) => [node.id, node]));
+  const nodeTemplateFields = nodeRuns
+    .filter(isRecord)
+    .map((nodeRun) => {
+      const output = getNodeRunOutput(nodeRun);
+      if (!output) return null;
+
+      const nodeId = typeof nodeRun.nodeId === 'string' ? nodeRun.nodeId : undefined;
+      return buildNodeTemplateFieldSummary({
+        node: nodeId ? nodesById.get(nodeId) : undefined,
+        nodeRun: nodeId
+          ? {
+              nodeId,
+              nodeName: typeof nodeRun.nodeName === 'string' ? nodeRun.nodeName : undefined,
+              nodeType: typeof nodeRun.nodeType === 'string' ? nodeRun.nodeType : undefined,
+            }
+          : undefined,
+        output,
+      });
+    })
+    .filter((summary): summary is NodeTemplateFieldSummary => summary !== null);
+
+  return {
+    run: runDetail,
+    nodeTemplateFields,
+  };
+}
+
+async function buildExecuteNodeTemplatePayload(
+  accessor: WorkflowAccessor,
+  runId: string,
+  nodeId: string,
+  runResult: Record<string, unknown>
+): Promise<ExecuteNodeTemplatePayload> {
+  if (Array.isArray(runResult.nodeRuns)) {
+    const payload = await buildRunTemplatePayload(accessor, runResult);
+    const nodeRuns = runResult.nodeRuns.filter(isRecord);
+    const targetRun =
+      nodeRuns.find((nodeRun) => nodeRun.nodeId === nodeId) ??
+      (nodeRuns.length === 1 ? nodeRuns[0] : undefined);
+    const output = targetRun ? getNodeRunOutput(targetRun) : null;
+    const templateFields =
+      payload.nodeTemplateFields.find((summary) => summary.nodeId === nodeId) ??
+      (payload.nodeTemplateFields.length === 1 ? payload.nodeTemplateFields[0] : null);
+
+    return {
+      runId,
+      output,
+      templateFields,
+      ...payload,
+    };
+  }
+
+  return {
+    runId,
+    output: runResult,
+    templateFields: buildTemplateFieldSummary(runResult),
+    run: runResult,
+    nodeTemplateFields: [],
+  };
+}
+
+function getNodeRunOutput(nodeRun: Record<string, unknown>): Record<string, unknown> | null {
+  return isRecord(nodeRun.outputs) ? nodeRun.outputs : null;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
 class WfExecuteTool extends Tool {
   name = 'wf_execute';
   description = 'Execute the entire workflow and return run results.';
@@ -883,6 +983,7 @@ class WfExecuteTool extends Tool {
   private workflowId: string;
   private onProgress?: (event: WsWorkflowEvent) => void;
   private tempWorkdir?: string;
+  private workflowAccessor: WorkflowAccessor;
 
   constructor(
     workflowId: string,
@@ -893,6 +994,7 @@ class WfExecuteTool extends Tool {
     this.workflowId = workflowId;
     this.onProgress = onProgress;
     this.tempWorkdir = tempWorkdir;
+    this.workflowAccessor = new DbWorkflowAccessor(workflowId, tempWorkdir);
   }
 
   async execute(params: ToolParams): Promise<ToolResult> {
@@ -908,7 +1010,11 @@ class WfExecuteTool extends Tool {
           executionEngine.registerProgressCallback(handle.runId, this.onProgress);
         }
         const runDetail = await handle.promise;
-        return { success: true, data: sanitizeForLlm(runDetail) };
+        const sanitizedRunDetail = sanitizeForLlm(runDetail);
+        const data = isRecord(sanitizedRunDetail)
+          ? await buildRunTemplatePayload(this.workflowAccessor, sanitizedRunDetail)
+          : sanitizedRunDetail;
+        return { success: true, data };
       } catch (error) {
         if (!handle) {
           await rm(workFolder, { recursive: true, force: true }).catch(() => {
@@ -976,7 +1082,17 @@ export class WfExecuteNodeTool extends Tool {
         onProgress: this.onProgress,
       });
       const runResult = await this.accessor.getRunResult(runId);
-      return { success: true, data: sanitizeForLlm(runResult) };
+      const sanitizedRunResult = sanitizeForLlm(runResult);
+      const data = isRecord(sanitizedRunResult)
+        ? await buildExecuteNodeTemplatePayload(this.accessor, runId, nodeId, sanitizedRunResult)
+        : {
+            runId,
+            output: null,
+            templateFields: null,
+            run: sanitizedRunResult,
+            nodeTemplateFields: [],
+          };
+      return { success: true, data };
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       logger.error('wf_execute_node failed', { workflowId: this.accessor.workflowId, error: msg });
@@ -1011,7 +1127,11 @@ export class WfGetRunResultTool extends Tool {
       }
 
       const runDetail = await this.accessor.getRunResult(runId);
-      return { success: true, data: sanitizeForLlm(runDetail) };
+      const sanitizedRunDetail = sanitizeForLlm(runDetail);
+      const data = isRecord(sanitizedRunDetail)
+        ? await buildRunTemplatePayload(this.accessor, sanitizedRunDetail)
+        : sanitizedRunDetail;
+      return { success: true, data };
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       logger.error('wf_get_run_result failed', {

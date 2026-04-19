@@ -26,12 +26,16 @@ import {
   WfGetRunResultTool,
   WfSearchCustomNodesTool,
 } from '../../src/copilot/copilotTools';
-import { InMemoryWorkflowAccessor } from '../../src/copilot/workflowAccessor';
+import {
+  InMemoryWorkflowAccessor,
+  type WorkflowAccessor,
+} from '../../src/copilot/workflowAccessor';
 import type {
   CustomNodeTemplateInfo,
   WorkflowDetail,
   WorkflowRunDetail,
 } from '../../src/workflow/workflow.types';
+import { WorkflowNodeType } from '../../src/workflow/workflow.types';
 
 function makeBase64(length: number): string {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
@@ -314,7 +318,85 @@ describe('WfGetRunResultTool', () => {
     const result = await tool.execute({ runId: 'run-123' });
 
     expect(result.success).toBe(true);
-    expectRunResultSanitized(result.data, longOutput, base64Payload, 'image/png');
+    expectRunResultSanitized(
+      (result.data as { run: unknown }).run,
+      longOutput,
+      base64Payload,
+      'image/png'
+    );
+  });
+
+  it('wraps run results with nodeTemplateFields', async () => {
+    const accessor = {
+      workflowId: 'wf-1',
+      getWorkflow: vi.fn().mockResolvedValue({
+        id: 'wf-1',
+        name: 'Workflow',
+        description: null,
+        createdAt: new Date('2026-04-19T00:00:00Z'),
+        updatedAt: new Date('2026-04-19T00:00:00Z'),
+        nodes: [
+          {
+            id: 'node-1',
+            workflowId: 'wf-1',
+            name: 'Process Ecommerce',
+            type: WorkflowNodeType.Python,
+            config: {
+              nodeType: 'python',
+              params: {},
+              script: 'result = {"months": []}',
+              outputVariable: 'ecommerce_monthly',
+            },
+            positionX: 0,
+            positionY: 0,
+          },
+        ],
+        edges: [],
+      }),
+      getNode: vi.fn(),
+      updateNode: vi.fn(),
+      executeNode: vi.fn(),
+      getRunResult: vi.fn().mockResolvedValue({
+        id: 'run-1',
+        workflowId: 'wf-1',
+        status: 'completed',
+        startedAt: new Date('2026-04-19T00:00:00Z'),
+        completedAt: new Date('2026-04-19T00:01:00Z'),
+        errorMessage: null,
+        nodeRuns: [
+          {
+            id: 'nr-1',
+            runId: 'run-1',
+            nodeId: 'node-1',
+            status: 'completed',
+            inputs: null,
+            outputs: { months: ['2026-01'], total_cost: 100 },
+            errorMessage: null,
+            startedAt: new Date('2026-04-19T00:00:00Z'),
+            completedAt: new Date('2026-04-19T00:01:00Z'),
+            nodeName: 'Process Ecommerce',
+            nodeType: 'python',
+          },
+        ],
+      }),
+    } satisfies WorkflowAccessor;
+
+    const tool = new WfGetRunResultTool(accessor);
+    const result = await tool.execute({ runId: 'run-1' });
+
+    expect(result.success).toBe(true);
+    expect(result.data).toMatchObject({
+      run: { id: 'run-1' },
+      nodeTemplateFields: [
+        {
+          nodeId: 'node-1',
+          outputVariable: 'ecommerce_monthly',
+          referenceNames: ['ecommerce_monthly', 'Process Ecommerce'],
+          fields: ['months', 'total_cost'],
+          needsUpstreamFix: false,
+        },
+      ],
+    });
   });
 });
 
@@ -353,8 +435,13 @@ describe('WfExecuteTool', () => {
     const result = await registry.execute('wf_execute', {});
 
     expect(result.success).toBe(true);
-    expectRunResultSanitized(result.data, longOutput, base64Payload, 'image/png');
-    expect(result.data).toMatchObject({
+    expectRunResultSanitized(
+      (result.data as { run: unknown }).run,
+      longOutput,
+      base64Payload,
+      'image/png'
+    );
+    expect((result.data as { run: unknown }).run).toMatchObject({
       startedAt: startedAt.toISOString(),
       completedAt: completedAt.toISOString(),
     });
@@ -381,7 +468,84 @@ describe('WfExecuteNodeTool', () => {
     const result = await tool.execute({ nodeId: 'node-exec' });
 
     expect(result.success).toBe(true);
-    expectRunResultSanitized(result.data, longOutput, base64Payload, 'image/png');
+    expectRunResultSanitized(
+      (result.data as { output: unknown }).output,
+      longOutput,
+      base64Payload,
+      'image/png'
+    );
+  });
+
+  it('returns templateFields and needsUpstreamFix for execute-node raw output', async () => {
+    const accessor = {
+      workflowId: 'wf-1',
+      getWorkflow: vi.fn().mockResolvedValue({
+        id: 'wf-1',
+        name: 'Workflow',
+        description: null,
+        createdAt: new Date('2026-04-19T00:00:00Z'),
+        updatedAt: new Date('2026-04-19T00:00:00Z'),
+        nodes: [
+          {
+            id: 'node-1',
+            workflowId: 'wf-1',
+            name: 'Process Ecommerce',
+            type: WorkflowNodeType.Python,
+            config: {
+              nodeType: 'python',
+              params: {},
+              script: 'print({"months": []})',
+              outputVariable: 'ecommerce_monthly',
+            },
+            positionX: 0,
+            positionY: 0,
+          },
+        ],
+        edges: [],
+      }),
+      getNode: vi.fn(),
+      updateNode: vi.fn(),
+      executeNode: vi.fn().mockResolvedValue({ runId: 'run-1' }),
+      getRunResult: vi.fn().mockResolvedValue({
+        id: 'run-1',
+        workflowId: 'wf-1',
+        status: 'completed',
+        startedAt: new Date('2026-04-19T00:00:00Z'),
+        completedAt: new Date('2026-04-19T00:01:00Z'),
+        errorMessage: null,
+        nodeRuns: [
+          {
+            id: 'nr-1',
+            runId: 'run-1',
+            nodeId: 'node-1',
+            status: 'completed',
+            inputs: null,
+            outputs: { csvPath: '/tmp/out.csv', stderr: '', raw_output: '{"months":[]}' },
+            errorMessage: null,
+            startedAt: new Date('2026-04-19T00:00:00Z'),
+            completedAt: new Date('2026-04-19T00:01:00Z'),
+            nodeName: 'Process Ecommerce',
+            nodeType: 'python',
+          },
+        ],
+      }),
+    } satisfies WorkflowAccessor;
+
+    const tool = new WfExecuteNodeTool(accessor);
+    const result = await tool.execute({ nodeId: 'node-1' });
+
+    expect(result.success).toBe(true);
+    expect(result.data).toMatchObject({
+      runId: 'run-1',
+      output: { csvPath: '/tmp/out.csv', stderr: '', raw_output: '{"months":[]}' },
+      templateFields: {
+        nodeId: 'node-1',
+        outputVariable: 'ecommerce_monthly',
+        fields: ['csvPath', 'stderr', 'raw_output'],
+        hasRawOutput: true,
+        needsUpstreamFix: true,
+      },
+    });
   });
 });
 
