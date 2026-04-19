@@ -60,6 +60,7 @@ Inter-node data passing uses \`{{outputVariable.field}}\` template syntax. Rules
 - **Nested paths supported**: \`{{outputVariable.field.subfield}}\`, e.g. \`{{my_result.result.summary}}\`
 - **Auto-serialization**: If the referenced value is an object/array, it is automatically JSON-stringified
 - **No field reference**: \`{{outputVariable}}\` without a field returns the node's complete output (JSON-serialized)
+- **Variable validation**: Before using a \`{{}}\` reference, verify the variable name matches an existing upstream node's \`outputVariable\` or node name. Verify the field path matches the node type's output schema (e.g., Python nodes require \`result\` as the intermediate level: \`{{py.result.field}}\`, not \`{{py.field}}\`). Do not invent variable names — only reference nodes that actually exist in the workflow.
 
 Output structure and reference examples for each node type:
 

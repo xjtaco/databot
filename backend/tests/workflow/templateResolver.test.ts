@@ -46,22 +46,21 @@ describe('templateResolver', () => {
       const outputs = new Map<string, Record<string, unknown>>([
         ['python_node', { result: { analysis: { metrics: { accuracy: 95.6 } } } }],
       ]);
-      const result = resolveTemplate('Accuracy: {{python_node.result.analysis.metrics.accuracy}}', outputs);
+      const result = resolveTemplate(
+        'Accuracy: {{python_node.result.analysis.metrics.accuracy}}',
+        outputs
+      );
       expect(result).toBe('Accuracy: 95.6');
     });
 
     it('should return original template when intermediate field is null', () => {
-      const outputs = new Map<string, Record<string, unknown>>([
-        ['node', { result: null }],
-      ]);
+      const outputs = new Map<string, Record<string, unknown>>([['node', { result: null }]]);
       const result = resolveTemplate('{{node.result.summary}}', outputs);
       expect(result).toBe('{{node.result.summary}}');
     });
 
     it('should return original template when intermediate field is undefined', () => {
-      const outputs = new Map<string, Record<string, unknown>>([
-        ['node', { result: undefined }],
-      ]);
+      const outputs = new Map<string, Record<string, unknown>>([['node', { result: undefined }]]);
       const result = resolveTemplate('{{node.result.summary}}', outputs);
       expect(result).toBe('{{node.result.summary}}');
     });
@@ -75,26 +74,25 @@ describe('templateResolver', () => {
     });
 
     it('should return original template when intermediate value is primitive', () => {
-      const outputs = new Map<string, Record<string, unknown>>([
-        ['node', { result: 42 }],
-      ]);
+      const outputs = new Map<string, Record<string, unknown>>([['node', { result: 42 }]]);
       const result = resolveTemplate('{{node.result.subfield}}', outputs);
       expect(result).toBe('{{node.result.subfield}}');
     });
 
     it('should return original template when intermediate value is string', () => {
-      const outputs = new Map<string, Record<string, unknown>>([
-        ['node', { result: 'a string' }],
-      ]);
+      const outputs = new Map<string, Record<string, unknown>>([['node', { result: 'a string' }]]);
       const result = resolveTemplate('{{node.result.subfield}}', outputs);
       expect(result).toBe('{{node.result.subfield}}');
     });
 
     it('should auto-extract TypedOutputValue at intermediate levels', () => {
       const outputs = new Map<string, Record<string, unknown>>([
-        ['node', {
-          result: { value: '{"summary":"ok","detail":"fine"}', type: 'json' },
-        }],
+        [
+          'node',
+          {
+            result: { value: '{"summary":"ok","detail":"fine"}', type: 'json' },
+          },
+        ],
       ]);
       const result = resolveTemplate('{{node.result}}', outputs);
       expect(result).toBe('{"summary":"ok","detail":"fine"}');
@@ -102,9 +100,12 @@ describe('templateResolver', () => {
 
     it('should auto-extract TypedOutputValue with object value at intermediate levels', () => {
       const outputs = new Map<string, Record<string, unknown>>([
-        ['node', {
-          result: { value: { summary: 'ok', detail: 'fine' }, type: 'json' },
-        }],
+        [
+          'node',
+          {
+            result: { value: { summary: 'ok', detail: 'fine' }, type: 'json' },
+          },
+        ],
       ]);
       const result = resolveTemplate('{{node.result.summary}}', outputs);
       expect(result).toBe('ok');
@@ -112,9 +113,12 @@ describe('templateResolver', () => {
 
     it('should auto-extract TypedOutputValue at final level', () => {
       const outputs = new Map<string, Record<string, unknown>>([
-        ['node', {
-          result: { data: { value: 'extracted', type: 'text' } },
-        }],
+        [
+          'node',
+          {
+            result: { data: { value: 'extracted', type: 'text' } },
+          },
+        ],
       ]);
       const result = resolveTemplate('{{node.result.data}}', outputs);
       expect(result).toBe('extracted');
@@ -122,12 +126,15 @@ describe('templateResolver', () => {
 
     it('should cascade through object TypedOutputValue then plain object then string TypedOutputValue', () => {
       const outputs = new Map<string, Record<string, unknown>>([
-        ['node', {
-          result: {
-            value: { inner: { name: { value: 'alice', type: 'text' } } },
-            type: 'json',
+        [
+          'node',
+          {
+            result: {
+              value: { inner: { name: { value: 'alice', type: 'text' } } },
+              type: 'json',
+            },
           },
-        }],
+        ],
       ]);
       const result = resolveTemplate('{{node.result.inner.name}}', outputs);
       expect(result).toBe('alice');
@@ -135,12 +142,15 @@ describe('templateResolver', () => {
 
     it('should cascade through object TypedOutputValue then plain object to primitive field', () => {
       const outputs = new Map<string, Record<string, unknown>>([
-        ['node', {
-          result: {
-            value: { inner: { score: 98.5 } },
-            type: 'json',
+        [
+          'node',
+          {
+            result: {
+              value: { inner: { score: 98.5 } },
+              type: 'json',
+            },
           },
-        }],
+        ],
       ]);
       const result = resolveTemplate('{{node.result.inner.score}}', outputs);
       expect(result).toBe('98.5');
@@ -148,10 +158,13 @@ describe('templateResolver', () => {
 
     it('should cascade through string TypedOutputValue at first level then plain object', () => {
       const outputs = new Map<string, Record<string, unknown>>([
-        ['node', {
-          csvPath: { value: '/data/output.csv', type: 'csvFile' },
-          totalRows: { value: '100', type: 'text' },
-        }],
+        [
+          'node',
+          {
+            csvPath: { value: '/data/output.csv', type: 'csvFile' },
+            totalRows: { value: '100', type: 'text' },
+          },
+        ],
       ]);
       const result = resolveTemplate('{{node.csvPath}}', outputs);
       expect(result).toBe('/data/output.csv');
@@ -159,12 +172,15 @@ describe('templateResolver', () => {
 
     it('should return JSON when cascading ends at an object TypedOutputValue', () => {
       const outputs = new Map<string, Record<string, unknown>>([
-        ['node', {
-          result: {
-            value: { payload: { value: { a: 1, b: 2 }, type: 'json' } },
-            type: 'json',
+        [
+          'node',
+          {
+            result: {
+              value: { payload: { value: { a: 1, b: 2 }, type: 'json' } },
+              type: 'json',
+            },
           },
-        }],
+        ],
       ]);
       const result = resolveTemplate('{{node.result.payload}}', outputs);
       expect(result).toBe('{"a":1,"b":2}');
@@ -172,22 +188,25 @@ describe('templateResolver', () => {
 
     it('should cascade through multiple object TypedOutputValue layers', () => {
       const outputs = new Map<string, Record<string, unknown>>([
-        ['node', {
-          level1: {
-            value: {
-              level2: {
-                value: {
-                  level3: {
-                    value: 'deep',
-                    type: 'text',
+        [
+          'node',
+          {
+            level1: {
+              value: {
+                level2: {
+                  value: {
+                    level3: {
+                      value: 'deep',
+                      type: 'text',
+                    },
                   },
+                  type: 'json',
                 },
-                type: 'json',
               },
+              type: 'json',
             },
-            type: 'json',
           },
-        }],
+        ],
       ]);
       const result = resolveTemplate('{{node.level1.level2.level3}}', outputs);
       expect(result).toBe('deep');
@@ -195,17 +214,20 @@ describe('templateResolver', () => {
 
     it('should cascade into object TypedOutputValue and access deep nested field', () => {
       const outputs = new Map<string, Record<string, unknown>>([
-        ['node', {
-          result: {
-            value: {
-              analysis: {
-                metrics: { accuracy: 0.95, recall: 0.88 },
-                summary: { value: 'report ready', type: 'text' },
+        [
+          'node',
+          {
+            result: {
+              value: {
+                analysis: {
+                  metrics: { accuracy: 0.95, recall: 0.88 },
+                  summary: { value: 'report ready', type: 'text' },
+                },
               },
+              type: 'json',
             },
-            type: 'json',
           },
-        }],
+        ],
       ]);
       expect(resolveTemplate('{{node.result.analysis.metrics.accuracy}}', outputs)).toBe('0.95');
       expect(resolveTemplate('{{node.result.analysis.summary}}', outputs)).toBe('report ready');

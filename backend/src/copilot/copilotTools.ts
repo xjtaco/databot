@@ -11,6 +11,7 @@ import { sanitizeForLlm } from '../infrastructure/tools/objectSanitizer';
 import { WebSearch } from '../infrastructure/tools/webSearch';
 import { WebFetchTool } from '../infrastructure/tools/webFetch';
 import { SqlTool } from '../infrastructure/tools/sqlTool';
+import { BashTool } from '../infrastructure/tools/bashTool';
 import { TodosWriter } from '../infrastructure/tools/todosWriter';
 import { config } from '../base/config';
 import * as repository from '../workflow/workflow.repository';
@@ -62,6 +63,7 @@ export const COPILOT_TOOL_NAMES = [
   'web_search',
   'web_fetch',
   'sql',
+  'bash',
   'todos_writer',
   'wf_search_custom_nodes',
 ] as const;
@@ -1307,6 +1309,36 @@ class CopilotSqlTool extends Tool {
   }
 }
 
+class CopilotBashTool extends Tool {
+  name = 'bash';
+  description =
+    'Execute a shell command in the Docker sandbox container. Useful for running scripts, installing packages, or performing system operations.';
+  parameters: JSONSchemaObject = {
+    type: 'object',
+    properties: {
+      command: {
+        type: 'string',
+        description: 'The shell command to execute',
+      },
+      directory: {
+        type: 'string',
+        description:
+          'Working directory for command execution (optional, defaults to sandbox default workdir)',
+      },
+      timeout: {
+        type: 'integer',
+        description: 'Command timeout in seconds (optional, defaults to config sandbox timeout)',
+      },
+    },
+    required: ['command'],
+  };
+  private bashTool = new BashTool();
+
+  async execute(params: ToolParams): Promise<ToolResult> {
+    return this.bashTool.execute(params);
+  }
+}
+
 // ── Custom node template search tool ─────────────────────
 
 export class WfSearchCustomNodesTool extends Tool {
@@ -1400,6 +1432,7 @@ export function createCopilotToolRegistry(
   }
   registry.register(new CopilotWebFetchTool());
   registry.register(new CopilotSqlTool());
+  registry.register(new CopilotBashTool());
   registry.register(new TodosWriter());
   registry.register(new WfSearchCustomNodesTool());
 

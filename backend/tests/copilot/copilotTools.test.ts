@@ -20,6 +20,7 @@ import * as templateRepository from '../../src/workflow/customNodeTemplate.repos
 import * as executionEngine from '../../src/workflow/executionEngine';
 import {
   createCopilotToolRegistry,
+  COPILOT_TOOL_NAMES,
   WfExecuteNodeTool,
   WfGetNodeTool,
   WfGetRunResultTool,
@@ -381,5 +382,20 @@ describe('WfExecuteNodeTool', () => {
 
     expect(result.success).toBe(true);
     expectRunResultSanitized(result.data, longOutput, base64Payload, 'image/png');
+  });
+});
+
+describe('createCopilotToolRegistry', () => {
+  it('includes sql and bash tools', () => {
+    const registry = createCopilotToolRegistry('wf-test', undefined, undefined, '/tmp/test');
+    expect(() => registry.get('sql')).not.toThrow();
+    expect(() => registry.get('bash')).not.toThrow();
+  });
+
+  it('registers all tools listed in COPILOT_TOOL_NAMES', () => {
+    const registry = createCopilotToolRegistry('wf-test', undefined, undefined, '/tmp/test');
+    for (const name of COPILOT_TOOL_NAMES) {
+      expect(() => registry.get(name)).not.toThrow(`tool "${name}" not registered`);
+    }
   });
 });

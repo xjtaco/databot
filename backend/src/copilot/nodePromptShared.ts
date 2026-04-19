@@ -34,7 +34,8 @@ const NODE_TYPE_PYTHON = `### Python Script (python)
   - stderr (string): Standard error output, used for debugging
 - **Inputs:** Values in the params dict support {{}} template variables. The script field also supports {{}} templates. Can accept outputs from multiple upstream nodes.
 - **Outputs:** result (object), csvPath (csvFile, optional), stderr (text)
-- **Downstream reference examples:** {{result.key}}, {{result.csvPath}}
+- **Downstream reference examples:** {{analysis.result.key}}, {{analysis.csvPath}}
+- **Important — template path structure**: Python node outputs always have a top-level \`result\` field containing the script's return dict. To access data inside it, use \`{{outputVariable.result.fieldName}}\` (e.g., \`{{analysis.result.summary}}\`). Do NOT omit the \`outputVariable\` prefix or the \`result\` intermediate level. The bare \`result\` keyword in the output schema is a field name, not a variable name.
 - **Tips**: Access inputs via the \`params\` dict; \`result\` must be a JSON-serializable dict; use pandas for CSV processing; the script has a predefined \`WORKSPACE\` variable pointing to the node execution temp directory at runtime — always use \`os.path.join(WORKSPACE, 'filename')\` to build file paths; never hardcode absolute paths
 - **Large-result handling**:
   - Small structured outputs can still be returned directly in \`result\`

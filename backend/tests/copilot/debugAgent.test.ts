@@ -5,6 +5,8 @@ vi.mock('../../src/workflow/customNodeTemplate.service');
 
 import * as templateService from '../../src/workflow/customNodeTemplate.service';
 import { createDebugAgent, DebugAgent } from '../../src/copilot/debugAgent';
+import { createDebugToolRegistry } from '../../src/copilot/debugTools';
+import { InMemoryWorkflowAccessor } from '../../src/copilot/workflowAccessor';
 import { config } from '../../src/base/config';
 import type { CopilotServerMessage } from '../../src/copilot/copilot.types';
 import type { CustomNodeTemplateInfo, SqlNodeConfig } from '../../src/workflow/workflow.types';
@@ -75,5 +77,22 @@ describe('createDebugAgent', () => {
     await expect(createDebugAgent('nonexistent', sendEvent)).rejects.toThrow(
       'Custom node template not found'
     );
+  });
+});
+
+describe('createDebugToolRegistry', () => {
+  it('includes sql and bash tools', () => {
+    const accessor = new InMemoryWorkflowAccessor({
+      id: 'wf-test',
+      name: 'test',
+      description: null,
+      nodes: [],
+      edges: [],
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    const registry = createDebugToolRegistry(accessor);
+    expect(() => registry.get('sql')).not.toThrow();
+    expect(() => registry.get('bash')).not.toThrow();
   });
 });
