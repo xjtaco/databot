@@ -48,7 +48,7 @@ export type OutputValueType =
   | 'imageFile';
 
 export interface TypedOutputValue {
-  value: string;
+  value: string | Record<string, unknown>;
   type: OutputValueType;
 }
 
@@ -61,7 +61,6 @@ export function isTypedOutputValue(val: unknown): val is TypedOutputValue {
     val !== null &&
     'value' in val &&
     'type' in val &&
-    typeof (val as TypedOutputValue).value === 'string' &&
     typeof (val as TypedOutputValue).type === 'string'
   );
 }
