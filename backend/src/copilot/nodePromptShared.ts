@@ -42,6 +42,7 @@ const NODE_TYPE_PYTHON = `### Python Script (python)
   - When the result can reasonably be represented as a file, prefer returning a file path rather than embedding large text in the output
   - Return path fields such as \`markdownPath\`, \`txtPath\`, \`jsonPath\`, or \`csvPath\` when appropriate
   - In the final user-facing answer, mention the result file path instead of pasting the full contents
+- If wf_execute_node returns raw_output or needsUpstreamFix: true, the script must assign every downstream field to result; printing is not enough
 - **Report generation**: When generating data analysis reports, the Python node handles chart generation, data embedding, and Markdown file assembly:
   - Charts: Use matplotlib; must set \`plt.rcParams['font.sans-serif'] = ['WenQuanYi Zen Hei']\` and \`plt.rcParams['axes.unicode_minus'] = False\`; save PNG with \`fig.savefig(os.path.join(WORKSPACE, 'chart.png'), dpi=150, bbox_inches='tight')\`
   - Image embedding: Read PNG as base64 and embed in Markdown as \`![description](data:image/png;base64,{base64_str})\`

@@ -28,6 +28,14 @@ describe('nodePromptShared', () => {
     expect(text).toContain('final user-facing answer');
   });
 
+  it('tells Python nodes to assign downstream fields when wf_execute_node returns raw output', () => {
+    const text = getSharedNodeTypeGuide('python');
+
+    expect(text).toContain('If wf_execute_node returns raw_output or needsUpstreamFix: true');
+    expect(text).toContain('assign every downstream field to result');
+    expect(text).toContain('printing is not enough');
+  });
+
   it('uses flattened Python result fields in template reference examples', () => {
     const text = getSharedNodeTypeDescriptions(ALL_CONFIGURED);
 

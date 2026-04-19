@@ -99,6 +99,21 @@ describe('buildSystemPrompt', () => {
     expect(prompt).toContain('Nested paths supported');
   });
 
+  it('instructs Copilot to inspect templateFields after workflow tool results', () => {
+    const prompt = buildSystemPrompt(ALL_CONFIGURED, TEMP_WORKDIR);
+
+    expect(prompt).toContain('templateFields.fields');
+    expect(prompt).toContain('nodeTemplateFields[].fields');
+    expect(prompt).toContain('do not reference fields that are absent from templateFields.fields');
+  });
+
+  it('instructs Copilot to fix upstream nodes when workflow results need it', () => {
+    const prompt = buildSystemPrompt(ALL_CONFIGURED, TEMP_WORKDIR);
+
+    expect(prompt).toContain('needsUpstreamFix: true');
+    expect(prompt).toContain('fix and re-run the upstream node before creating/modifying downstream templates');
+  });
+
   it('documents flattened Python and LLM result field references without result prefix', () => {
     const prompt = buildSystemPrompt(ALL_CONFIGURED, TEMP_WORKDIR);
 
