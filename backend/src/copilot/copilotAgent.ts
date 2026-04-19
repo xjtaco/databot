@@ -35,7 +35,7 @@ export class CopilotAgent {
   private hasManualLayoutEdits: boolean;
   private aborted: boolean;
   private isProcessing: boolean;
-  private toolRegistry: ToolRegistryClass;
+  private toolRegistry: ToolRegistryClass | undefined;
   private tempWorkdirCleaned: boolean;
 
   constructor(
@@ -52,14 +52,7 @@ export class CopilotAgent {
     this.aborted = false;
     this.isProcessing = false;
     this.tempWorkdirCleaned = false;
-    this.toolRegistry = createCopilotToolRegistry(
-      workflowId,
-      (event) => {
-        this.sendEvent({ type: 'execution_event', event });
-      },
-      undefined,
-      this.tempWorkdir
-    );
+    this.toolRegistry = undefined;
   }
 
   abort(): void {
@@ -156,9 +149,10 @@ export class CopilotAgent {
         const preRoundWorkflow = await this.getWorkflowSnapshot();
 
         // Call LLM with copilot tool registry + UI callbacks
+        const registry = this.toolRegistry!;
         const response = await provider.chat(allMessages, {
-          tools: this.toolRegistry.getAllToolSchemas(),
-          toolRegistry: this.toolRegistry,
+          tools: registry.getAllToolSchemas(),
+          toolRegistry: registry,
           onToolCallStart: (tc: ToolCall) => {
             toolCallCount++;
             let args: Record<string, unknown> = {};
