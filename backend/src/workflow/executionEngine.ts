@@ -251,7 +251,7 @@ export async function executeNode(
     existingOutputs = new Map<string, Record<string, unknown>>();
     for (const [key, value] of Object.entries(mockInputs)) {
       if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
-        existingOutputs.set(key, value as Record<string, unknown>);
+        existingOutputs.set(key, flattenResultField(value as Record<string, unknown>));
       }
     }
   } else if (cascade) {
@@ -278,10 +278,11 @@ export async function executeNode(
         );
       }
       if (upNode) {
-        existingOutputs.set(upNode.name, output);
+        const resolvedOutput = flattenResultField(output);
+        existingOutputs.set(upNode.name, resolvedOutput);
         const outputVar = getOutputVariable(upNode.config);
         if (outputVar) {
-          existingOutputs.set(outputVar, output);
+          existingOutputs.set(outputVar, resolvedOutput);
         }
       }
     }
@@ -334,10 +335,11 @@ export async function retryFromFailed(
     if (nr.status === RunStatus.Completed && nr.outputs) {
       const node = workflow.nodes.find((n) => n.id === nr.nodeId);
       if (node) {
-        completedOutputs.set(node.name, nr.outputs);
+        const resolvedOutput = flattenResultField(nr.outputs);
+        completedOutputs.set(node.name, resolvedOutput);
         const outputVar = getOutputVariable(node.config);
         if (outputVar) {
-          completedOutputs.set(outputVar, nr.outputs);
+          completedOutputs.set(outputVar, resolvedOutput);
         }
       }
     }

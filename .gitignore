@@ -65,6 +65,7 @@ Thumbs.db
 .cache/
 
 .claude
+.codex
 
 .playwright-mcp/
 .superpowers/

@@ -6,7 +6,11 @@ import { config as appConfig } from '../base/config';
 import * as service from '../workflow/workflow.service';
 import * as executionEngine from '../workflow/executionEngine';
 import { annotateOutputTypes } from '../workflow/executionEngine';
-import { resolveTemplate, resolveParamsTemplates } from '../workflow/templateResolver';
+import {
+  resolveTemplate,
+  resolveParamsTemplates,
+  flattenResultField,
+} from '../workflow/templateResolver';
 import { getNodeExecutor } from '../workflow/nodeExecutors';
 import { WorkflowNodeNotFoundError } from '../errors/types';
 import type {
@@ -282,7 +286,7 @@ export class InMemoryWorkflowAccessor implements WorkflowAccessor {
     if (options.mockInputs) {
       for (const [key, value] of Object.entries(options.mockInputs)) {
         if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
-          nodeOutputs.set(key, value as Record<string, unknown>);
+          nodeOutputs.set(key, flattenResultField(value as Record<string, unknown>));
         }
       }
     }
@@ -313,16 +317,17 @@ export class InMemoryWorkflowAccessor implements WorkflowAccessor {
       // Convert and annotate output
       const rawRecord = nodeOutputToRecord(output);
       const outputRecord = annotateOutputTypes(node.type, rawRecord);
+      const resolvedOutput = flattenResultField(outputRecord);
 
       // Store under node name and outputVariable
-      nodeOutputs.set(node.name, outputRecord);
+      nodeOutputs.set(node.name, resolvedOutput);
       const outputVar = getOutputVariable(node.config);
       if (outputVar) {
-        nodeOutputs.set(outputVar, outputRecord);
+        nodeOutputs.set(outputVar, resolvedOutput);
       }
 
       // Store run result
-      this.runResults.set(runId, outputRecord);
+      this.runResults.set(runId, resolvedOutput);
 
       // Notify progress: node_complete
       options.onProgress?.({

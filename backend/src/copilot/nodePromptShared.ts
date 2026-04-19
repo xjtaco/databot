@@ -14,7 +14,7 @@ const NODE_TYPE_SQL = `### SQL Query (sql)
   - totalRows (number): Total number of rows in the result
   - columns (string[]): List of column names
   - previewData (Record[]): Preview of the first few rows
-- **Inputs:** The sql field supports {{}} template variables to reference upstream outputs, e.g. {{python_result.result.status}}
+- **Inputs:** The sql field supports {{}} template variables to reference upstream outputs, e.g. {{python_result.status}}
 - **Outputs:** csvPath (csvFile), totalRows (number), columns (string[]), previewData (object[])
 - **Downstream reference examples:** {{query_result.csvPath}}, {{query_result.totalRows}}
 - **Tips**: Read the config.ini file in the datasource's dictionary directory to get the datasource_id for the datasourceId field; use \`{{}}\` to reference upstream node data; downstream Python nodes can read CSV via csvPath`;
@@ -33,8 +33,8 @@ const NODE_TYPE_PYTHON = `### Python Script (python)
   - csvPath (string | undefined): Path to generated CSV, if any
   - stderr (string): Standard error output, used for debugging
 - **Inputs:** Values in the params dict support {{}} template variables. The script field also supports {{}} templates. Can accept outputs from multiple upstream nodes.
-- **Outputs:** result (object), csvPath (csvFile, optional), stderr (text)
-- **Downstream reference examples:** {{analysis.key}}, {{analysis.csvPath}} (fields inside \`result\` are directly accessible at the top level)
+- **Outputs:** result (object), csvPath (csvFile, optional), stderr (text). For template references, object fields inside \`result\` are flattened to the top level.
+- **Downstream reference examples:** {{analysis.key}}, {{analysis.csvPath}}. If the script sets \`result = {"key": "..."}\`, use \`{{analysis.key}}\`, not \`{{analysis.result.key}}\`.
 - **Tips**: Access inputs via the \`params\` dict; \`result\` must be a JSON-serializable dict; use pandas for CSV processing; the script has a predefined \`WORKSPACE\` variable pointing to the node execution temp directory at runtime — always use \`os.path.join(WORKSPACE, 'filename')\` to build file paths; never hardcode absolute paths
 - **Large-result handling**:
   - Small structured outputs can still be returned directly in \`result\`
@@ -61,8 +61,8 @@ const NODE_TYPE_LLM = `### LLM Generation (llm)
   - result (Record): Parsed JSON object returned by the LLM
   - rawResponse (string): Raw text response from the LLM
 - **Inputs:** Values in the params dict support {{}} template variables. The prompt field supports {{}} templates.
-- **Outputs:** result (object — JSON returned by the LLM), rawResponse (text — raw text)
-- **Downstream reference examples:** {{llm_result.summary}}, {{llm_result.rawResponse}} (fields inside \`result\` are directly accessible)
+- **Outputs:** result (object — JSON returned by the LLM), rawResponse (text — raw text). For template references, object fields inside \`result\` are flattened to the top level.
+- **Downstream reference examples:** {{llm_result.summary}}, {{llm_result.rawResponse}}. If the LLM returns \`{"summary": "..."}\`, use \`{{llm_result.summary}}\`, not \`{{llm_result.result.summary}}\`.
 - **Tips**: Explicitly request a specific JSON structure in your prompt; params are automatically injected as context; recommended temperature 0.2
 - **Data volume control**: LLM nodes are not suitable for processing large volumes of raw data. Params passed to the LLM should contain aggregated summary data (statistics, Top N, key metrics, etc.) — do not pass raw CSV data. If raw data processing is needed, use a Python node for aggregation/summarization first, then pass the results to the LLM node`;
 

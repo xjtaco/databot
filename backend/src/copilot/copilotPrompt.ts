@@ -55,12 +55,13 @@ You have access to two categories of tools:
 ### Template Syntax Reference
 
 Inter-node data passing uses \`{{outputVariable.field}}\` template syntax. Rules:
-- **outputVariable**: The outputVariable name from the upstream node's config (not the node name/id)
+- **outputVariable**: Prefer outputVariable references from upstream node configs. Node names may resolve for compatibility, but do not generate node-name references because display names can be changed or duplicated.
 - **field**: A field name from the upstream node's output_schema
 - **Nested paths supported**: \`{{outputVariable.field.subfield}}\`, e.g. \`{{my_result.nested.deep}}\`
 - **Auto-serialization**: If the referenced value is an object/array, it is automatically JSON-stringified
 - **No field reference**: \`{{outputVariable}}\` without a field returns the node's complete output (JSON-serialized)
-- **Variable validation**: Before using a \`{{}}\` reference, verify the variable name matches an existing upstream node's \`outputVariable\` or node name. Verify the field path matches the node type's output schema. For Python and LLM nodes, fields inside \`result\` are directly accessible at the top level (e.g., \`{{py.summary}}\`), so do NOT add a \`result\` prefix. Do not invent variable names — only reference nodes that actually exist in the workflow.
+- **Python/LLM result flattening**: Python and LLM object fields inside \`result\` are directly accessible at the top level. If Python sets \`result = {"summary": "..."}\`, use \`{{analysis.summary}}\`; if an LLM returns \`{"answer": "..."}\`, use \`{{summary.answer}}\`; do not write \`.result\` for Python or LLM result fields.
+- **Variable validation**: Before using a \`{{}}\` reference, verify the variable name matches an existing upstream node's \`outputVariable\` and verify the field path matches the node type's output schema. Do not invent variable names — only reference nodes that actually exist in the workflow.
 
 Output structure and reference examples for each node type:
 

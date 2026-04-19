@@ -28,6 +28,14 @@ describe('nodePromptShared', () => {
     expect(text).toContain('final user-facing answer');
   });
 
+  it('uses flattened Python result fields in template reference examples', () => {
+    const text = getSharedNodeTypeDescriptions(ALL_CONFIGURED);
+
+    expect(text).toContain('{{python_result.status}}');
+    expect(text).toContain('{{analysis.key}}');
+    expect(text).not.toContain('{{python_result.result.status}}');
+  });
+
   it('documents params in the web search node guide', () => {
     const text = getSharedNodeTypeGuide('web_search');
 

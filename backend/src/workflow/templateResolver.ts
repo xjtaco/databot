@@ -123,7 +123,7 @@ export function flattenResultField(record: Record<string, unknown>): Record<stri
     }
   }
   for (const [key, value] of Object.entries(resultObj)) {
-    if (!(key in flattened)) {
+    if (!(key in flattened) || flattened[key] === undefined) {
       flattened[key] = value;
     }
   }

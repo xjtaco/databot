@@ -412,6 +412,17 @@ describe('templateResolver', () => {
       expect(flattened['summary']).toBe('text');
     });
 
+    it('should promote result fields when the top-level field is undefined', () => {
+      const record = {
+        result: { csvPath: '/result/path.csv', summary: 'text' },
+        csvPath: undefined,
+        stderr: '',
+      };
+      const flattened = flattenResultField(record);
+      expect(flattened['csvPath']).toBe('/result/path.csv');
+      expect(flattened['summary']).toBe('text');
+    });
+
     it('should return record unchanged when result is null', () => {
       const record = { result: null, stderr: '' };
       expect(flattenResultField(record)).toBe(record);

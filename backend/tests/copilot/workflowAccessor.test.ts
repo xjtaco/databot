@@ -317,4 +317,59 @@ describe('InMemoryWorkflowAccessor', () => {
     expect(JSON.stringify(runResult)).toContain(longOutput);
     expect(JSON.stringify(runResult)).toContain(base64Payload);
   });
+
+  it('flattens mock input result fields before resolving in-memory node templates', async () => {
+    const workflow: WorkflowDetail = {
+      id: 'mem-wf-flat-mock',
+      name: 'Debug Workflow',
+      description: null,
+      nodes: [
+        {
+          id: 'node-llm',
+          workflowId: 'mem-wf-flat-mock',
+          name: 'debug_llm',
+          description: null,
+          type: 'llm',
+          config: {
+            nodeType: 'llm',
+            params: {},
+            prompt: 'Summarize {{analysis.summary}} from {{analysis.csvPath}}',
+            outputVariable: 'llm_result',
+          },
+          positionX: 0,
+          positionY: 0,
+        },
+      ],
+      edges: [],
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    const accessor = new InMemoryWorkflowAccessor(workflow);
+    const execute = vi.fn().mockResolvedValue({
+      result: { ok: true },
+      rawResponse: '{"ok":true}',
+    });
+    mockGetNodeExecutor.mockReturnValue({ type: 'llm', execute });
+
+    await accessor.executeNode('node-llm', {
+      mockInputs: {
+        analysis: {
+          result: {
+            summary: 'sales up',
+            csvPath: '/tmp/from-result.csv',
+          },
+          csvPath: undefined,
+          stderr: '',
+        },
+      },
+    });
+
+    expect(execute).toHaveBeenCalledWith(
+      expect.objectContaining({
+        resolvedConfig: expect.objectContaining({
+          prompt: 'Summarize sales up from /tmp/from-result.csv',
+        }),
+      })
+    );
+  });
 });

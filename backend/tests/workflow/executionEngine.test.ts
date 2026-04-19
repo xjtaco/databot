@@ -1378,6 +1378,84 @@ describe('executionEngine', () => {
       expect(pythonExecute).toHaveBeenCalledTimes(1);
     });
 
+    it('non-cascade flattens historical Python result fields before template resolution', async () => {
+      const wfId = uniqueWfId();
+      const nodeA = makeNode({
+        id: 'node-a',
+        name: 'SummaryNode',
+        workflowId: wfId,
+        type: 'python',
+        config: makePythonConfig({ outputVariable: 'summary_data' }),
+      });
+      const nodeB = makeNode({
+        id: 'node-b',
+        name: 'ReportNode',
+        workflowId: wfId,
+        type: 'llm',
+        config: makeLlmConfig({
+          outputVariable: 'report',
+          prompt: 'Summarize {{summary_data.summary_text}} from {{summary_data.csvPath}}',
+        }),
+      });
+      const workflow = makeWorkflow({
+        id: wfId,
+        nodes: [nodeA, nodeB],
+        edges: [
+          {
+            id: 'e1',
+            workflowId: wfId,
+            sourceNodeId: 'node-a',
+            targetNodeId: 'node-b',
+          },
+        ],
+      });
+      const runId = `run-nc-flat-${wfId}`;
+
+      setupBaseExecution(workflow, runId);
+      mockGetUpstreamNodes.mockReturnValue(['node-a', 'node-b']);
+      mockFindLatestSuccessfulNodeRunOutput.mockResolvedValue({
+        result: {
+          csvPath: '/tmp/from-result.csv',
+          summary_text: 'sales up',
+        },
+        csvPath: undefined,
+        stderr: '',
+      });
+
+      const capturedOutputMaps: Array<Map<string, Record<string, unknown>>> = [];
+      mockResolveTemplate.mockImplementation(
+        (s: string, outputs: Map<string, Record<string, unknown>>) => {
+          capturedOutputMaps.push(new Map(outputs));
+          return s.replace(/\{\{summary_data\.summary_text\}\}/g, 'sales up').replace(
+            /\{\{summary_data\.csvPath\}\}/g,
+            '/tmp/from-result.csv'
+          );
+        }
+      );
+
+      const llmExecute = vi.fn().mockResolvedValue({
+        result: { ok: true },
+        rawResponse: '{"ok":true}',
+      });
+      mockGetNodeExecutor.mockReturnValue({ type: 'llm', execute: llmExecute });
+
+      const handle = await executeNode(wfId, 'node-b', { cascade: false });
+      await handle.promise;
+
+      expect(llmExecute).toHaveBeenCalledTimes(1);
+      const lastMap = capturedOutputMaps[capturedOutputMaps.length - 1];
+      expect(lastMap.get('summary_data')).toMatchObject({
+        csvPath: '/tmp/from-result.csv',
+        summary_text: 'sales up',
+        stderr: '',
+      });
+      expect(lastMap.get('SummaryNode')).toMatchObject({
+        csvPath: '/tmp/from-result.csv',
+        summary_text: 'sales up',
+        stderr: '',
+      });
+    });
+
     it('non-cascade throws WorkflowExecutionError on missing historical output', async () => {
       const wfId = uniqueWfId();
       const runId = `run-noncas-fail-${wfId}`;

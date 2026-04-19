@@ -99,6 +99,16 @@ describe('buildSystemPrompt', () => {
     expect(prompt).toContain('Nested paths supported');
   });
 
+  it('documents flattened Python and LLM result field references without result prefix', () => {
+    const prompt = buildSystemPrompt(ALL_CONFIGURED, TEMP_WORKDIR);
+
+    expect(prompt).toContain('Prefer outputVariable references');
+    expect(prompt).toContain('{{analysis.summary}}');
+    expect(prompt).toContain('{{summary.answer}}');
+    expect(prompt).toContain('do not write `.result` for Python or LLM result fields');
+    expect(prompt).not.toContain('{{python_result.result.status}}');
+  });
+
   it('does not include conditional error handling instructions', () => {
     const prompt = buildSystemPrompt(ALL_CONFIGURED, TEMP_WORKDIR);
     expect(prompt).not.toContain('wait for user confirmation');
