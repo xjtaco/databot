@@ -104,6 +104,7 @@ describe('buildSystemPrompt', () => {
 
     expect(prompt).toContain('templateFields.fields');
     expect(prompt).toContain('nodeTemplateFields[].fields');
+    expect(prompt).toContain('Only generate downstream template references for listed fields');
     expect(prompt).toContain('do not reference fields that are absent from templateFields.fields');
   });
 
