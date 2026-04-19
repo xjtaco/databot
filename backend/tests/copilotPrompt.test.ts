@@ -125,6 +125,14 @@ describe('buildSystemPrompt', () => {
     expect(prompt).not.toContain('{{python_result.result.status}}');
   });
 
+  it('instructs LLM nodes to put upstream templates in params instead of prompt placeholders', () => {
+    const prompt = buildSystemPrompt(ALL_CONFIGURED, TEMP_WORKDIR);
+
+    expect(prompt).toContain('For LLM nodes, put upstream template references in `params`');
+    expect(prompt).toContain('do not put bare business placeholders such as `{{eco_total_sales}}` in the prompt');
+    expect(prompt).toContain('In the prompt, refer to injected params by name in natural language');
+  });
+
   it('does not include conditional error handling instructions', () => {
     const prompt = buildSystemPrompt(ALL_CONFIGURED, TEMP_WORKDIR);
     expect(prompt).not.toContain('wait for user confirmation');

@@ -64,7 +64,7 @@ const NODE_TYPE_LLM = `### LLM Generation (llm)
 - **Inputs:** Values in the params dict support {{}} template variables. The prompt field supports {{}} templates.
 - **Outputs:** result (object — JSON returned by the LLM), rawResponse (text — raw text). For template references, object fields inside \`result\` are flattened to the top level.
 - **Downstream reference examples:** {{llm_result.summary}}, {{llm_result.rawResponse}}. If the LLM returns \`{"summary": "..."}\`, use \`{{llm_result.summary}}\`, not \`{{llm_result.result.summary}}\`.
-- **Tips**: Explicitly request a specific JSON structure in your prompt; params are automatically injected as context; recommended temperature 0.2
+- **Tips**: Put upstream template references in params. Do not put bare business placeholders such as {{eco_total_sales}} in the prompt. In the prompt, refer to injected params by name in natural language; params are automatically injected as context. Explicitly request a specific JSON structure in your prompt; recommended temperature 0.2
 - **Data volume control**: LLM nodes are not suitable for processing large volumes of raw data. Params passed to the LLM should contain aggregated summary data (statistics, Top N, key metrics, etc.) — do not pass raw CSV data. If raw data processing is needed, use a Python node for aggregation/summarization first, then pass the results to the LLM node`;
 
 const NODE_TYPE_EMAIL = `### Email Sending (email)

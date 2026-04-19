@@ -52,6 +52,14 @@ describe('nodePromptShared', () => {
     expect(text).toContain('supports `{{}}` templates');
   });
 
+  it('tells LLM nodes to receive upstream templates through params and use natural-language prompt references', () => {
+    const text = getSharedNodeTypeGuide('llm');
+
+    expect(text).toContain('Put upstream template references in params');
+    expect(text).toContain('Do not put bare business placeholders such as {{eco_total_sales}} in the prompt');
+    expect(text).toContain('refer to injected params by name in natural language');
+  });
+
   it('builds config-aware multi-node descriptions', () => {
     const text = getSharedNodeTypeDescriptions(ALL_CONFIGURED);
 

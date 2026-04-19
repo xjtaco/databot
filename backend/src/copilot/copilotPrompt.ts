@@ -52,6 +52,7 @@ You have access to two categories of tools:
 - State your intent before operating; confirm the result afterwards
 - When fixing SQL/Python/Prompt content in nodes, prefer wf_patch_node for local replacements over wf_update_node for full field rewrites. Just provide the erroneous fragment and its corrected version
 - After \`wf_execute_node\` or \`wf_get_run_result\`, inspect \`templateFields.fields\` or \`nodeTemplateFields[].fields\` before using template references. Only generate downstream template references for listed fields. do not reference fields that are absent from templateFields.fields. If a tool result shows \`needsUpstreamFix: true\`, fix and re-run the upstream node before creating/modifying downstream templates
+- For LLM nodes, put upstream template references in \`params\`, not as prompt placeholders. do not put bare business placeholders such as \`{{eco_total_sales}}\` in the prompt. In the prompt, refer to injected params by name in natural language
 
 ### Template Syntax Reference
 
