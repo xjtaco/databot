@@ -21,8 +21,9 @@ describe('TodosStatusBar', () => {
     setActivePinia(createPinia());
   });
 
-  function createWrapper() {
+  function createWrapper(props: { scope?: 'chat' | 'workflow-copilot' | 'debug-copilot' } = {}) {
     return mount(TodosStatusBar, {
+      props,
       global: {
         plugins: [i18n],
         stubs: {
@@ -159,5 +160,24 @@ describe('TodosStatusBar', () => {
     const wrapper = createWrapper();
 
     expect(wrapper.find('.todos-status__icon.spinning').exists()).toBe(false);
+  });
+
+  it('renders only todos for the provided scope', () => {
+    const todosStore = useTodosStore();
+    todosStore.updateTodos(
+      [{ content: 'Chat task', activeForm: 'Chat task', status: 'pending' }],
+      { count: 1, completed: 0, inProgress: 0, pending: 1, cancelled: 0 },
+      'chat'
+    );
+    todosStore.updateTodos(
+      [{ content: 'Workflow task', activeForm: 'Workflow task', status: 'in_progress' }],
+      { count: 1, completed: 0, inProgress: 1, pending: 0, cancelled: 0 },
+      'workflow-copilot'
+    );
+
+    const wrapper = createWrapper({ scope: 'workflow-copilot' });
+
+    expect(wrapper.find('.todos-status__current').text()).toBe('Workflow task');
+    expect(wrapper.text()).not.toContain('Chat task');
   });
 });

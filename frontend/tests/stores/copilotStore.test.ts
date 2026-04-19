@@ -3,6 +3,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { setActivePinia, createPinia } from 'pinia';
 import { useCopilotStore } from '@/stores/copilotStore';
 import { useWorkflowStore } from '@/stores/workflowStore';
+import { useTodosStore } from '@/stores/todosStore';
 import * as workflowApi from '@/api/workflow';
 import type { WorkflowDetail } from '@/types/workflow';
 
@@ -308,6 +309,31 @@ describe('copilotStore', () => {
       });
       expect(store.messages).toHaveLength(1);
       expect(store.messages[0]).toMatchObject({ type: 'node_config_card', nodeId: 'n1' });
+    });
+
+    it('writes todos updates to workflow-copilot scope without overwriting chat todos', () => {
+      const todosStore = useTodosStore();
+      todosStore.updateTodos(
+        [{ content: 'Chat task', activeForm: 'Chat task', status: 'pending' }],
+        { count: 1 },
+        'chat'
+      );
+
+      const store = useCopilotStore();
+      store.handleServerMessage({
+        type: 'todos_update',
+        todos: [{ content: 'Workflow task', activeForm: 'Workflow task', status: 'in_progress' }],
+        stats: {
+          count: 1,
+          completed: 0,
+          inProgress: 1,
+          pending: 0,
+          cancelled: 0,
+        },
+      });
+
+      expect(todosStore.getTodos('chat')[0].content).toBe('Chat task');
+      expect(todosStore.getTodos('workflow-copilot')[0].content).toBe('Workflow task');
     });
   });
 });

@@ -38,15 +38,36 @@ import { computed } from 'vue';
 import { Loading, Finished, Check, Close, Clock } from '@element-plus/icons-vue';
 import { useI18n } from 'vue-i18n';
 import { useTodosStore } from '@/stores';
-import { storeToRefs } from 'pinia';
+import type { TodoScope } from '@/stores/todosStore';
+
+const props = withDefaults(
+  defineProps<{
+    scope?: TodoScope;
+  }>(),
+  {
+    scope: 'chat',
+  }
+);
 
 const { t } = useI18n();
 const todosStore = useTodosStore();
 
-const { todos, isExpanded, hasTodos, currentTask, progressText } = storeToRefs(todosStore);
-const { toggleExpanded } = todosStore;
+const todos = computed(() => todosStore.getTodos(props.scope));
+const isExpanded = computed({
+  get: () => todosStore.getIsExpanded(props.scope),
+  set: (value) => {
+    todosStore.setExpanded(value, props.scope);
+  },
+});
+const hasTodos = computed(() => todosStore.hasTodosFor(props.scope));
+const currentTask = computed(() => todosStore.getCurrentTask(props.scope));
+const progressText = computed(() => todosStore.getProgressText(props.scope));
 
 const hasInProgress = computed(() => !!currentTask.value);
+
+function toggleExpanded() {
+  todosStore.toggleExpanded(props.scope);
+}
 </script>
 
 <style scoped lang="scss">

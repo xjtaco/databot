@@ -109,6 +109,27 @@ describe('todosStore', () => {
 
       expect(store.stats.count).toBe(2);
     });
+
+    it('should keep chat and workflow copilot todos isolated by scope', () => {
+      const store = useTodosStore();
+
+      store.updateTodos(
+        [{ content: 'Chat task', activeForm: 'Chat task', status: 'in_progress' }],
+        { count: 1, completed: 0, inProgress: 1, pending: 0, cancelled: 0 },
+        'chat'
+      );
+      store.updateTodos(
+        [{ content: 'Workflow task', activeForm: 'Workflow task', status: 'pending' }],
+        { count: 1, completed: 0, inProgress: 0, pending: 1, cancelled: 0 },
+        'workflow-copilot'
+      );
+
+      expect(store.getTodos('chat')[0].content).toBe('Chat task');
+      expect(store.getTodos('workflow-copilot')[0].content).toBe('Workflow task');
+      expect(store.todos[0].content).toBe('Chat task');
+      expect(store.hasTodosFor('chat')).toBe(true);
+      expect(store.hasTodosFor('workflow-copilot')).toBe(true);
+    });
   });
 
   describe('toggleExpanded', () => {
@@ -144,6 +165,27 @@ describe('todosStore', () => {
       expect(store.isExpanded).toBe(false);
       expect(store.lastUpdated).toBe(0);
       expect(store.hasTodos).toBe(false);
+    });
+
+    it('should clear only the requested scope', () => {
+      const store = useTodosStore();
+
+      store.updateTodos(
+        [{ content: 'Chat task', activeForm: 'Chat task', status: 'pending' }],
+        { count: 1 },
+        'chat'
+      );
+      store.updateTodos(
+        [{ content: 'Workflow task', activeForm: 'Workflow task', status: 'pending' }],
+        { count: 1 },
+        'workflow-copilot'
+      );
+
+      store.clear('workflow-copilot');
+
+      expect(store.getTodos('workflow-copilot')).toEqual([]);
+      expect(store.getTodos('chat')).toHaveLength(1);
+      expect(store.hasTodos).toBe(true);
     });
   });
 

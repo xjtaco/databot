@@ -9,7 +9,7 @@
       <template #status>
         <UsageReportBadge />
         <ToolCallHistory />
-        <TodosStatusBar />
+        <TodosStatusBar scope="chat" />
       </template>
     </ChatHeader>
     <ChatListDrawer

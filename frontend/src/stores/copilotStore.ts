@@ -138,6 +138,8 @@ export const useCopilotStore = defineStore('copilot', () => {
     }
     isConnected.value = false;
     workflowId.value = null;
+    const todosStore = useTodosStore();
+    todosStore.clear('workflow-copilot');
   }
 
   function createConnection(): void {
@@ -231,7 +233,7 @@ export const useCopilotStore = defineStore('copilot', () => {
     isAgentThinking.value = false;
     pendingMessage.value = null;
     const todosStore = useTodosStore();
-    todosStore.clear();
+    todosStore.clear('workflow-copilot');
   }
 
   function removeMessage(index: number): void {
@@ -318,7 +320,7 @@ export const useCopilotStore = defineStore('copilot', () => {
       }
       case 'todos_update': {
         const todosStore = useTodosStore();
-        todosStore.updateTodos(msg.todos, msg.stats);
+        todosStore.updateTodos(msg.todos, msg.stats, 'workflow-copilot');
         break;
       }
       case 'turn_done':

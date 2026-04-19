@@ -1,7 +1,7 @@
 <template>
   <div class="copilot-header">
     <span class="copilot-header__title">{{ $t('copilot.title') }}</span>
-    <TodosStatusBar />
+    <TodosStatusBar scope="workflow-copilot" />
   </div>
 </template>
 
