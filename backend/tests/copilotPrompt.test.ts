@@ -95,7 +95,7 @@ describe('buildSystemPrompt', () => {
     const prompt = buildSystemPrompt(ALL_CONFIGURED, TEMP_WORKDIR);
     expect(prompt).toContain('{{');
     expect(prompt).toContain('Template Syntax Reference');
-    expect(prompt).toContain('{{analysis.result}}');
+    expect(prompt).toContain('{{analysis.summary}}');
     expect(prompt).toContain('Nested paths supported');
   });
 

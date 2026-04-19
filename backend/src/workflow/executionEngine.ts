@@ -10,6 +10,7 @@ import {
   resolveTemplate,
   resolveParamsTemplates,
   findUnresolvedTemplates,
+  flattenResultField,
 } from './templateResolver';
 import { getNodeExecutor } from './nodeExecutors';
 import {
@@ -474,12 +475,13 @@ async function executeNodes(
       // Store output for downstream nodes
       const rawOutputRecord = nodeOutputToRecord(output);
       const outputRecord = annotateOutputTypes(node.type, rawOutputRecord);
-      nodeOutputs.set(node.name, outputRecord);
+      const resolvedOutput = flattenResultField(outputRecord);
+      nodeOutputs.set(node.name, resolvedOutput);
 
       // Also store under outputVariable name if the config has one
       const outputVar = getOutputVariable(node.config);
       if (outputVar) {
-        nodeOutputs.set(outputVar, outputRecord);
+        nodeOutputs.set(outputVar, resolvedOutput);
       }
 
       // Branch node: block edges for the inactive branch

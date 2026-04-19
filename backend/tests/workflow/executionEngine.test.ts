@@ -74,6 +74,7 @@ vi.mock('../../src/workflow/templateResolver', async (importOriginal) => {
       outputs: Map<string, Record<string, unknown>>
     ) => mockResolveParamsTemplates(p, outputs),
     findUnresolvedTemplates: original.findUnresolvedTemplates,
+    flattenResultField: original.flattenResultField,
   };
 });
 

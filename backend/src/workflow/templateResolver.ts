@@ -100,6 +100,31 @@ export function findUnresolvedTemplates(value: string): string[] {
   return unresolved;
 }
 
+/**
+ * Flattens the `result` field into the top level so that
+ * {{outputVar.field}} resolves without needing {{outputVar.result.field}}.
+ * Existing top-level fields take priority; `result` itself is preserved.
+ */
+export function flattenResultField(record: Record<string, unknown>): Record<string, unknown> {
+  const result = record['result'];
+  if (
+    result === null ||
+    result === undefined ||
+    typeof result !== 'object' ||
+    Array.isArray(result)
+  ) {
+    return record;
+  }
+  const resultObj = result as Record<string, unknown>;
+  const flattened = { ...record };
+  for (const [key, value] of Object.entries(resultObj)) {
+    if (!(key in flattened)) {
+      flattened[key] = value;
+    }
+  }
+  return flattened;
+}
+
 function getNestedValue(obj: Record<string, unknown>, path: string): unknown {
   const parts = path.split('.');
   let current: unknown = obj;

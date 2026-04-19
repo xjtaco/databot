@@ -4,6 +4,7 @@ import {
   resolveParamsTemplates,
   extractParamNames,
   findUnresolvedTemplates,
+  flattenResultField,
 } from '../../src/workflow/templateResolver';
 import { ParamDefinition } from '../../src/workflow/workflow.types';
 
@@ -383,6 +384,118 @@ describe('templateResolver', () => {
     it('should deduplicate param names', () => {
       const result = extractParamNames('{{params.x}} and {{params.x}} again');
       expect(result).toEqual(['x']);
+    });
+  });
+
+  describe('flattenResultField', () => {
+    it('should promote result fields to top level', () => {
+      const record = {
+        result: { ecommerce_summary: 'good', tiktok_summary: 'bad' },
+        csvPath: '/tmp/data.csv',
+        stderr: '',
+      };
+      const flattened = flattenResultField(record);
+      expect(flattened['ecommerce_summary']).toBe('good');
+      expect(flattened['tiktok_summary']).toBe('bad');
+      expect(flattened['result']).toEqual({ ecommerce_summary: 'good', tiktok_summary: 'bad' });
+      expect(flattened['csvPath']).toBe('/tmp/data.csv');
+    });
+
+    it('should not overwrite existing top-level fields', () => {
+      const record = {
+        result: { csvPath: '/result/path.csv', summary: 'text' },
+        csvPath: '/node/path.csv',
+        stderr: '',
+      };
+      const flattened = flattenResultField(record);
+      expect(flattened['csvPath']).toBe('/node/path.csv');
+      expect(flattened['summary']).toBe('text');
+    });
+
+    it('should return record unchanged when result is null', () => {
+      const record = { result: null, stderr: '' };
+      expect(flattenResultField(record)).toBe(record);
+    });
+
+    it('should return record unchanged when result is undefined', () => {
+      const record = { result: undefined, stderr: '' };
+      expect(flattenResultField(record)).toBe(record);
+    });
+
+    it('should return record unchanged when result is a string', () => {
+      const record = { result: 'plain text', stderr: '' };
+      expect(flattenResultField(record)).toBe(record);
+    });
+
+    it('should return record unchanged when result is an array', () => {
+      const record = { result: [1, 2, 3], stderr: '' };
+      expect(flattenResultField(record)).toBe(record);
+    });
+
+    it('should return record unchanged when result is a boolean (branch node)', () => {
+      const record = { result: true };
+      expect(flattenResultField(record)).toBe(record);
+    });
+
+    it('should not mutate the original record', () => {
+      const record = { result: { key: 'value' }, stderr: '' };
+      flattenResultField(record);
+      expect('key' in record).toBe(false);
+    });
+
+    it('should handle deeply nested result fields', () => {
+      const record = {
+        result: { analysis: { metrics: { accuracy: 0.95 } } },
+        stderr: '',
+      };
+      const flattened = flattenResultField(record);
+      expect(flattened['analysis']).toEqual({ metrics: { accuracy: 0.95 } });
+    });
+  });
+
+  describe('resolveTemplate with flattened result fields', () => {
+    it('should resolve {{node.field}} directly when field is inside result', () => {
+      const outputs = new Map<string, Record<string, unknown>>([
+        [
+          'data_summary',
+          flattenResultField({
+            result: { ecommerce_summary: 'sales up 20%', tiktok_summary: 'ctr 3.5%' },
+            stderr: '',
+          }),
+        ],
+      ]);
+      expect(resolveTemplate('{{data_summary.ecommerce_summary}}', outputs)).toBe('sales up 20%');
+      expect(resolveTemplate('{{data_summary.tiktok_summary}}', outputs)).toBe('ctr 3.5%');
+    });
+
+    it('should still resolve {{node.result.field}} after flattening', () => {
+      const outputs = new Map<string, Record<string, unknown>>([
+        [
+          'data_summary',
+          flattenResultField({
+            result: { ecommerce_summary: 'sales up 20%' },
+            stderr: '',
+          }),
+        ],
+      ]);
+      expect(resolveTemplate('{{data_summary.result.ecommerce_summary}}', outputs)).toBe(
+        'sales up 20%'
+      );
+    });
+
+    it('should resolve direct field and result.field identically', () => {
+      const outputs = new Map<string, Record<string, unknown>>([
+        [
+          'analysis',
+          flattenResultField({
+            result: { score: 95.6 },
+            stderr: '',
+          }),
+        ],
+      ]);
+      const direct = resolveTemplate('{{analysis.score}}', outputs);
+      const viaResult = resolveTemplate('{{analysis.result.score}}', outputs);
+      expect(direct).toBe(viaResult);
     });
   });
 });

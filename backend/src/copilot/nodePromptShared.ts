@@ -34,8 +34,7 @@ const NODE_TYPE_PYTHON = `### Python Script (python)
   - stderr (string): Standard error output, used for debugging
 - **Inputs:** Values in the params dict support {{}} template variables. The script field also supports {{}} templates. Can accept outputs from multiple upstream nodes.
 - **Outputs:** result (object), csvPath (csvFile, optional), stderr (text)
-- **Downstream reference examples:** {{analysis.result.key}}, {{analysis.csvPath}}
-- **Important — template path structure**: Python node outputs always have a top-level \`result\` field containing the script's return dict. To access data inside it, use \`{{outputVariable.result.fieldName}}\` (e.g., \`{{analysis.result.summary}}\`). Do NOT omit the \`outputVariable\` prefix or the \`result\` intermediate level. The bare \`result\` keyword in the output schema is a field name, not a variable name.
+- **Downstream reference examples:** {{analysis.key}}, {{analysis.csvPath}} (fields inside \`result\` are directly accessible at the top level; \`{{analysis.result.key}}\` also works)
 - **Tips**: Access inputs via the \`params\` dict; \`result\` must be a JSON-serializable dict; use pandas for CSV processing; the script has a predefined \`WORKSPACE\` variable pointing to the node execution temp directory at runtime — always use \`os.path.join(WORKSPACE, 'filename')\` to build file paths; never hardcode absolute paths
 - **Large-result handling**:
   - Small structured outputs can still be returned directly in \`result\`
@@ -63,7 +62,7 @@ const NODE_TYPE_LLM = `### LLM Generation (llm)
   - rawResponse (string): Raw text response from the LLM
 - **Inputs:** Values in the params dict support {{}} template variables. The prompt field supports {{}} templates.
 - **Outputs:** result (object — JSON returned by the LLM), rawResponse (text — raw text)
-- **Downstream reference examples:** {{llm_result.result.summary}}, {{llm_result.rawResponse}}
+- **Downstream reference examples:** {{llm_result.summary}}, {{llm_result.rawResponse}} (fields inside \`result\` are directly accessible; \`{{llm_result.result.summary}}\` also works)
 - **Tips**: Explicitly request a specific JSON structure in your prompt; params are automatically injected as context; recommended temperature 0.2
 - **Data volume control**: LLM nodes are not suitable for processing large volumes of raw data. Params passed to the LLM should contain aggregated summary data (statistics, Top N, key metrics, etc.) — do not pass raw CSV data. If raw data processing is needed, use a Python node for aggregation/summarization first, then pass the results to the LLM node`;
 
@@ -79,7 +78,7 @@ const NODE_TYPE_EMAIL = `### Email Sending (email)
     "subject": "string (email subject, supports {{}} template syntax)",
     "contentSource": "'inline' | 'upstream' (content source: inline for direct body, upstream for referencing upstream field)",
     "body": "string (email body when contentSource is 'inline')",
-    "upstreamField": "string (when contentSource is 'upstream', references an upstream node output field, e.g. {{report_gen.result.markdownPath}})",
+    "upstreamField": "string (when contentSource is 'upstream', references an upstream node output field, e.g. {{report_gen.markdownPath}})",
     "isHtml": "boolean (whether the email is HTML format, default: true)",
     "outputVariable": "string (required, output variable name)"
   }
@@ -94,14 +93,14 @@ const NODE_TYPE_EMAIL = `### Email Sending (email)
   \`\`\`
 - **Inputs:** The to, subject, body, and upstreamField fields all support {{}} template variables. upstreamField can only reference outputs from upstream nodes reachable via edges.
 - **Outputs:** success (boolean), messageId (text), recipients (string[])
-- **Tips**: Confirm global SMTP is configured before sending; use upstream mode to reference a markdownPath field from a Python node's result as email content (e.g. \`{{report_gen.result.markdownPath}}\`); isHtml defaults to true — always use HTML format unless the user explicitly requests plain text`;
+- **Tips**: Confirm global SMTP is configured before sending; use upstream mode to reference a markdownPath field from a Python node's output as email content (e.g. \`{{report_gen.markdownPath}}\`); isHtml defaults to true — always use HTML format unless the user explicitly requests plain text`;
 
 const NODE_TYPE_BRANCH = `### Branch (branch)
 
 Conditional branch node that evaluates an upstream output field as Truthy/Falsy to control workflow branching.
 
 **Config:**
-- \`field\`: string — The variable to evaluate, using template syntax e.g. \`{{python_result.result.flag}}\`
+- \`field\`: string — The variable to evaluate, using template syntax e.g. \`{{python_result.flag}}\`
 - \`outputVariable\`: string — Output variable name
 
 **Truthy evaluation rules (Python-style):**
@@ -113,7 +112,7 @@ Conditional branch node that evaluates an upstream output field as Truthy/Falsy 
 
 **Tips:**
 - For complex conditions, use a Python node to process and output a boolean value, then pass it to the Branch node
-- Example: Python outputs \`{"result": {"should_continue": true}}\` → Branch field: \`{{python_result.result.should_continue}}\`
+- Example: Python outputs \`{"result": {"should_continue": true}}\` → Branch field: \`{{python_result.should_continue}}\`
 - When connecting downstream nodes, you must specify "true" or "false" via the sourceHandle parameter of the wf_connect_nodes tool
 - sourceHandle="true" represents the Truthy branch, sourceHandle="false" represents the Falsy branch
 - Downstream nodes can directly reference any upstream node's output via {{}}, the branch node does not pass through data`;

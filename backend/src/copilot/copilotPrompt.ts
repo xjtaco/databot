@@ -57,10 +57,10 @@ You have access to two categories of tools:
 Inter-node data passing uses \`{{outputVariable.field}}\` template syntax. Rules:
 - **outputVariable**: The outputVariable name from the upstream node's config (not the node name/id)
 - **field**: A field name from the upstream node's output_schema
-- **Nested paths supported**: \`{{outputVariable.field.subfield}}\`, e.g. \`{{my_result.result.summary}}\`
+- **Nested paths supported**: \`{{outputVariable.field.subfield}}\`, e.g. \`{{my_result.nested.deep}}\`
 - **Auto-serialization**: If the referenced value is an object/array, it is automatically JSON-stringified
 - **No field reference**: \`{{outputVariable}}\` without a field returns the node's complete output (JSON-serialized)
-- **Variable validation**: Before using a \`{{}}\` reference, verify the variable name matches an existing upstream node's \`outputVariable\` or node name. Verify the field path matches the node type's output schema (e.g., Python nodes require \`result\` as the intermediate level: \`{{py.result.field}}\`, not \`{{py.field}}\`). Do not invent variable names — only reference nodes that actually exist in the workflow.
+- **Variable validation**: Before using a \`{{}}\` reference, verify the variable name matches an existing upstream node's \`outputVariable\` or node name. Verify the field path matches the node type's output schema. For Python and LLM nodes, fields inside \`result\` are directly accessible at the top level (e.g., \`{{py.summary}}\`), so do NOT add a \`result\` prefix. Do not invent variable names — only reference nodes that actually exist in the workflow.
 
 Output structure and reference examples for each node type:
 
@@ -69,16 +69,14 @@ Output structure and reference examples for each node type:
 | SQL | query1 | \`{{query1.csvPath}}\` | CSV file path |
 | SQL | query1 | \`{{query1.totalRows}}\` | Row count |
 | SQL | query1 | \`{{query1.columns}}\` | Column name array (JSON) |
-| Python | analysis | \`{{analysis.result}}\` | Entire result dict (JSON) |
-| Python | analysis | \`{{analysis.result.summary}}\` | Nested field within result |
+| Python | analysis | \`{{analysis.summary}}\` | Field inside result (accessible directly) |
 | Python | analysis | \`{{analysis.csvPath}}\` | Generated CSV path |
-| LLM | summary | \`{{summary.result}}\` | Entire JSON output |
-| LLM | summary | \`{{summary.result.answer}}\` | Nested field within result |
+| LLM | summary | \`{{summary.answer}}\` | Field inside result (accessible directly) |
 
 Common node chain reference examples:
 - **SQL → Python**: In params: \`"csv_file": "{{query1.csvPath}}"\`; in script: \`pd.read_csv(params['csv_file'])\`
-- **Python → LLM**: In params: \`"data": "{{analysis.result}}"\`; the prompt uses the injected data directly
-- **Python → Email**: Set upstreamField to \`{{report_gen.result.markdownPath}}\`
+- **Python → LLM**: In params: \`"data": "{{analysis.summary}}"\`; the prompt uses the injected data directly
+- **Python → Email**: Set upstreamField to \`{{report_gen.markdownPath}}\`
 
 ### Information Gathering Tools
 - scoped_glob: List workspace file structure
