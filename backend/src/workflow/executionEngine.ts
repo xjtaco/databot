@@ -13,6 +13,7 @@ import {
   flattenResultField,
 } from './templateResolver';
 import { getNodeExecutor } from './nodeExecutors';
+import { formatRawOutputTemplateDiagnostics } from './templateFields';
 import {
   WorkflowDetail,
   WorkflowNodeInfo,
@@ -710,9 +711,11 @@ function validateResolvedConfig(
   if (allUnresolved.length > 0) {
     const vars = [...new Set(allUnresolved)].join(', ');
     const available = formatAvailableOutputs(nodeOutputs);
+    const diagnostics = formatRawOutputTemplateDiagnostics(nodeOutputs);
     throw new WorkflowExecutionError(
       `Node '${nodeName}' has unresolved template variables: ${vars}. ` +
-        `Available output variables and their fields:\n${available}`
+        `Available output variables and their fields:\n${available}` +
+        (diagnostics ? `\n${diagnostics}` : '')
     );
   }
 }

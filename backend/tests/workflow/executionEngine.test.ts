@@ -1282,6 +1282,92 @@ describe('executionEngine', () => {
       // Executor should NOT have been called (validation prevents execution)
       expect(mockExecute).not.toHaveBeenCalled();
     });
+
+    it('appends raw-output diagnostics when an upstream output has raw_output', async () => {
+      const wfId = uniqueWfId();
+      const nodeA = makeNode({
+        id: 'node-a',
+        name: 'Ecommerce Monthly',
+        workflowId: wfId,
+        type: 'python',
+        config: makePythonConfig({
+          outputVariable: 'ecommerce_monthly',
+        }),
+      });
+      const nodeB = makeNode({
+        id: 'node-b',
+        name: 'Reporter',
+        workflowId: wfId,
+        type: 'llm',
+        config: makeLlmConfig({
+          prompt: 'Summarize {{ecommerce_monthly.months}}',
+          outputVariable: 'report',
+        }),
+      });
+
+      const workflow = makeWorkflow({
+        id: wfId,
+        nodes: [nodeA, nodeB],
+        edges: [
+          {
+            id: 'edge-a-b',
+            workflowId: wfId,
+            sourceNodeId: 'node-a',
+            targetNodeId: 'node-b',
+          },
+        ],
+      });
+      const runId = `run-unresolved-raw-${wfId}`;
+      mockFindWorkflowById.mockResolvedValue(workflow);
+      mockCreateRun.mockResolvedValue({
+        id: runId,
+        workflowId: wfId,
+        status: 'running',
+        startedAt: now,
+        completedAt: null,
+        errorMessage: null,
+      });
+
+      let nodeRunCounter = 0;
+      mockCreateNodeRunsBatch.mockImplementation((_runId: string, nodeIds: string[]) =>
+        nodeIds.map((nodeId) => ({
+          id: `nr-${++nodeRunCounter}`,
+          runId: _runId,
+          nodeId,
+          status: 'pending',
+          inputs: null,
+          outputs: null,
+          errorMessage: null,
+          startedAt: null,
+          completedAt: null,
+        }))
+      );
+      mockUpdateNodeRun.mockResolvedValue(undefined);
+      mockUpdateRunStatus.mockResolvedValue(undefined);
+      mockGetUpstreamNodes.mockReturnValue(['node-a', 'node-b']);
+      mockFindLatestSuccessfulNodeRunOutput.mockResolvedValue({
+        csvPath: '/tmp/ecommerce-monthly.csv',
+        stderr: '',
+        raw_output: '{"months":["2026-01"]}',
+      });
+      mockGetNodeExecutor.mockReturnValue({ type: 'llm', execute: mockExecute });
+      mockFindRunById.mockResolvedValue(makeRunDetail({ workflowId: wfId }));
+
+      // Keep the unresolved placeholder in place so validation fails.
+      mockResolveTemplate.mockImplementation((s: string) => s);
+
+      const handle = await executeNode(wfId, 'node-b', { cascade: false });
+      await handle.promise;
+
+      const updateCalls = mockUpdateNodeRun.mock.calls as Array<[string, Record<string, unknown>]>;
+      const failedCall = updateCalls.find(([, data]) => data.status === 'failed');
+      expect(failedCall).toBeDefined();
+      expect(failedCall?.[1].errorMessage).toContain('unresolved template variables');
+      expect(failedCall?.[1].errorMessage).toContain('ecommerce_monthly.months');
+      expect(failedCall?.[1].errorMessage).toContain('Raw-output upstream nodes need fixes');
+      expect(failedCall?.[1].errorMessage).toContain('ecommerce_monthly: needsUpstreamFix: true');
+      expect(mockExecute).not.toHaveBeenCalled();
+    });
   });
 
   // ── executeNode: non-cascade, cascade, and mockInputs modes ──
