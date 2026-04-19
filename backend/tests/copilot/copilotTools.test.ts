@@ -398,6 +398,83 @@ describe('WfGetRunResultTool', () => {
       ],
     });
   });
+
+  it('builds nodeTemplateFields from full run results with more than five node runs', async () => {
+    const nodes = Array.from({ length: 6 }, (_, index) => ({
+      id: `node-${index + 1}`,
+      workflowId: 'wf-large',
+      name: `Node ${index + 1}`,
+      type: WorkflowNodeType.Python,
+      config: {
+        nodeType: 'python' as const,
+        params: {},
+        script: `result = {"field_${index + 1}": ${index + 1}}`,
+        outputVariable: `node_${index + 1}_output`,
+      },
+      positionX: index,
+      positionY: index,
+    }));
+    const nodeRuns = nodes.map((node, index) => ({
+      id: `nr-${index + 1}`,
+      runId: 'run-large',
+      nodeId: node.id,
+      status: 'completed' as const,
+      inputs: null,
+      outputs: { [`field_${index + 1}`]: index + 1 },
+      errorMessage: null,
+      startedAt: new Date('2026-04-19T00:00:00Z'),
+      completedAt: new Date('2026-04-19T00:01:00Z'),
+      nodeName: node.name,
+      nodeType: node.type,
+    }));
+    const accessor = {
+      workflowId: 'wf-large',
+      getWorkflow: vi.fn().mockResolvedValue({
+        id: 'wf-large',
+        name: 'Large Workflow',
+        description: null,
+        createdAt: new Date('2026-04-19T00:00:00Z'),
+        updatedAt: new Date('2026-04-19T00:00:00Z'),
+        nodes,
+        edges: [],
+      }),
+      getNode: vi.fn(),
+      updateNode: vi.fn(),
+      executeNode: vi.fn(),
+      getRunResult: vi.fn().mockResolvedValue({
+        id: 'run-large',
+        workflowId: 'wf-large',
+        status: 'completed',
+        startedAt: new Date('2026-04-19T00:00:00Z'),
+        completedAt: new Date('2026-04-19T00:01:00Z'),
+        errorMessage: null,
+        nodeRuns,
+      }),
+    } satisfies WorkflowAccessor;
+
+    const tool = new WfGetRunResultTool(accessor);
+    const result = await tool.execute({ runId: 'run-large' });
+
+    expect(result.success).toBe(true);
+    expect(result.data).toMatchObject({
+      status: 'completed',
+    });
+    expect((result.data as { nodeTemplateFields: unknown[] }).nodeTemplateFields).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          nodeId: 'node-1',
+          outputVariable: 'node_1_output',
+          fields: ['field_1'],
+        }),
+        expect.objectContaining({
+          nodeId: 'node-6',
+          outputVariable: 'node_6_output',
+          fields: ['field_6'],
+        }),
+      ])
+    );
+    expect((result.data as { nodeTemplateFields: unknown[] }).nodeTemplateFields).toHaveLength(6);
+  });
 });
 
 describe('WfExecuteTool', () => {
@@ -445,6 +522,7 @@ describe('WfExecuteTool', () => {
       startedAt: startedAt.toISOString(),
       completedAt: completedAt.toISOString(),
     });
+    expect(result.data).toMatchObject({ status: 'completed' });
   });
 });
 
@@ -536,6 +614,7 @@ describe('WfExecuteNodeTool', () => {
 
     expect(result.success).toBe(true);
     expect(result.data).toMatchObject({
+      status: 'completed',
       runId: 'run-1',
       output: { csvPath: '/tmp/out.csv', stderr: '', raw_output: '{"months":[]}' },
       templateFields: {
