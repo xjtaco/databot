@@ -34,7 +34,7 @@ const NODE_TYPE_PYTHON = `### Python Script (python)
   - stderr (string): Standard error output, used for debugging
 - **Inputs:** Values in the params dict support {{}} template variables. The script field also supports {{}} templates. Can accept outputs from multiple upstream nodes.
 - **Outputs:** result (object), csvPath (csvFile, optional), stderr (text)
-- **Downstream reference examples:** {{analysis.key}}, {{analysis.csvPath}} (fields inside \`result\` are directly accessible at the top level; \`{{analysis.result.key}}\` also works)
+- **Downstream reference examples:** {{analysis.key}}, {{analysis.csvPath}} (fields inside \`result\` are directly accessible at the top level)
 - **Tips**: Access inputs via the \`params\` dict; \`result\` must be a JSON-serializable dict; use pandas for CSV processing; the script has a predefined \`WORKSPACE\` variable pointing to the node execution temp directory at runtime — always use \`os.path.join(WORKSPACE, 'filename')\` to build file paths; never hardcode absolute paths
 - **Large-result handling**:
   - Small structured outputs can still be returned directly in \`result\`
@@ -62,7 +62,7 @@ const NODE_TYPE_LLM = `### LLM Generation (llm)
   - rawResponse (string): Raw text response from the LLM
 - **Inputs:** Values in the params dict support {{}} template variables. The prompt field supports {{}} templates.
 - **Outputs:** result (object — JSON returned by the LLM), rawResponse (text — raw text)
-- **Downstream reference examples:** {{llm_result.summary}}, {{llm_result.rawResponse}} (fields inside \`result\` are directly accessible; \`{{llm_result.result.summary}}\` also works)
+- **Downstream reference examples:** {{llm_result.summary}}, {{llm_result.rawResponse}} (fields inside \`result\` are directly accessible)
 - **Tips**: Explicitly request a specific JSON structure in your prompt; params are automatically injected as context; recommended temperature 0.2
 - **Data volume control**: LLM nodes are not suitable for processing large volumes of raw data. Params passed to the LLM should contain aggregated summary data (statistics, Top N, key metrics, etc.) — do not pass raw CSV data. If raw data processing is needed, use a Python node for aggregation/summarization first, then pass the results to the LLM node`;
 

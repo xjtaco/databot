@@ -103,7 +103,7 @@ export function findUnresolvedTemplates(value: string): string[] {
 /**
  * Flattens the `result` field into the top level so that
  * {{outputVar.field}} resolves without needing {{outputVar.result.field}}.
- * Existing top-level fields take priority; `result` itself is preserved.
+ * Existing top-level fields take priority; `result` itself is removed.
  */
 export function flattenResultField(record: Record<string, unknown>): Record<string, unknown> {
   const result = record['result'];
@@ -116,7 +116,12 @@ export function flattenResultField(record: Record<string, unknown>): Record<stri
     return record;
   }
   const resultObj = result as Record<string, unknown>;
-  const flattened = { ...record };
+  const flattened: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(record)) {
+    if (key !== 'result') {
+      flattened[key] = value;
+    }
+  }
   for (const [key, value] of Object.entries(resultObj)) {
     if (!(key in flattened)) {
       flattened[key] = value;

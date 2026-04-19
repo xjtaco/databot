@@ -397,7 +397,7 @@ describe('templateResolver', () => {
       const flattened = flattenResultField(record);
       expect(flattened['ecommerce_summary']).toBe('good');
       expect(flattened['tiktok_summary']).toBe('bad');
-      expect(flattened['result']).toEqual({ ecommerce_summary: 'good', tiktok_summary: 'bad' });
+      expect(flattened['result']).toBeUndefined();
       expect(flattened['csvPath']).toBe('/tmp/data.csv');
     });
 
@@ -443,10 +443,11 @@ describe('templateResolver', () => {
       expect('key' in record).toBe(false);
     });
 
-    it('should return a copy when result is an empty object', () => {
+    it('should return a copy without result when result is an empty object', () => {
       const record = { result: {}, stderr: '' };
       const flattened = flattenResultField(record);
-      expect(flattened).toEqual({ result: {}, stderr: '' });
+      expect(flattened).toEqual({ stderr: '' });
+      expect(flattened['result']).toBeUndefined();
       expect(flattened).not.toBe(record);
     });
 
@@ -486,7 +487,7 @@ describe('templateResolver', () => {
       expect(resolveTemplate('{{data_summary.tiktok_summary}}', outputs)).toBe('ctr 3.5%');
     });
 
-    it('should still resolve {{node.result.field}} after flattening', () => {
+    it('should NOT resolve {{node.result.field}} after flattening', () => {
       const outputs = new Map<string, Record<string, unknown>>([
         [
           'data_summary',
@@ -497,23 +498,8 @@ describe('templateResolver', () => {
         ],
       ]);
       expect(resolveTemplate('{{data_summary.result.ecommerce_summary}}', outputs)).toBe(
-        'sales up 20%'
+        '{{data_summary.result.ecommerce_summary}}'
       );
-    });
-
-    it('should resolve direct field and result.field identically', () => {
-      const outputs = new Map<string, Record<string, unknown>>([
-        [
-          'analysis',
-          flattenResultField({
-            result: { score: 95.6 },
-            stderr: '',
-          }),
-        ],
-      ]);
-      const direct = resolveTemplate('{{analysis.score}}', outputs);
-      const viaResult = resolveTemplate('{{analysis.result.score}}', outputs);
-      expect(direct).toBe(viaResult);
     });
   });
 });
