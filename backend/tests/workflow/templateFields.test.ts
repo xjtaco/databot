@@ -42,9 +42,7 @@ describe('templateFields', () => {
     const summary = buildNodeTemplateFieldSummary({
       node: {
         id: 'node-1',
-        workflowId: 'wf-1',
         name: 'Process Ecommerce',
-        description: null,
         type: WorkflowNodeType.Python,
         config: {
           nodeType: 'python',
@@ -52,8 +50,6 @@ describe('templateFields', () => {
           script: 'result = {"months": []}',
           outputVariable: 'Process Ecommerce',
         },
-        positionX: 0,
-        positionY: 0,
       },
       output: { months: ['2026-01'] },
     });

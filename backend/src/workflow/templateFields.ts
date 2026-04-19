@@ -113,7 +113,10 @@ export function formatRawOutputTemplateDiagnostics(
   const lines = toNodeOutputEntries(nodeOutputs)
     .map(({ name, output }) => ({ name, summary: buildTemplateFieldSummary(output) }))
     .filter(({ summary }) => summary.needsUpstreamFix)
-    .map(({ name }) => `- ${name}: needsUpstreamFix: true, assign \`result = {"months": value}\``);
+    .map(
+      ({ name }) =>
+        `- ${name}: needsUpstreamFix: true; for example, assign \`result = {"months": value}\` or another downstream field map.`
+    );
 
   if (lines.length === 0) return '';
 
