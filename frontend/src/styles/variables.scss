@@ -1,26 +1,30 @@
 // Design Tokens for DataBot
 
 // Background colors
-$bg-page: #0a0a0b;
-$bg-sidebar: #141417;
-$bg-card: #141417;
-$bg-deeper: #111113;
-$bg-elevated: #1a1a1d;
+$bg-page: #080a0d;
+$bg-sidebar: #0d1015;
+$bg-card: #11161d;
+$bg-deeper: #05070a;
+$bg-elevated: #151b23;
+$bg-panel: #0f1319;
+$bg-control: #171e27;
 
 // Text colors
-$text-primary-color: #fff;
-$text-secondary-color: #adadb0;
-$text-muted: #6b6b70;
+$text-primary-color: #f4f7fb;
+$text-secondary-color: #a9b2bf;
+$text-muted: #697483;
 
 // Accent colors
-$accent: #ff5c00;
-$accent-light: #ff8a4c;
-$accent-tint10: rgba(#ff5c00, 0.094);
-$accent-tint20: rgba(#ff5c00, 0.2);
+$accent: #ff6a2a;
+$accent-light: #ff8a52;
+$accent-strong: #ff4f12;
+$accent-tint10: rgba(#ff6a2a, 0.1);
+$accent-tint20: rgba(#ff6a2a, 0.18);
 
 // Border colors
-$border-dark: #1f1f23;
-$border-elevated: #2a2a2e;
+$border-dark: #1d2530;
+$border-elevated: #2a3543;
+$border-strong: #3a4656;
 
 // Status colors
 $success: #22c55e;
@@ -41,8 +45,8 @@ $spacing-2xl: 48px;
 // Border radius
 $radius-sm: 6px;
 $radius-md: 8px;
-$radius-lg: 12px;
-$radius-xl: 16px;
+$radius-lg: 8px;
+$radius-xl: 10px;
 $radius-pill: 100px;
 $radius-full: 9999px;
 
@@ -73,14 +77,14 @@ $font-weight-semibold: 600;
 $font-weight-bold: 700;
 
 // Shadows
-$shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 20%);
+$shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 24%);
 $shadow-md:
-  0 4px 6px -1px rgb(0 0 0 / 30%),
-  0 2px 4px -2px rgb(0 0 0 / 20%);
+  0 10px 24px -18px rgb(0 0 0 / 70%),
+  0 1px 0 rgb(255 255 255 / 3%) inset;
 $shadow-lg:
-  0 10px 15px -3px rgb(0 0 0 / 40%),
-  0 4px 6px -4px rgb(0 0 0 / 30%);
-$shadow-modal: 0 8px 40px 4px rgb(0 0 0 / 40%);
+  0 18px 48px -28px rgb(0 0 0 / 85%),
+  0 1px 0 rgb(255 255 255 / 4%) inset;
+$shadow-modal: 0 24px 80px rgb(0 0 0 / 55%);
 
 // Transitions
 $transition-fast: 150ms ease;

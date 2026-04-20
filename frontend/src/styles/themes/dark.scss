@@ -10,6 +10,14 @@
   --bg-tertiary: #{$bg-deeper};
   --bg-elevated: #{$bg-elevated};
   --bg-hover: #{$bg-elevated};
+  --bg-panel: #{$bg-panel};
+  --bg-control: #{$bg-control};
+  --bg-console: linear-gradient(180deg, #0a0d12 0%, #080a0d 46%, #06080b 100%);
+  --bg-console-grid:
+    linear-gradient(rgb(255 255 255 / 2.4%) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(255 255 255 / 2.4%) 1px, transparent 1px);
+  --surface-raised: #{$bg-card};
+  --surface-sunken: #{$bg-deeper};
 
   // Text colors
   --text-primary: #{$text-primary-color};
@@ -21,13 +29,15 @@
   // Border colors
   --border-primary: #{$border-dark};
   --border-secondary: #{$border-elevated};
+  --border-strong: #{$border-strong};
+  --focus-ring: rgb(255 106 42 / 38%);
 
   // Accent
   --accent: #{$accent};
   --accent-light: #{$accent-light};
   --accent-tint10: #{$accent-tint10};
   --accent-tint20: #{$accent-tint20};
-  --accent-gradient: linear-gradient(180deg, #{$accent} 0%, #{$accent-light} 100%);
+  --accent-gradient: linear-gradient(180deg, #{$accent-light} 0%, #{$accent-strong} 100%);
 
   // Status colors
   --success: #{$success};
@@ -44,25 +54,25 @@
   --shadow-modal: #{$shadow-modal};
 
   // Message backgrounds
-  --message-user-bg: #{$accent-tint20};
-  --message-assistant-bg: #{$bg-card};
+  --message-user-bg: rgb(255 106 42 / 14%);
+  --message-assistant-bg: #{$bg-panel};
 
   // Input
-  --input-bg: #{$bg-deeper};
-  --input-border: #{$border-dark};
+  --input-bg: #{$bg-control};
+  --input-border: #{$border-elevated};
   --input-focus-border: #{$accent};
 
   // Scrollbar
-  --scrollbar-track: #{$bg-sidebar};
+  --scrollbar-track: #{$bg-deeper};
   --scrollbar-thumb: #{$border-elevated};
-  --scrollbar-thumb-hover: #{$text-muted};
+  --scrollbar-thumb-hover: #{$border-strong};
 
   // Dialog & Drawer
-  --dialog-overlay: rgb(0 0 0 / 50%);
-  --dialog-bg: #{$bg-sidebar};
+  --dialog-overlay: rgb(0 0 0 / 64%);
+  --dialog-bg: #{$bg-panel};
   --dialog-header-bg: #{$bg-sidebar};
-  --dialog-card-bg: #{$bg-elevated};
-  --dialog-border: #{$border-dark};
+  --dialog-card-bg: #{$bg-card};
+  --dialog-border: #{$border-elevated};
 
   // Error backgrounds
   --error-bg: #{$error-tint};

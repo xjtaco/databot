@@ -1,6 +1,7 @@
 @use 'variables' as *;
 @use 'reset';
 @use 'typography';
+@use 'console';
 @use 'themes/dark';
 @use 'components/dialogs';
 
@@ -195,6 +196,54 @@ pre.hljs {
     var(--bg-elevated) 63%
   );
   background-size: 400% 100%;
+}
+
+.el-button {
+  --el-button-border-radius: #{$radius-md};
+  --el-button-bg-color: var(--bg-control);
+  --el-button-border-color: var(--border-secondary);
+  --el-button-text-color: var(--text-secondary);
+  --el-button-hover-bg-color: var(--bg-elevated);
+  --el-button-hover-border-color: var(--border-strong);
+  --el-button-hover-text-color: var(--text-primary);
+}
+
+.el-button--primary {
+  --el-button-bg-color: var(--accent);
+  --el-button-border-color: var(--accent);
+  --el-button-text-color: var(--text-on-accent);
+  --el-button-hover-bg-color: var(--accent-light);
+  --el-button-hover-border-color: var(--accent-light);
+  --el-button-hover-text-color: var(--text-on-accent);
+}
+
+.el-input__wrapper,
+.el-select__wrapper,
+.el-textarea__inner {
+  background-color: var(--input-bg);
+  border-radius: #{$radius-md};
+  box-shadow: 0 0 0 1px var(--input-border) inset;
+}
+
+.el-input__wrapper.is-focus,
+.el-select__wrapper.is-focused,
+.el-textarea__inner:focus {
+  box-shadow: 0 0 0 1px var(--input-focus-border) inset;
+}
+
+.el-dropdown-menu {
+  background: var(--bg-panel);
+  border: 1px solid var(--border-secondary);
+}
+
+.el-dropdown-menu__item {
+  color: var(--text-secondary);
+
+  &:hover,
+  &:focus {
+    color: var(--text-primary);
+    background: var(--bg-elevated);
+  }
 }
 
 // Select dropdown dark theme

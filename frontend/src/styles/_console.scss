@@ -1,0 +1,146 @@
+@use 'variables' as *;
+
+@mixin console-page {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+  overflow: hidden;
+  color: var(--text-primary);
+  background: var(--bg-console);
+}
+
+@mixin console-scroll-page {
+  @include console-page;
+
+  overflow-y: auto;
+}
+
+@mixin console-desktop-padding {
+  padding: 22px 28px 28px;
+}
+
+@mixin console-page-header {
+  display: flex;
+  flex-shrink: 0;
+  gap: $spacing-lg;
+  align-items: flex-end;
+  justify-content: space-between;
+  padding-bottom: $spacing-md;
+  border-bottom: 1px solid var(--border-primary);
+}
+
+@mixin console-title-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+@mixin console-title {
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: $font-size-xl;
+  font-weight: $font-weight-semibold;
+  line-height: $line-height-tight;
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+
+@mixin console-description {
+  margin: 0;
+  font-size: $font-size-sm;
+  line-height: $line-height-normal;
+  color: var(--text-tertiary);
+}
+
+@mixin console-toolbar {
+  display: flex;
+  flex-shrink: 0;
+  gap: $spacing-md;
+  align-items: center;
+  justify-content: space-between;
+  padding: $spacing-md 0;
+}
+
+@mixin console-mobile-header {
+  display: flex;
+  flex-shrink: 0;
+  gap: $spacing-sm;
+  align-items: center;
+  min-height: 52px;
+  padding: 0 $spacing-sm;
+  background: rgb(13 16 21 / 92%);
+  border-bottom: 1px solid var(--border-primary);
+  backdrop-filter: blur(16px);
+}
+
+@mixin console-icon-button {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: $radius-md;
+  transition:
+    color $transition-fast,
+    background-color $transition-fast,
+    border-color $transition-fast,
+    transform $transition-fast;
+
+  &:hover {
+    color: var(--text-primary);
+    background: var(--bg-control);
+    border-color: var(--border-primary);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+  }
+
+  &:active {
+    transform: translateY(1px);
+  }
+}
+
+@mixin console-input-shell {
+  background: var(--bg-control);
+  border: 1px solid var(--border-secondary);
+  border-radius: $radius-lg;
+  box-shadow: 0 1px 0 rgb(255 255 255 / 3%) inset;
+}
+
+@mixin console-table {
+  --el-table-bg-color: transparent;
+  --el-table-tr-bg-color: transparent;
+  --el-table-header-bg-color: var(--bg-panel);
+  --el-table-row-hover-bg-color: var(--bg-elevated);
+  --el-table-border-color: var(--border-primary);
+  --el-table-text-color: var(--text-primary);
+  --el-table-header-text-color: var(--text-tertiary);
+
+  border: 1px solid var(--border-primary);
+  border-radius: $radius-lg;
+
+  :deep(.el-table__header th.el-table__cell) {
+    font-weight: $font-weight-medium;
+  }
+
+  :deep(.el-table__body tr:last-child td) {
+    border-bottom: none;
+  }
+
+  :deep(.el-table__inner-wrapper::before) {
+    display: none;
+  }
+}
