@@ -361,6 +361,14 @@ pre.hljs {
   &.is-selected {
     color: var(--accent);
   }
+
+  &.is-disabled,
+  &.is-disabled:hover,
+  &.is-disabled.is-hovering {
+    color: var(--text-muted);
+    cursor: not-allowed;
+    background-color: transparent;
+  }
 }
 
 .el-message-box {

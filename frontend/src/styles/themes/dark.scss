@@ -35,6 +35,7 @@
   // Accent
   --accent: #{$accent};
   --accent-light: #{$accent-light};
+  --accent-strong: #{$accent-strong};
   --accent-tint10: #{$accent-tint10};
   --accent-tint20: #{$accent-tint20};
   --accent-gradient: linear-gradient(180deg, #{$accent-light} 0%, #{$accent-strong} 100%);
