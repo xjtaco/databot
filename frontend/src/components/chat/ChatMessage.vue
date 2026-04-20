@@ -121,7 +121,9 @@ async function copyContent() {
 .chat-message {
   display: flex;
   gap: $spacing-lg;
-  width: 100%;
+  width: min(920px, 100%);
+  margin: 0 auto;
+  animation: message-in 180ms ease-out;
 
   &:hover {
     .chat-message__actions {
@@ -135,10 +137,11 @@ async function copyContent() {
   }
 
   &__user-bubble {
-    max-width: 70%;
-    padding: $spacing-lg $spacing-md;
-    background-color: var(--accent-tint20);
-    border-radius: $radius-lg;
+    max-width: min(720px, 82%);
+    padding: 12px 14px;
+    background-color: var(--message-user-bg);
+    border: 1px solid rgb(255 106 42 / 20%);
+    border-radius: $radius-lg $radius-lg 2px $radius-lg;
 
     .chat-message__body {
       font-size: 13px;
@@ -152,15 +155,17 @@ async function copyContent() {
     flex-shrink: 0;
     align-items: center;
     justify-content: center;
-    width: 32px;
-    height: 32px;
+    width: 30px;
+    height: 30px;
+    margin-top: 2px;
     background: var(--accent-gradient);
     border-radius: $radius-md;
+    box-shadow: 0 0 0 1px rgb(255 255 255 / 8%) inset;
   }
 
   &__avatar-letter {
     font-family: $font-family-sans;
-    font-size: 14px;
+    font-size: 13px;
     font-weight: $font-weight-semibold;
     color: var(--text-on-accent);
   }
@@ -168,10 +173,11 @@ async function copyContent() {
   &__card {
     flex: 1;
     min-width: 0;
-    padding: $spacing-lg $spacing-md;
-    background-color: var(--bg-secondary);
+    padding: 14px 16px;
+    background-color: var(--message-assistant-bg);
     border: 1px solid var(--border-primary);
     border-radius: $radius-lg;
+    box-shadow: 0 1px 0 rgb(255 255 255 / 3%) inset;
   }
 
   &__body {
@@ -222,6 +228,7 @@ async function copyContent() {
     font-size: $font-size-sm;
     color: var(--error);
     background-color: var(--error-bg);
+    border: 1px solid rgb(239 68 68 / 18%);
     border-radius: $radius-md;
   }
 
@@ -235,6 +242,18 @@ async function copyContent() {
     @media (max-width: $breakpoint-md) {
       opacity: 1;
     }
+  }
+}
+
+@keyframes message-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 

@@ -121,10 +121,18 @@ onMounted(() => {
 </script>
 
 <style scoped lang="scss">
+@use '@/styles/variables' as *;
+
 .chat-container {
+  position: relative;
   display: flex;
   flex-direction: column;
+  min-width: 0;
   height: 100%;
-  background-color: var(--bg-primary);
+  overflow: hidden;
+  background:
+    var(--bg-console-grid) 0 0 / 28px 28px,
+    radial-gradient(circle at 72% 0%, rgb(255 106 42 / 5%), transparent 24%),
+    var(--bg-console);
 }
 </style>

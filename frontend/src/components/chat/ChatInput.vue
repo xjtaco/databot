@@ -70,35 +70,40 @@ function handleKeydown(event: Event | KeyboardEvent) {
 
 .chat-input {
   display: flex;
-  gap: $spacing-lg;
+  gap: $spacing-sm;
   align-items: flex-end;
-  padding: $spacing-md $content-padding-x;
+  padding: 14px clamp(20px, 5vw, 72px) 18px;
+  background: rgb(8 10 13 / 88%);
   border-top: 1px solid var(--border-primary);
+  backdrop-filter: blur(18px);
 
   @media (max-width: $breakpoint-md) {
-    gap: 10px;
-    padding: $spacing-lg $spacing-md;
-    padding-bottom: max($spacing-lg, env(safe-area-inset-bottom, 0px));
+    padding: 10px $spacing-sm max(10px, env(safe-area-inset-bottom, 0px));
   }
 
   &__input-box {
     flex: 1;
-    padding: $spacing-lg $spacing-md;
-    background-color: var(--bg-tertiary);
-    border: 1px solid var(--border-primary);
+    max-width: 920px;
+    padding: 12px 14px;
+    margin-left: auto;
+    background-color: var(--input-bg);
+    border: 1px solid var(--input-border);
     border-radius: $radius-lg;
-    transition: border-color $transition-fast;
+    box-shadow: 0 1px 0 rgb(255 255 255 / 3%) inset;
+    transition:
+      border-color $transition-fast,
+      box-shadow $transition-fast;
 
     &:focus-within {
-      border-color: var(--accent);
-    }
-
-    @media (max-width: $breakpoint-md) {
-      padding: 10px 14px;
+      border-color: var(--input-focus-border);
+      box-shadow:
+        0 0 0 3px var(--focus-ring),
+        0 1px 0 rgb(255 255 255 / 3%) inset;
     }
   }
 
   :deep(.el-textarea__inner) {
+    min-height: 22px !important;
     padding: 0;
     font-size: 13px;
     line-height: $line-height-normal;
@@ -118,20 +123,34 @@ function handleKeydown(event: Event | KeyboardEvent) {
     flex-shrink: 0;
     align-items: center;
     justify-content: center;
-    width: 40px;
-    height: 40px;
+    width: 42px;
+    height: 42px;
+    padding: 0;
     cursor: pointer;
-    border: none;
-    border-radius: 20px;
-    transition: opacity $transition-fast;
+    border: 1px solid transparent;
+    border-radius: $radius-lg;
+    transition:
+      opacity $transition-fast,
+      transform $transition-fast,
+      border-color $transition-fast;
 
     :deep(.el-icon) {
       font-size: 18px;
       color: var(--text-on-accent);
     }
 
+    &:focus-visible {
+      outline: 2px solid var(--focus-ring);
+      outline-offset: 2px;
+    }
+
+    &:active:not(:disabled) {
+      transform: translateY(1px);
+    }
+
     &--send {
       background: var(--accent-gradient);
+      border-color: rgb(255 106 42 / 34%);
 
       &:disabled {
         cursor: not-allowed;

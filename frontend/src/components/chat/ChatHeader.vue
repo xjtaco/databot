@@ -63,16 +63,28 @@ const { t } = useI18n();
 @use '@/styles/variables' as *;
 
 .chat-header {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) auto minmax(160px, 1fr);
+  gap: $spacing-md;
   align-items: center;
-  justify-content: space-between;
-  padding: 14px $spacing-lg;
+  min-height: 64px;
+  padding: 0 28px;
+  background: rgb(8 10 13 / 82%);
   border-bottom: 1px solid var(--border-primary);
+  backdrop-filter: blur(18px);
+
+  @media (max-width: $breakpoint-md) {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: $spacing-sm;
+    min-height: 56px;
+    padding: 0 $spacing-sm;
+  }
 
   &__left {
     display: flex;
     gap: $spacing-sm;
     align-items: center;
+    min-width: 0;
   }
 
   &__menu-btn {
@@ -82,41 +94,57 @@ const { t } = useI18n();
   &__title {
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: 3px;
+    min-width: 0;
 
     h1 {
-      font-family: $font-family-serif;
-      font-size: $font-size-xl;
-      font-weight: $font-weight-normal;
+      margin: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      font-family: $font-family-sans;
+      font-size: $font-size-lg;
+      font-weight: $font-weight-semibold;
       line-height: 1.2;
       color: var(--text-primary);
-      letter-spacing: -0.5px;
+      white-space: nowrap;
     }
   }
 
   &__subtitle {
+    overflow: hidden;
+    text-overflow: ellipsis;
     font-size: $font-size-xs;
+    line-height: 1.2;
     color: var(--text-tertiary);
+    white-space: nowrap;
+
+    @media (max-width: $breakpoint-md) {
+      display: none;
+    }
   }
 
   &__center {
     display: flex;
-    flex: 1;
     gap: $spacing-lg;
     align-items: center;
     justify-content: center;
+    min-width: 0;
+
+    @media (max-width: $breakpoint-md) {
+      display: none;
+    }
   }
 
   &__right {
     display: flex;
     gap: $spacing-lg;
     align-items: center;
+    justify-content: flex-end;
+    min-width: 0;
   }
 
   &__new-chat-btn {
-    :deep(.el-icon) {
-      color: var(--accent);
-    }
+    color: var(--accent);
   }
 }
 </style>

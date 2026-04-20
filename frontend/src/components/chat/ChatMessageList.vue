@@ -67,51 +67,58 @@ watch(
   display: flex;
   flex: 1;
   flex-direction: column;
-  gap: $spacing-lg;
-  padding: $spacing-lg $content-padding-x;
+  gap: 18px;
+  padding: 28px clamp(20px, 5vw, 72px);
   overflow-y: auto;
+  scroll-behavior: smooth;
 
   @media (max-width: $breakpoint-md) {
     gap: $spacing-md;
-    padding: $spacing-md;
+    padding: $spacing-md $spacing-sm;
   }
 
   &__empty {
     display: flex;
     flex-direction: column;
-    gap: $spacing-md;
-    align-items: center;
+    gap: $spacing-sm;
+    align-items: flex-start;
     justify-content: center;
+    width: min(640px, 100%);
     height: 100%;
-    text-align: center;
+    margin: 0 auto;
+    text-align: left;
   }
 
   &__empty-icon {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 80px;
-    height: 80px;
+    width: 48px;
+    height: 48px;
+    color: var(--accent);
     background-color: var(--accent-tint10);
-    border-radius: 40px;
+    border: 1px solid rgb(255 106 42 / 20%);
+    border-radius: $radius-lg;
 
     :deep(.el-icon) {
-      font-size: 36px;
-      color: var(--accent);
+      font-size: 24px;
     }
   }
 
   h3 {
-    font-family: $font-family-serif;
-    font-size: $font-size-3xl;
-    font-weight: $font-weight-normal;
+    margin: $spacing-sm 0 0;
+    font-family: $font-family-sans;
+    font-size: $font-size-2xl;
+    font-weight: $font-weight-semibold;
+    line-height: $line-height-tight;
     color: var(--text-primary);
-    letter-spacing: -1px;
   }
 
   p {
-    max-width: 400px;
+    max-width: 460px;
+    margin: 0;
     font-size: $font-size-sm;
+    line-height: $line-height-normal;
     color: var(--text-tertiary);
     white-space: pre-line;
   }
