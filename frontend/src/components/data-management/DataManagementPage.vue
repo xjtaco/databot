@@ -370,13 +370,14 @@ function cancelDelete(): void {
 
 <style scoped lang="scss">
 @use '@/styles/variables' as *;
+@use '@/styles/console' as console;
 
-$data-tree-panel-width: 280px;
+$data-tree-panel-width: 300px;
 
 .data-management {
-  display: flex;
-  width: 100%;
-  height: 100%;
+  @include console.console-page;
+
+  flex-direction: row;
 
   &--mobile {
     flex-direction: column;
@@ -388,13 +389,7 @@ $data-tree-panel-width: 280px;
   }
 
   &__mobile-header {
-    display: flex;
-    gap: $spacing-xs;
-    align-items: center;
-    height: 48px;
-    min-height: 48px;
-    padding: 0 $spacing-sm;
-    border-bottom: 1px solid $border-dark;
+    @include console.console-mobile-header;
   }
 
   &__mobile-title {
@@ -410,17 +405,16 @@ $data-tree-panel-width: 280px;
     width: $data-tree-panel-width;
     min-width: $data-tree-panel-width;
     height: 100%;
-    background-color: $bg-sidebar;
-    border-right: 1px solid $border-dark;
+    background-color: var(--bg-secondary);
+    border-right: 1px solid var(--border-primary);
   }
 
   &__tree-header {
     display: flex;
     align-items: center;
-    height: 48px;
-    min-height: 48px;
-    padding: 0;
-    border-bottom: 1px solid $border-dark;
+    min-height: 54px;
+    padding: 0 $spacing-sm;
+    border-bottom: 1px solid var(--border-primary);
   }
 
   &__tabs {
@@ -434,28 +428,32 @@ $data-tree-panel-width: 280px;
     gap: 6px;
     align-items: center;
     min-width: 0;
-    height: 100%;
+    height: 38px;
     padding: 0 10px;
     overflow: hidden;
     text-overflow: ellipsis;
     font-size: $font-size-sm;
-    font-weight: $font-weight-normal;
-    color: $text-muted;
+    font-weight: $font-weight-medium;
+    color: var(--text-tertiary);
     white-space: nowrap;
     cursor: pointer;
-    background: none;
-    border: none;
-    border-bottom: 2px solid transparent;
-    transition: all $transition-fast;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: $radius-md;
+    transition:
+      color $transition-fast,
+      background-color $transition-fast,
+      border-color $transition-fast;
 
     &:hover:not(.is-active) {
-      color: $text-secondary-color;
+      color: var(--text-secondary);
+      background: var(--bg-control);
     }
 
     &.is-active {
-      font-weight: 600;
-      color: $accent;
-      border-bottom-color: $accent;
+      color: var(--accent);
+      background: var(--accent-tint10);
+      border-color: rgb(255 106 42 / 24%);
     }
   }
 
@@ -474,6 +472,9 @@ $data-tree-panel-width: 280px;
     flex-direction: column;
     min-width: 0;
     height: 100%;
+    background:
+      radial-gradient(circle at 70% 0%, rgb(255 106 42 / 4%), transparent 24%),
+      var(--bg-console);
   }
 
   &__empty-state {

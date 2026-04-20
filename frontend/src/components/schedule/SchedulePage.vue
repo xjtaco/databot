@@ -171,16 +171,11 @@ function handleFormVisibleChange(val: boolean): void {
 
 <style scoped lang="scss">
 @use '@/styles/variables' as *;
+@use '@/styles/console' as console;
 
 .schedule-page {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  width: 100%;
-  min-width: 0;
-  height: 100%;
-  padding: $spacing-md $spacing-lg;
-  overflow-y: auto;
+  @include console.console-scroll-page;
+  @include console.console-desktop-padding;
 
   &--mobile {
     padding: 0;
@@ -199,19 +194,13 @@ function handleFormVisibleChange(val: boolean): void {
   }
 
   &__title-bar {
-    display: flex;
-    flex-shrink: 0;
-    flex-direction: column;
-    gap: $spacing-xs;
-    margin-bottom: $spacing-md;
+    @include console.console-title-stack;
+
+    margin-bottom: 0;
   }
 
   &__toolbar {
-    display: flex;
-    flex-shrink: 0;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: $spacing-md;
+    @include console.console-toolbar;
   }
 
   &__toolbar-left {
@@ -224,16 +213,11 @@ function handleFormVisibleChange(val: boolean): void {
   }
 
   &__title {
-    margin: 0;
-    font-size: $font-size-xl;
-    font-weight: $font-weight-semibold;
-    color: $text-primary-color;
+    @include console.console-title;
   }
 
   &__description {
-    margin: 0;
-    font-size: $font-size-sm;
-    color: $text-muted;
+    @include console.console-description;
   }
 
   &__loading {
@@ -247,13 +231,7 @@ function handleFormVisibleChange(val: boolean): void {
 
   // Mobile header
   &__mobile-header {
-    display: flex;
-    gap: $spacing-sm;
-    align-items: center;
-    height: 48px;
-    min-height: 48px;
-    padding: 0 $spacing-sm;
-    border-bottom: 1px solid $border-dark;
+    @include console.console-mobile-header;
   }
 
   &__mobile-title {
@@ -272,24 +250,7 @@ function handleFormVisibleChange(val: boolean): void {
 
   &__back-btn,
   &__add-btn {
-    display: flex;
-    flex-shrink: 0;
-    align-items: center;
-    justify-content: center;
-    width: 36px;
-    height: 36px;
-    padding: 0;
-    color: $text-muted;
-    cursor: pointer;
-    background: none;
-    border: none;
-    border-radius: $radius-md;
-    transition: all $transition-fast;
-
-    &:hover {
-      color: $text-secondary-color;
-      background-color: $bg-elevated;
-    }
+    @include console.console-icon-button;
   }
 }
 </style>

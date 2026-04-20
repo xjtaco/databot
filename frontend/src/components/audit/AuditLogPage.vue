@@ -205,16 +205,11 @@ onMounted(() => {
 
 <style scoped lang="scss">
 @use '@/styles/variables' as *;
+@use '@/styles/console' as console;
 
 .audit-log-page {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  width: 100%;
-  min-width: 0;
-  height: 100%;
-  padding: $spacing-md $spacing-lg;
-  overflow-y: auto;
+  @include console.console-scroll-page;
+  @include console.console-desktop-padding;
 
   &--mobile {
     padding: 0;
@@ -233,24 +228,17 @@ onMounted(() => {
   }
 
   &__title-bar {
-    display: flex;
-    flex-shrink: 0;
-    flex-direction: column;
-    gap: $spacing-xs;
-    margin-bottom: $spacing-md;
+    @include console.console-title-stack;
+
+    margin-bottom: 0;
   }
 
   &__title {
-    margin: 0;
-    font-size: $font-size-xl;
-    font-weight: $font-weight-semibold;
-    color: $text-primary-color;
+    @include console.console-title;
   }
 
   &__description {
-    margin: 0;
-    font-size: $font-size-sm;
-    color: $text-muted;
+    @include console.console-description;
   }
 
   &__body {
@@ -260,25 +248,7 @@ onMounted(() => {
 
   // Table dark theme
   &__table {
-    --el-table-bg-color: transparent;
-    --el-table-tr-bg-color: transparent;
-    --el-table-header-bg-color: var(--bg-secondary);
-    --el-table-row-hover-bg-color: var(--bg-elevated);
-    --el-table-border-color: var(--border-primary);
-    --el-table-text-color: var(--text-primary);
-    --el-table-header-text-color: var(--text-tertiary);
-
-    :deep(.el-table__header th.el-table__cell) {
-      font-weight: 400;
-    }
-
-    :deep(.el-table__body tr:last-child td) {
-      border-bottom: none;
-    }
-
-    :deep(.el-table__inner-wrapper::before) {
-      display: none;
-    }
+    @include console.console-table;
   }
 
   &__date {
@@ -299,13 +269,7 @@ onMounted(() => {
 
   // Mobile header
   &__mobile-header {
-    display: flex;
-    gap: $spacing-sm;
-    align-items: center;
-    height: 48px;
-    min-height: 48px;
-    padding: 0 $spacing-sm;
-    border-bottom: 1px solid $border-dark;
+    @include console.console-mobile-header;
   }
 
   &__mobile-title {
@@ -319,24 +283,7 @@ onMounted(() => {
   }
 
   &__back-btn {
-    display: flex;
-    flex-shrink: 0;
-    align-items: center;
-    justify-content: center;
-    width: 36px;
-    height: 36px;
-    padding: 0;
-    color: $text-muted;
-    cursor: pointer;
-    background: none;
-    border: none;
-    border-radius: $radius-md;
-    transition: all $transition-fast;
-
-    &:hover {
-      color: $text-secondary-color;
-      background-color: $bg-elevated;
-    }
+    @include console.console-icon-button;
   }
 
   // Mobile card list

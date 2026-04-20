@@ -478,12 +478,12 @@ function addMobileNode(type: WorkflowNodeType): void {
 
 <style scoped lang="scss">
 @use '@/styles/variables' as *;
+@use '@/styles/console' as console;
 
 .workflow-page {
-  display: flex;
-  width: 100%;
-  height: 100%;
-  background-color: $bg-page;
+  @include console.console-page;
+
+  flex-direction: row;
 
   &--mobile {
     flex-direction: column;
@@ -494,6 +494,9 @@ function addMobileNode(type: WorkflowNodeType): void {
     flex: 1;
     flex-direction: column;
     min-width: 0;
+    background:
+      var(--bg-console-grid) 0 0 / 28px 28px,
+      var(--bg-console);
   }
 
   &__editor-body {
@@ -572,13 +575,7 @@ function addMobileNode(type: WorkflowNodeType): void {
   // Mobile styles
   &__mobile-list-header,
   &__mobile-editor-header {
-    display: flex;
-    gap: $spacing-sm;
-    align-items: center;
-    height: 48px;
-    min-height: 48px;
-    padding: 0 $spacing-sm;
-    border-bottom: 1px solid $border-dark;
+    @include console.console-mobile-header;
   }
 
   &__mobile-title {
@@ -597,24 +594,7 @@ function addMobileNode(type: WorkflowNodeType): void {
   }
 
   &__back-btn {
-    display: flex;
-    flex-shrink: 0;
-    align-items: center;
-    justify-content: center;
-    width: 36px;
-    height: 36px;
-    padding: 0;
-    color: $text-muted;
-    cursor: pointer;
-    background: none;
-    border: none;
-    border-radius: $radius-md;
-    transition: all $transition-fast;
-
-    &:hover {
-      color: $text-secondary-color;
-      background-color: $bg-elevated;
-    }
+    @include console.console-icon-button;
   }
 
   &__mobile-nodes {
@@ -629,11 +609,12 @@ function addMobileNode(type: WorkflowNodeType): void {
 
   &__mobile-add-btn {
     position: fixed;
-    right: 24px;
-    bottom: 24px;
+    right: 18px;
+    bottom: max(18px, env(safe-area-inset-bottom, 0px));
     z-index: $z-index-fixed;
     width: 48px;
     height: 48px;
+    box-shadow: var(--shadow-lg);
   }
 
   &__mobile-node-menu {
@@ -648,16 +629,18 @@ function addMobileNode(type: WorkflowNodeType): void {
     align-items: center;
     padding: $spacing-md;
     font-size: $font-size-sm;
-    color: $text-primary-color;
+    color: var(--text-primary);
     cursor: pointer;
-    background: $bg-elevated;
-    border: 1px solid $border-dark;
-    border-radius: $radius-md;
-    transition: all $transition-fast;
+    background: var(--bg-panel);
+    border: 1px solid var(--border-primary);
+    border-radius: $radius-lg;
+    transition:
+      background-color $transition-fast,
+      border-color $transition-fast;
 
     &:hover {
-      background-color: $bg-deeper;
-      border-color: $border-elevated;
+      background-color: var(--bg-elevated);
+      border-color: var(--border-secondary);
     }
   }
 }

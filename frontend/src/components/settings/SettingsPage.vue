@@ -40,46 +40,25 @@ const authStore = useAuthStore();
 
 <style scoped lang="scss">
 @use '@/styles/variables' as *;
+@use '@/styles/console' as console;
 
 .settings-page {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  background-color: $bg-page;
+  @include console.console-scroll-page;
 
   &__header {
-    display: flex;
-    flex-shrink: 0;
-    gap: 12px;
-    align-items: center;
-    padding: 20px 32px;
-    border-bottom: 1px solid $border-dark;
+    @include console.console-mobile-header;
+
+    min-height: 64px;
+    padding: 0 28px;
 
     @media (max-width: $breakpoint-md) {
-      gap: 10px;
-      padding: 12px 16px;
+      min-height: 52px;
+      padding: 0 $spacing-sm;
     }
   }
 
   &__back {
-    display: flex;
-    flex-shrink: 0;
-    align-items: center;
-    justify-content: center;
-    width: 36px;
-    height: 36px;
-    padding: 0;
-    color: $text-muted;
-    cursor: pointer;
-    background: none;
-    border: none;
-    border-radius: $radius-md;
-    transition: all $transition-fast;
-
-    &:hover {
-      color: $text-secondary-color;
-      background-color: $bg-elevated;
-    }
+    @include console.console-icon-button;
   }
 
   &__header-icon {
@@ -88,9 +67,9 @@ const authStore = useAuthStore();
   }
 
   &__header-title {
+    @include console.console-title;
+
     font-size: $font-size-lg;
-    font-weight: $font-weight-semibold;
-    color: $text-primary-color;
 
     @media (max-width: $breakpoint-md) {
       font-size: $font-size-md;
@@ -101,13 +80,13 @@ const authStore = useAuthStore();
     display: flex;
     flex: 1;
     flex-direction: column;
-    gap: 32px;
-    padding: 32px 40px;
+    gap: 22px;
+    padding: 28px;
     overflow-y: auto;
 
     @media (max-width: $breakpoint-md) {
-      gap: 20px;
-      padding: 16px;
+      gap: $spacing-md;
+      padding: $spacing-md;
     }
   }
 }
