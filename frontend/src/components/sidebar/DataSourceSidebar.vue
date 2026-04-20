@@ -49,7 +49,7 @@ function handleUserCommand(command: string): void {
   width: $sidebar-width-collapsed;
   height: 100%;
   overflow: hidden;
-  background: var(--bg-sidebar);
+  background: var(--bg-secondary);
   border-right: 1px solid var(--border-primary);
 }
 </style>

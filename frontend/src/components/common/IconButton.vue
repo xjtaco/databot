@@ -28,10 +28,24 @@ defineEmits<{
 .icon-button {
   @include console.console-icon-button;
 
+  @media (max-width: $breakpoint-md) {
+    width: 44px;
+    height: 44px;
+  }
+
   &:disabled {
     cursor: not-allowed;
     opacity: 0.45;
     transform: none;
+  }
+
+  &.icon-button--disabled {
+    &:hover,
+    &:active {
+      color: var(--text-tertiary);
+      background-color: transparent;
+      transform: none;
+    }
   }
 }
 </style>

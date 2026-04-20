@@ -182,7 +182,7 @@ function toggleLocale(): void {
   min-width: $icon-bar-width;
   height: 100%;
   padding: 12px 8px;
-  background: linear-gradient(180deg, var(--bg-sidebar) 0%, var(--surface-sunken) 100%);
+  background: linear-gradient(180deg, var(--bg-secondary) 0%, var(--surface-sunken) 100%);
   border-right: 1px solid var(--border-primary);
 
   &--mobile {
