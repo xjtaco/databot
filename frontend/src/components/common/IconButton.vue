@@ -44,6 +44,7 @@ defineEmits<{
     &:active {
       color: var(--text-tertiary);
       background-color: transparent;
+      border-color: transparent;
       transform: none;
     }
   }
