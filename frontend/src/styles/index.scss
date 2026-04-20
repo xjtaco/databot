@@ -212,8 +212,8 @@ pre.hljs {
   --el-button-active-color: var(--text-primary);
   --el-button-outline-color: var(--focus-ring);
   --el-button-disabled-bg-color: var(--bg-control);
-  --el-button-disabled-border-color: var(--border-dark);
-  --el-button-disabled-text-color: var(--text-muted);
+  --el-button-disabled-border-color: var(--border-primary);
+  --el-button-disabled-text-color: var(--text-tertiary);
   --el-button-hover-link-text-color: var(--text-primary);
 }
 
@@ -271,8 +271,8 @@ pre.hljs {
   --el-input-bg-color: var(--input-bg);
   --el-input-text-color: var(--text-primary);
   --el-input-disabled-bg-color: var(--bg-control);
-  --el-input-disabled-border-color: var(--border-dark);
-  --el-input-disabled-text-color: var(--text-muted);
+  --el-input-disabled-border-color: var(--border-primary);
+  --el-input-disabled-text-color: var(--text-tertiary);
 }
 
 .el-input__wrapper.is-focus,
@@ -289,14 +289,14 @@ pre.hljs {
 .el-input.is-disabled .el-input__wrapper,
 .el-textarea.is-disabled .el-textarea__inner {
   background-color: var(--bg-control);
-  box-shadow: 0 0 0 1px var(--border-dark) inset;
+  box-shadow: 0 0 0 1px var(--border-primary) inset;
 }
 
 .el-select {
   --el-select-border-color-hover: var(--border-strong);
-  --el-select-disabled-border: var(--border-dark);
-  --el-select-disabled-color: var(--text-muted);
-  --el-select-input-color: var(--text-muted);
+  --el-select-disabled-border: var(--border-primary);
+  --el-select-disabled-color: var(--text-tertiary);
+  --el-select-input-color: var(--text-tertiary);
   --el-select-multiple-input-color: var(--text-primary);
   --el-select-input-focus-border-color: var(--accent);
 }
@@ -308,13 +308,13 @@ pre.hljs {
 .el-select__wrapper.is-disabled,
 .el-select__wrapper.is-disabled:hover {
   background-color: var(--bg-control);
-  box-shadow: 0 0 0 1px var(--border-dark) inset;
+  box-shadow: 0 0 0 1px var(--border-primary) inset;
 }
 
 .el-select__wrapper.is-disabled .el-select__selected-item,
 .el-select__wrapper.is-disabled .el-select__caret,
 .el-select__wrapper.is-disabled input {
-  color: var(--text-muted);
+  color: var(--text-tertiary);
 }
 
 .el-dropdown-menu {
@@ -337,7 +337,16 @@ pre.hljs {
   }
 
   &.is-disabled {
-    color: var(--text-muted);
+    color: var(--text-tertiary);
+  }
+
+  &.is-disabled,
+  &.is-disabled:hover,
+  &.is-disabled:focus,
+  &.is-disabled:active {
+    color: var(--text-tertiary);
+    cursor: not-allowed;
+    background: transparent;
   }
 }
 
@@ -365,7 +374,7 @@ pre.hljs {
   &.is-disabled,
   &.is-disabled:hover,
   &.is-disabled.is-hovering {
-    color: var(--text-muted);
+    color: var(--text-tertiary);
     cursor: not-allowed;
     background-color: transparent;
   }
