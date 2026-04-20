@@ -76,14 +76,25 @@ async function handleUserCommand(command: string): Promise<void> {
 </script>
 
 <style scoped lang="scss">
+@use '@/styles/variables' as *;
+
 .desktop-layout {
   display: flex;
   width: 100%;
+  min-width: 0;
   height: 100%;
+  overflow: hidden;
+  background: var(--bg-console);
 
   &__main {
+    position: relative;
     flex: 1;
     min-width: 0;
+    height: 100%;
+    overflow: hidden;
+    background:
+      radial-gradient(circle at 18% 0%, rgb(255 106 42 / 5%), transparent 26%),
+      var(--bg-console);
   }
 }
 </style>

@@ -106,13 +106,17 @@ async function handleUserCommand(command: string): Promise<void> {
 .mobile-layout {
   position: relative;
   width: 100%;
+  min-width: 0;
   height: 100%;
+  overflow: hidden;
+  background: var(--bg-console);
 
   &__overlay {
     position: fixed;
     inset: 0;
     z-index: $z-index-modal - 1;
     background-color: var(--dialog-overlay);
+    backdrop-filter: blur(8px);
   }
 
   &__sidebar {
@@ -121,17 +125,21 @@ async function handleUserCommand(command: string): Promise<void> {
     bottom: 0;
     left: 0;
     z-index: $z-index-modal;
-    box-shadow: $shadow-lg;
+    box-shadow: var(--shadow-lg);
   }
 
   &__main {
+    min-width: 0;
     height: 100%;
+    overflow: hidden;
   }
 }
 
 .slide-enter-active,
 .slide-leave-active {
-  transition: all $transition-normal;
+  transition:
+    opacity $transition-normal,
+    transform $transition-normal;
 }
 
 .slide-enter-from,

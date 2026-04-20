@@ -176,20 +176,20 @@ function toggleLocale(): void {
 .icon-bar {
   display: flex;
   flex-direction: column;
-  gap: $spacing-sm;
+  gap: 7px;
   align-items: center;
   width: $icon-bar-width;
   min-width: $icon-bar-width;
   height: 100%;
-  padding: $spacing-md $spacing-sm;
-  background-color: $bg-deeper;
-  border-right: 1px solid $border-dark;
+  padding: 12px 8px;
+  background: linear-gradient(180deg, var(--bg-sidebar) 0%, var(--surface-sunken) 100%);
+  border-right: 1px solid var(--border-primary);
 
   &--mobile {
-    gap: $spacing-xs;
+    gap: 6px;
     width: $icon-bar-width-mobile;
     min-width: $icon-bar-width-mobile;
-    padding: $spacing-sm $spacing-xs;
+    padding: 10px 6px;
   }
 
   &__logo {
@@ -197,30 +197,30 @@ function toggleLocale(): void {
     flex-shrink: 0;
     align-items: center;
     justify-content: center;
-    width: 32px;
-    height: 32px;
+    width: 34px;
+    height: 34px;
+    background: var(--bg-panel);
+    border: 1px solid var(--border-primary);
+    border-radius: $radius-lg;
 
     .icon-bar--mobile & {
-      width: 28px;
-      height: 28px;
+      width: 30px;
+      height: 30px;
     }
   }
 
   &__logo-img {
-    width: 100%;
-    height: 100%;
+    width: 24px;
+    height: 24px;
     object-fit: contain;
   }
 
   &__separator {
     flex-shrink: 0;
-    width: 24px;
+    width: 22px;
     height: 1px;
-    background-color: $border-dark;
-
-    .icon-bar--mobile & {
-      width: 20px;
-    }
+    margin: 4px 0;
+    background-color: var(--border-primary);
   }
 
   &__item {
@@ -232,12 +232,16 @@ function toggleLocale(): void {
     width: 40px;
     height: 40px;
     padding: 0;
-    color: $text-muted;
+    color: var(--text-tertiary);
     cursor: pointer;
-    background: none;
-    border: none;
-    border-radius: $radius-sm;
-    transition: all $transition-fast;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: $radius-md;
+    transition:
+      color $transition-fast,
+      background-color $transition-fast,
+      border-color $transition-fast,
+      transform $transition-fast;
 
     .icon-bar--mobile & {
       width: 36px;
@@ -245,21 +249,33 @@ function toggleLocale(): void {
     }
 
     &:hover:not(.is-disabled) {
-      color: $text-secondary-color;
-      background-color: $bg-elevated;
+      color: var(--text-primary);
+      background-color: var(--bg-control);
+      border-color: var(--border-primary);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--focus-ring);
+      outline-offset: 2px;
+    }
+
+    &:active:not(.is-disabled) {
+      transform: translateY(1px);
     }
 
     &.is-active {
-      color: $accent;
-      background-color: $accent-tint10;
+      color: var(--accent);
+      background-color: var(--accent-tint10);
+      border-color: rgb(255 106 42 / 28%);
 
       .icon-bar__indicator {
         opacity: 1;
+        transform: translateY(-50%) scaleY(1);
       }
     }
 
     &.is-disabled {
-      color: $border-elevated;
+      color: var(--border-secondary);
       cursor: not-allowed;
       opacity: 0.5;
     }
@@ -268,16 +284,19 @@ function toggleLocale(): void {
   &__indicator {
     position: absolute;
     top: 50%;
-    left: 0;
+    left: -8px;
     width: 3px;
     height: 20px;
-    background-color: $accent;
-    border-radius: 0 2px 2px 0;
+    background-color: var(--accent);
+    border-radius: 0 3px 3px 0;
     opacity: 0;
-    transform: translateY(-50%);
-    transition: opacity $transition-fast;
+    transform: translateY(-50%) scaleY(0.6);
+    transition:
+      opacity $transition-fast,
+      transform $transition-fast;
 
     .icon-bar--mobile & {
+      left: -6px;
       height: 16px;
     }
   }
@@ -288,22 +307,18 @@ function toggleLocale(): void {
 
   &__lang {
     font-size: 12px;
-    font-weight: 600;
-    color: $text-muted;
+    font-weight: $font-weight-semibold;
+    color: var(--text-secondary);
     letter-spacing: 0;
-
-    .icon-bar--mobile & {
-      font-size: 11px;
-    }
   }
 
   &__user {
-    color: $text-muted;
+    color: var(--text-secondary);
   }
 
   &__username {
     font-weight: $font-weight-semibold;
-    color: $text-primary-color;
+    color: var(--text-primary);
   }
 
   &__dropdown-icon {
