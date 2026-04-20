@@ -206,6 +206,15 @@ pre.hljs {
   --el-button-hover-bg-color: var(--bg-elevated);
   --el-button-hover-border-color: var(--border-strong);
   --el-button-hover-text-color: var(--text-primary);
+  --el-button-active-bg-color: var(--bg-control);
+  --el-button-active-border-color: var(--border-strong);
+  --el-button-active-text-color: var(--text-primary);
+  --el-button-active-color: var(--text-primary);
+  --el-button-outline-color: var(--focus-ring);
+  --el-button-disabled-bg-color: var(--bg-control);
+  --el-button-disabled-border-color: var(--border-dark);
+  --el-button-disabled-text-color: var(--text-muted);
+  --el-button-hover-link-text-color: var(--text-primary);
 }
 
 .el-button--primary {
@@ -215,6 +224,35 @@ pre.hljs {
   --el-button-hover-bg-color: var(--accent-light);
   --el-button-hover-border-color: var(--accent-light);
   --el-button-hover-text-color: var(--text-on-accent);
+  --el-button-active-bg-color: var(--accent-strong);
+  --el-button-active-border-color: var(--accent-strong);
+  --el-button-active-text-color: var(--text-on-accent);
+  --el-button-active-color: var(--text-on-accent);
+  --el-button-outline-color: var(--focus-ring);
+  --el-button-disabled-bg-color: rgb(255 106 42 / 28%);
+  --el-button-disabled-border-color: rgb(255 106 42 / 28%);
+  --el-button-disabled-text-color: var(--text-on-accent);
+  --el-button-hover-link-text-color: var(--text-on-accent);
+}
+
+.el-button--primary.is-plain,
+.el-button--primary.is-text,
+.el-button--primary.is-link {
+  --el-button-text-color: var(--accent-light);
+  --el-button-bg-color: rgb(255 106 42 / 12%);
+  --el-button-border-color: rgb(255 106 42 / 24%);
+  --el-button-hover-bg-color: rgb(255 106 42 / 24%);
+  --el-button-hover-border-color: var(--accent);
+  --el-button-hover-text-color: var(--text-on-accent);
+  --el-button-active-bg-color: var(--accent-strong);
+  --el-button-active-border-color: var(--accent-strong);
+  --el-button-active-text-color: var(--text-on-accent);
+  --el-button-active-color: var(--text-on-accent);
+  --el-button-outline-color: var(--focus-ring);
+  --el-button-disabled-bg-color: rgb(255 106 42 / 10%);
+  --el-button-disabled-border-color: rgb(255 106 42 / 18%);
+  --el-button-disabled-text-color: rgb(255 138 82 / 72%);
+  --el-button-hover-link-text-color: var(--accent-light);
 }
 
 .el-input__wrapper,
@@ -225,10 +263,58 @@ pre.hljs {
   box-shadow: 0 0 0 1px var(--input-border) inset;
 }
 
+.el-input,
+.el-textarea {
+  --el-input-border-color: var(--input-border);
+  --el-input-hover-border-color: var(--border-strong);
+  --el-input-focus-border-color: var(--accent);
+  --el-input-bg-color: var(--input-bg);
+  --el-input-text-color: var(--text-primary);
+  --el-input-disabled-bg-color: var(--bg-control);
+  --el-input-disabled-border-color: var(--border-dark);
+  --el-input-disabled-text-color: var(--text-muted);
+}
+
 .el-input__wrapper.is-focus,
 .el-select__wrapper.is-focused,
 .el-textarea__inner:focus {
   box-shadow: 0 0 0 1px var(--input-focus-border) inset;
+}
+
+.el-input__wrapper:hover,
+.el-textarea__inner:hover {
+  box-shadow: 0 0 0 1px var(--border-strong) inset;
+}
+
+.el-input.is-disabled .el-input__wrapper,
+.el-textarea.is-disabled .el-textarea__inner {
+  background-color: var(--bg-control);
+  box-shadow: 0 0 0 1px var(--border-dark) inset;
+}
+
+.el-select {
+  --el-select-border-color-hover: var(--border-strong);
+  --el-select-disabled-border: var(--border-dark);
+  --el-select-disabled-color: var(--text-muted);
+  --el-select-input-color: var(--text-muted);
+  --el-select-multiple-input-color: var(--text-primary);
+  --el-select-input-focus-border-color: var(--accent);
+}
+
+.el-select__wrapper.is-hovering:not(.is-focused) {
+  box-shadow: 0 0 0 1px var(--border-strong) inset;
+}
+
+.el-select__wrapper.is-disabled,
+.el-select__wrapper.is-disabled:hover {
+  background-color: var(--bg-control);
+  box-shadow: 0 0 0 1px var(--border-dark) inset;
+}
+
+.el-select__wrapper.is-disabled .el-select__selected-item,
+.el-select__wrapper.is-disabled .el-select__caret,
+.el-select__wrapper.is-disabled input {
+  color: var(--text-muted);
 }
 
 .el-dropdown-menu {
@@ -243,6 +329,15 @@ pre.hljs {
   &:focus {
     color: var(--text-primary);
     background: var(--bg-elevated);
+  }
+
+  &:active {
+    color: var(--text-primary);
+    background: var(--bg-control);
+  }
+
+  &.is-disabled {
+    color: var(--text-muted);
   }
 }
 
