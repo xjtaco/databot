@@ -81,12 +81,12 @@ watch(
     display: flex;
     flex-direction: column;
     gap: $spacing-sm;
-    align-items: flex-start;
+    align-items: center;
     justify-content: center;
-    width: min(640px, 100%);
+    width: min(360px, 100%);
     height: 100%;
     margin: 0 auto;
-    text-align: left;
+    text-align: center;
   }
 
   &__empty-icon {
@@ -115,7 +115,7 @@ watch(
   }
 
   p {
-    max-width: 460px;
+    max-width: 320px;
     margin: 0;
     font-size: $font-size-sm;
     line-height: $line-height-normal;
