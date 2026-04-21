@@ -82,10 +82,9 @@ function handleKeydown(event: Event | KeyboardEvent) {
   }
 
   &__input-box {
-    flex: 1;
-    max-width: 920px;
+    flex: 1 1 auto;
+    min-width: 0;
     padding: 12px 14px;
-    margin-left: auto;
     background-color: var(--input-bg);
     border: 1px solid var(--input-border);
     border-radius: $radius-lg;
