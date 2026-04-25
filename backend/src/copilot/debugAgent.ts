@@ -11,6 +11,7 @@ import * as templateService from '../workflow/customNodeTemplate.service';
 import type { CopilotServerMessage } from './copilot.types';
 import type { WorkflowNodeInfo, WorkflowDetail } from '../workflow/workflow.types';
 import { buildToolStartSummary, buildToolDoneSummary } from './toolSummaries';
+import { createAgentRunRecorder, type AgentRunStatus } from '../agentRunEvaluator';
 
 const DEBUG_MAX_TOOL_CALLS_PER_TURN = 100;
 
@@ -63,6 +64,18 @@ export class DebugAgent {
       return;
     }
     this.isProcessing = true;
+    const runRecorder = createAgentRunRecorder({
+      agentType: 'debug',
+      workflowId: this.node.workflowId,
+      templateId: this.templateId,
+      userRequest: `execute_node:${nodeId}`,
+    });
+    runRecorder.recordToolStart({
+      toolCallId: `execute-node-${nodeId}`,
+      toolName: 'execute_node',
+      arguments: JSON.stringify({ nodeId }),
+    });
+    let runStatus: AgentRunStatus = 'success';
 
     try {
       await this.accessor.executeNode(nodeId, {
@@ -73,9 +86,22 @@ export class DebugAgent {
 
       // Send workflow_changed so the UI updates node state
       const node = await this.accessor.getNode(nodeId);
+      runRecorder.recordToolComplete({
+        toolCallId: `execute-node-${nodeId}`,
+        toolName: 'execute_node',
+        success: true,
+      });
       this.sendEvent({ type: 'workflow_changed', changeType: 'node_updated', nodeData: node });
     } catch (err) {
+      runStatus = 'failed';
+      runRecorder.recordError();
       const errorMessage = err instanceof Error ? err.message : String(err);
+      runRecorder.recordToolComplete({
+        toolCallId: `execute-node-${nodeId}`,
+        toolName: 'execute_node',
+        success: false,
+        error: errorMessage,
+      });
       logger.error('Direct node execution failed', {
         templateId: this.templateId,
         error: errorMessage,
@@ -84,6 +110,7 @@ export class DebugAgent {
     } finally {
       this.isProcessing = false;
       this.sendEvent({ type: 'turn_done' });
+      await runRecorder.finish(runStatus);
     }
   }
 
@@ -96,10 +123,18 @@ export class DebugAgent {
       return;
     }
     this.isProcessing = true;
+    const runRecorder = createAgentRunRecorder({
+      agentType: 'debug',
+      workflowId: this.node.workflowId,
+      templateId: this.templateId,
+      userRequest: content,
+    });
+    let runStatus: AgentRunStatus = 'success';
 
     // Check if LLM is configured
     const llmConfig = LLMProviderFactory.getConfig();
     if (!llmConfig.apiKey) {
+      runStatus = 'config_missing';
       this.sendEvent({
         type: 'error',
         message:
@@ -109,6 +144,7 @@ export class DebugAgent {
       });
       this.isProcessing = false;
       this.sendEvent({ type: 'turn_done' });
+      await runRecorder.finish(runStatus);
       return;
     }
 
@@ -130,6 +166,8 @@ export class DebugAgent {
       while (true) {
         if (this.aborted) break;
         if (toolCallCount >= DEBUG_MAX_TOOL_CALLS_PER_TURN) {
+          runStatus = 'limit_reached';
+          runRecorder.markLimitReached();
           logger.warn('Debug agent tool call limit reached', {
             templateId: this.templateId,
             limit: DEBUG_MAX_TOOL_CALLS_PER_TURN,
@@ -148,6 +186,11 @@ export class DebugAgent {
           toolRegistry,
           onToolCallStart: (tc: ToolCall) => {
             toolCallCount++;
+            runRecorder.recordToolStart({
+              toolCallId: tc.id,
+              toolName: tc.function.name,
+              arguments: tc.function.arguments,
+            });
             let args: Record<string, unknown> = {};
             try {
               args = JSON.parse(tc.function.arguments) as Record<string, unknown>;
@@ -164,6 +207,13 @@ export class DebugAgent {
           onToolCallComplete: (tc: ToolCall, result: ToolCallResult) => {
             const status = result.metadata?.status as string | undefined;
             const isSuccess = status === 'success';
+            runRecorder.recordToolComplete({
+              toolCallId: tc.id,
+              toolName: tc.function.name,
+              success: isSuccess,
+              content: result.content,
+              error: typeof result.metadata?.error === 'string' ? result.metadata.error : undefined,
+            });
             if (isSuccess) {
               this.sendEvent({
                 type: 'tool_done',
@@ -184,6 +234,7 @@ export class DebugAgent {
             }
           },
         });
+        runRecorder.recordLlmCall(response.usage);
 
         // Check if LLM called tools (provider already executed them)
         if (response.toolCalls && response.toolCalls.length > 0) {
@@ -197,6 +248,7 @@ export class DebugAgent {
           );
 
           if (response.content) {
+            runRecorder.recordAssistantText(response.content);
             this.streamText(response.content);
             this.sendEvent({ type: 'text_done' });
           }
@@ -212,7 +264,9 @@ export class DebugAgent {
           }
 
           // Compress context if token usage exceeds limit
-          await this.maybeCompressContext(response.usage?.totalTokens);
+          if (await this.maybeCompressContext(response.usage?.totalTokens)) {
+            runRecorder.recordContextCompression();
+          }
 
           if (this.aborted) break;
           continue;
@@ -221,25 +275,34 @@ export class DebugAgent {
         // No tool calls — final text response
         if (response.content) {
           this.context.addMessageWithTokens({ role: 'assistant', content: response.content });
+          runRecorder.recordAssistantText(response.content);
           this.streamText(response.content);
           this.sendEvent({ type: 'text_done' });
         }
 
-        await this.maybeCompressContext(response.usage?.totalTokens);
+        if (await this.maybeCompressContext(response.usage?.totalTokens)) {
+          runRecorder.recordContextCompression();
+        }
         break;
       }
     } catch (err) {
+      runStatus = 'failed';
+      runRecorder.recordError();
       const errorMessage = err instanceof Error ? err.message : String(err);
       logger.error('Debug agent error', { templateId: this.templateId, error: errorMessage });
       this.sendEvent({ type: 'error', message: errorMessage });
     } finally {
+      if (this.aborted) {
+        runStatus = 'aborted';
+      }
       this.isProcessing = false;
       this.sendEvent({ type: 'turn_done' });
+      await runRecorder.finish(runStatus);
     }
   }
 
-  private async maybeCompressContext(totalTokens: number | undefined): Promise<void> {
-    if (!totalTokens) return;
+  private async maybeCompressContext(totalTokens: number | undefined): Promise<boolean> {
+    if (!totalTokens) return false;
     const compressLimit = LLMProviderFactory.getConfig().compressTokenLimit ?? 90000;
     if (totalTokens > compressLimit) {
       logger.info('Debug agent context compression triggered', {
@@ -248,7 +311,9 @@ export class DebugAgent {
         compressLimit,
       });
       await this.context.compressContext();
+      return true;
     }
+    return false;
   }
 
   private streamText(text: string): void {

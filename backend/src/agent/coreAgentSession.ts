@@ -11,6 +11,7 @@ import { AgentSession } from './base';
 import { Context } from './context';
 import type { SessionConfig, WsMessage } from './types';
 import * as chatSessionService from '../chatSession/chatSession.service';
+import { createAgentRunRecorder, type AgentRunStatus } from '../agentRunEvaluator';
 
 const CORE_PROMPT = `
 You are an interactive command-line agent focused on data analysis tasks. Your primary goal is to assist users safely and efficiently while strictly following these instructions and making full use of available tools.
@@ -182,6 +183,12 @@ export class CoreAgentSession extends AgentSession {
   }
 
   async handleUserMessage(data: { content: string }): Promise<void> {
+    const runRecorder = createAgentRunRecorder({
+      agentType: 'core',
+      sessionId: this.config.sessionId,
+      userRequest: data.content,
+    });
+
     // Check if LLM is configured before processing
     const llmConfig = LLMProviderFactory.getConfig();
     if (!llmConfig.apiKey) {
@@ -195,6 +202,7 @@ export class CoreAgentSession extends AgentSession {
           configType: 'llm',
         },
       });
+      await runRecorder.finish('config_missing');
       return;
     }
 
@@ -231,6 +239,7 @@ export class CoreAgentSession extends AgentSession {
     }
 
     let finishReason = '';
+    let runStatus: AgentRunStatus = 'success';
     this.aborted = false;
     try {
       do {
@@ -262,6 +271,11 @@ export class CoreAgentSession extends AgentSession {
             case 'tool_call':
               if (event.toolCall) {
                 toolCalls.push(event.toolCall);
+                runRecorder.recordToolStart({
+                  toolCallId: event.toolCall.id,
+                  toolName: event.toolCall.function.name,
+                  arguments: event.toolCall.function.arguments,
+                });
               }
               logger.info('Received tool call', {
                 toolName: event.toolCall?.function?.name,
@@ -271,6 +285,18 @@ export class CoreAgentSession extends AgentSession {
             case 'tool_call_result':
               if (event.toolCallResult) {
                 toolCallResults.push(event.toolCallResult);
+                const status = event.toolCallResult.metadata?.status;
+                const success = status !== 'error' && status !== 'failed';
+                runRecorder.recordToolComplete({
+                  toolCallId: event.toolCallResult.toolCallId,
+                  toolName: event.toolCallResult.name,
+                  success,
+                  content: event.toolCallResult.content,
+                  error:
+                    typeof event.toolCallResult.metadata?.error === 'string'
+                      ? event.toolCallResult.metadata.error
+                      : undefined,
+                });
               }
               logger.info('Received tool call result', {
                 toolName: event.toolCallResult?.name,
@@ -326,6 +352,7 @@ export class CoreAgentSession extends AgentSession {
               finishReason = event.finishReason || 'completed';
               if (event.usage) {
                 lastUsage = event.usage;
+                runRecorder.recordLlmCall(event.usage);
                 this.sendMessage({
                   type: 'usage_report',
                   timestamp: Date.now(),
@@ -338,6 +365,8 @@ export class CoreAgentSession extends AgentSession {
               logger.info(`Stream completed with reason: ${finishReason}`);
               break;
             case 'error':
+              runStatus = 'failed';
+              runRecorder.recordError();
               this.sendMessage({
                 type: 'error',
                 timestamp: Date.now(),
@@ -385,6 +414,7 @@ export class CoreAgentSession extends AgentSession {
         // Persist assistant text content to chat session (every turn that has text)
         if (this.chatSessionId && assistantContentChunks.length > 0) {
           const fullContent = assistantContentChunks.join('');
+          runRecorder.recordAssistantText(fullContent);
           try {
             await chatSessionService.addMessage(this.chatSessionId, 'assistant', fullContent);
           } catch (error) {
@@ -411,6 +441,7 @@ export class CoreAgentSession extends AgentSession {
         const compressLimit = LLMProviderFactory.getConfig().compressTokenLimit ?? 90000;
         if (lastUsage && (lastUsage.total_tokens as number) > compressLimit) {
           await this.context.compressContext();
+          runRecorder.recordContextCompression();
         }
 
         // Log warning only if nothing was added at all
@@ -424,9 +455,12 @@ export class CoreAgentSession extends AgentSession {
       } while (finishReason !== 'stop');
 
       if (this.aborted) {
+        runStatus = 'aborted';
         this.sendMessage({ type: 'stop', timestamp: Date.now() });
       }
     } catch (error) {
+      runStatus = 'failed';
+      runRecorder.recordError();
       logger.error('Failed to process user message', { sessionId: this.config.sessionId, error });
       try {
         this.sendMessage({
@@ -437,6 +471,8 @@ export class CoreAgentSession extends AgentSession {
       } catch {
         // WebSocket already disconnected — nothing to notify
       }
+    } finally {
+      await runRecorder.finish(runStatus);
     }
   }
   /**

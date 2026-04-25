@@ -20,6 +20,7 @@ import {
 import { autoLayout } from '../workflow/layout/autoLayout';
 import { NodeConfig, WorkflowDetail } from '../workflow/workflow.types';
 import { buildToolStartSummary, buildToolDoneSummary } from './toolSummaries';
+import { createAgentRunRecorder, type AgentRunStatus } from '../agentRunEvaluator';
 
 function createTempWorkdir(): string {
   mkdirSync(config.work_folder, { recursive: true });
@@ -89,10 +90,17 @@ export class CopilotAgent {
       return;
     }
     this.isProcessing = true;
+    const runRecorder = createAgentRunRecorder({
+      agentType: 'copilot',
+      workflowId: this.workflowId,
+      userRequest: content,
+    });
+    let runStatus: AgentRunStatus = 'success';
 
     // Check if LLM is configured before processing
     const llmConfig = LLMProviderFactory.getConfig();
     if (!llmConfig.apiKey) {
+      runStatus = 'config_missing';
       this.sendEvent({
         type: 'error',
         message:
@@ -102,6 +110,7 @@ export class CopilotAgent {
       });
       this.isProcessing = false;
       this.sendEvent({ type: 'turn_done' });
+      await runRecorder.finish(runStatus);
       return;
     }
 
@@ -133,6 +142,8 @@ export class CopilotAgent {
       while (true) {
         if (this.aborted) break;
         if (toolCallCount >= COPILOT_MAX_TOOL_CALLS_PER_TURN) {
+          runStatus = 'limit_reached';
+          runRecorder.markLimitReached();
           logger.warn('Copilot tool call limit reached', {
             workflowId: this.workflowId,
             limit: COPILOT_MAX_TOOL_CALLS_PER_TURN,
@@ -155,6 +166,11 @@ export class CopilotAgent {
           toolRegistry: registry,
           onToolCallStart: (tc: ToolCall) => {
             toolCallCount++;
+            runRecorder.recordToolStart({
+              toolCallId: tc.id,
+              toolName: tc.function.name,
+              arguments: tc.function.arguments,
+            });
             let args: Record<string, unknown> = {};
             try {
               args = JSON.parse(tc.function.arguments) as Record<string, unknown>;
@@ -171,6 +187,13 @@ export class CopilotAgent {
           onToolCallComplete: (tc: ToolCall, result: ToolCallResult) => {
             const status = result.metadata?.status as string | undefined;
             const isSuccess = status === 'success';
+            runRecorder.recordToolComplete({
+              toolCallId: tc.id,
+              toolName: tc.function.name,
+              success: isSuccess,
+              content: result.content,
+              error: typeof result.metadata?.error === 'string' ? result.metadata.error : undefined,
+            });
             if (isSuccess) {
               this.sendEvent({
                 type: 'tool_done',
@@ -216,6 +239,7 @@ export class CopilotAgent {
             }
           },
         });
+        runRecorder.recordLlmCall(response.usage);
 
         // Check if LLM called tools (provider already executed them)
         if (response.toolCalls && response.toolCalls.length > 0) {
@@ -231,6 +255,7 @@ export class CopilotAgent {
 
           // If there was text content before tools, stream it
           if (response.content) {
+            runRecorder.recordAssistantText(response.content);
             this.streamText(response.content);
             this.sendEvent({ type: 'text_done' });
           }
@@ -247,7 +272,9 @@ export class CopilotAgent {
           }
 
           // Compress context if token usage exceeds limit
-          await this.maybeCompressContext(response.usage?.totalTokens);
+          if (await this.maybeCompressContext(response.usage?.totalTokens)) {
+            runRecorder.recordContextCompression();
+          }
           await this.maybeReflowRound(roundMutations, preRoundWorkflow);
 
           // Check abort after completing this round
@@ -260,26 +287,35 @@ export class CopilotAgent {
         // No tool calls — this is the final text response
         if (response.content) {
           this.context.addMessageWithTokens({ role: 'assistant', content: response.content });
+          runRecorder.recordAssistantText(response.content);
           this.streamText(response.content);
           this.sendEvent({ type: 'text_done' });
         }
 
         // Compress context if token usage exceeds limit
-        await this.maybeCompressContext(response.usage?.totalTokens);
+        if (await this.maybeCompressContext(response.usage?.totalTokens)) {
+          runRecorder.recordContextCompression();
+        }
         break;
       }
     } catch (err) {
+      runStatus = 'failed';
+      runRecorder.recordError();
       const errorMessage = err instanceof Error ? err.message : String(err);
       logger.error('Copilot agent error', { workflowId: this.workflowId, error: errorMessage });
       this.sendEvent({ type: 'error', message: errorMessage });
     } finally {
+      if (this.aborted) {
+        runStatus = 'aborted';
+      }
       this.isProcessing = false;
       this.sendEvent({ type: 'turn_done' });
+      await runRecorder.finish(runStatus);
     }
   }
 
-  private async maybeCompressContext(totalTokens: number | undefined): Promise<void> {
-    if (!totalTokens) return;
+  private async maybeCompressContext(totalTokens: number | undefined): Promise<boolean> {
+    if (!totalTokens) return false;
     const compressLimit = LLMProviderFactory.getConfig().compressTokenLimit ?? 90000;
     if (totalTokens > compressLimit) {
       logger.info('Copilot context compression triggered', {
@@ -288,7 +324,9 @@ export class CopilotAgent {
         compressLimit,
       });
       await this.context.compressContext();
+      return true;
     }
+    return false;
   }
 
   /** Try to parse JSON from tool result content string */

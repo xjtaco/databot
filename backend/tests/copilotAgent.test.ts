@@ -90,6 +90,7 @@ function wrapWithCallbacks(
 
 describe('CopilotAgent', () => {
   const ORIGINAL_WORK_FOLDER = config.work_folder;
+  const ORIGINAL_LOG_DIR = config.log.dir;
   const TEMP_ROOT = '/tmp/databot-test-workfolder-copilot-agent';
 
   let events: CopilotServerMessage[];
@@ -156,6 +157,7 @@ describe('CopilotAgent', () => {
 
   beforeEach(() => {
     config.work_folder = TEMP_ROOT;
+    config.log.dir = `${TEMP_ROOT}/logs`;
     events = [];
     baseMockChat = vi.fn();
     mockToolExecute = vi.fn();
@@ -205,6 +207,7 @@ describe('CopilotAgent', () => {
       rmSync(TEMP_ROOT, { recursive: true, force: true });
     }
     config.work_folder = ORIGINAL_WORK_FOLDER;
+    config.log.dir = ORIGINAL_LOG_DIR;
   });
 
   it('sends text_delta, text_done, turn_done for simple text response', async () => {
