@@ -42,17 +42,7 @@ cleanup() {
     return
   fi
   echo "[*] Cleaning up temporary files..."
-
-  if rm -rf "$WORK_DIR" 2>/dev/null; then
-    return
-  fi
-
-  # pg_data inside WORK_DIR may be owned by postgres uid, needs root to remove
-  if [ "$(id -u)" -ne 0 ]; then
-    sudo rm -rf "$WORK_DIR"
-  else
-    rm -rf "$WORK_DIR"
-  fi
+  rm -rf "$WORK_DIR" 2>/dev/null || true
 }
 trap cleanup EXIT
 
@@ -407,11 +397,13 @@ fi
 info "Creating archive..."
 mkdir -p "$OUTPUT_DIR"
 ARCHIVE_PATH="$(cd "$OUTPUT_DIR" && pwd)/${PACKAGE_NAME}.tar.gz"
-if [ "$(id -u)" -eq 0 ]; then
-  tar -czf "$ARCHIVE_PATH" -C "$WORK_DIR" "$PACKAGE_NAME"
-else
+if tar -czf "$ARCHIVE_PATH" -C "$WORK_DIR" "$PACKAGE_NAME" 2>/dev/null; then
+  :
+elif [ "$(id -u)" -ne 0 ]; then
   sudo tar -czf "$ARCHIVE_PATH" -C "$WORK_DIR" "$PACKAGE_NAME"
   sudo chown "$(id -u):$(id -g)" "$ARCHIVE_PATH"
+else
+  tar -czf "$ARCHIVE_PATH" -C "$WORK_DIR" "$PACKAGE_NAME"
 fi
 
 ARCHIVE_SIZE="$(du -h "$ARCHIVE_PATH" | cut -f1)"
