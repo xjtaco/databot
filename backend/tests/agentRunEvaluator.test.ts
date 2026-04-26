@@ -69,19 +69,32 @@ describe('AgentRunEvaluator', () => {
       userRequest: '查一下订单',
     });
 
-    for (const toolCallId of ['tool-001', 'tool-002']) {
-      recorder.recordToolStart({
-        toolCallId,
-        toolName: 'grep',
-        arguments: '{"pattern":"orders"}',
-      });
-      recorder.recordToolComplete({
-        toolCallId,
-        toolName: 'grep',
-        success: toolCallId === 'tool-001',
-        error: toolCallId === 'tool-002' ? 'grep failed' : undefined,
-      });
-    }
+    // First call: succeeds with content
+    recorder.recordToolStart({
+      toolCallId: 'tool-001',
+      toolName: 'grep',
+      arguments: '{"pattern":"orders"}',
+    });
+    recorder.recordToolComplete({
+      toolCallId: 'tool-001',
+      toolName: 'grep',
+      success: true,
+      content: 'orders.csv\norders_summary.csv',
+    });
+
+    // Second call: same args, same result → truly repeated
+    recorder.recordToolStart({
+      toolCallId: 'tool-002',
+      toolName: 'grep',
+      arguments: '{"pattern":"orders"}',
+    });
+    recorder.recordToolComplete({
+      toolCallId: 'tool-002',
+      toolName: 'grep',
+      success: false,
+      content: 'orders.csv\norders_summary.csv',
+      error: 'grep failed',
+    });
 
     const summary = await recorder.finish('failed');
 
@@ -89,5 +102,52 @@ describe('AgentRunEvaluator', () => {
     expect(summary.metrics.failedToolCalls).toBe(1);
     expect(summary.issues.map((issue) => issue.type)).toContain('failed_tool_call');
     expect(summary.issues.map((issue) => issue.type)).toContain('repeated_tool_call');
+    // Verify resultHash is recorded
+    expect(summary.tools[0].resultHash).toBe(summary.tools[1].resultHash);
+  });
+
+  it('does not flag repeated tool calls when result changes between calls', async () => {
+    const recorder = createAgentRunRecorder({
+      agentType: 'copilot',
+      runId: 'run-003',
+      workflowId: 'wf-001',
+      userRequest: '构建工作流',
+    });
+
+    // First call returns 2 nodes
+    recorder.recordToolStart({ toolCallId: 't1', toolName: 'wf_get_summary', arguments: '{}' });
+    recorder.recordToolComplete({
+      toolCallId: 't1',
+      toolName: 'wf_get_summary',
+      success: true,
+      content: '{"nodes":[{"id":"n1"},{"id":"n2"}]}',
+    });
+
+    // Mutation between calls
+    recorder.recordToolStart({
+      toolCallId: 't2',
+      toolName: 'wf_add_node',
+      arguments: '{"name":"new_node","type":"sql"}',
+    });
+    recorder.recordToolComplete({
+      toolCallId: 't2',
+      toolName: 'wf_add_node',
+      success: true,
+      content: '{"id":"n3","name":"new_node"}',
+    });
+
+    // Second call returns 3 nodes (different result after mutation)
+    recorder.recordToolStart({ toolCallId: 't3', toolName: 'wf_get_summary', arguments: '{}' });
+    recorder.recordToolComplete({
+      toolCallId: 't3',
+      toolName: 'wf_get_summary',
+      success: true,
+      content: '{"nodes":[{"id":"n1"},{"id":"n2"},{"id":"n3"}]}',
+    });
+
+    const summary = await recorder.finish('success');
+
+    // No repeated_tool_call issue: same args but different result after a mutation
+    expect(summary.issues.map((issue) => issue.type)).not.toContain('repeated_tool_call');
   });
 });
