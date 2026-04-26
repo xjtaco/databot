@@ -78,7 +78,10 @@ describe('templateFields', () => {
 
   it('formats raw-output diagnostics only when a node output has raw_output', () => {
     const message = formatRawOutputTemplateDiagnostics([
-      { nodeName: 'ecommerce_monthly', output: { csvPath: '/tmp/out.csv', raw_output: 'printed only' } },
+      {
+        nodeName: 'ecommerce_monthly',
+        output: { csvPath: '/tmp/out.csv', raw_output: 'printed only' },
+      },
       { nodeName: 'tiktok_monthly', output: { csvPath: '/tmp/tiktok.csv', totalRows: 2 } },
     ]);
 

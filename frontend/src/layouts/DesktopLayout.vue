@@ -93,8 +93,7 @@ async function handleUserCommand(command: string): Promise<void> {
     height: 100%;
     overflow: hidden;
     background:
-      radial-gradient(circle at 18% 0%, rgb(255 106 42 / 5%), transparent 26%),
-      var(--bg-console);
+      radial-gradient(circle at 18% 0%, rgb(255 106 42 / 5%), transparent 26%), var(--bg-console);
   }
 }
 </style>

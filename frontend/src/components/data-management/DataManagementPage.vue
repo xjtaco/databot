@@ -473,8 +473,7 @@ $data-tree-panel-width: 300px;
     min-width: 0;
     height: 100%;
     background:
-      radial-gradient(circle at 70% 0%, rgb(255 106 42 / 4%), transparent 24%),
-      var(--bg-console);
+      radial-gradient(circle at 70% 0%, rgb(255 106 42 / 4%), transparent 24%), var(--bg-console);
   }
 
   &__empty-state {

@@ -1512,10 +1512,9 @@ describe('executionEngine', () => {
       mockResolveTemplate.mockImplementation(
         (s: string, outputs: Map<string, Record<string, unknown>>) => {
           capturedOutputMaps.push(new Map(outputs));
-          return s.replace(/\{\{summary_data\.summary_text\}\}/g, 'sales up').replace(
-            /\{\{summary_data\.csvPath\}\}/g,
-            '/tmp/from-result.csv'
-          );
+          return s
+            .replace(/\{\{summary_data\.summary_text\}\}/g, 'sales up')
+            .replace(/\{\{summary_data\.csvPath\}\}/g, '/tmp/from-result.csv');
         }
       );
 

@@ -1,4 +1,8 @@
-import type { WorkflowNodeInfo, WorkflowNodeRunInfo, WorkflowNodeTypeValue } from './workflow.types';
+import type {
+  WorkflowNodeInfo,
+  WorkflowNodeRunInfo,
+  WorkflowNodeTypeValue,
+} from './workflow.types';
 import { flattenResultField } from './templateResolver';
 
 const INTERNAL_TEMPLATE_FIELD_KEYS = new Set(['_sanitized']);

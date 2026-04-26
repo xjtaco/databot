@@ -247,7 +247,11 @@ if [ "$IS_UPGRADE" -eq 0 ] && [ -d "$PKG_DIR/data" ]; then
 
     for sub in logs workfolder dictionary knowledge uploads; do
       if [ -d "$PKG_DIR/data/$sub" ]; then
-        cp -a "$PKG_DIR/data/$sub" "$DATA_DIR/$sub"
+        if [ "$(id -u)" -eq 0 ]; then
+          cp -a "$PKG_DIR/data/$sub" "$DATA_DIR/$sub"
+        else
+          sudo cp -a "$PKG_DIR/data/$sub" "$DATA_DIR/$sub"
+        fi
         info "  Restored $sub/"
       fi
     done
@@ -375,7 +379,11 @@ if [ "$WITH_DATA" -eq 1 ]; then
 
   for sub in "${DATA_DIRS[@]}"; do
     if [ -d "$DATA_DIR/$sub" ]; then
-      cp -a "$DATA_DIR/$sub" "$APP_DATA_DIR/$sub"
+      if [ "$(id -u)" -eq 0 ]; then
+        cp -a "$DATA_DIR/$sub" "$APP_DATA_DIR/$sub"
+      else
+        sudo cp -a "$DATA_DIR/$sub" "$APP_DATA_DIR/$sub"
+      fi
       info "  Copied $sub/"
     else
       warn "  $sub/ not found, skipping"

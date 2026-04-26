@@ -1022,9 +1022,10 @@ class WfExecuteTool extends Tool {
         }
         const runDetail = await handle.promise;
         const sanitizedRunDetail = sanitizeForLlm(runDetail);
-        const data = isRecord(runDetail) && isRecord(sanitizedRunDetail)
-          ? await buildRunTemplatePayload(this.workflowAccessor, runDetail, sanitizedRunDetail)
-          : sanitizedRunDetail;
+        const data =
+          isRecord(runDetail) && isRecord(sanitizedRunDetail)
+            ? await buildRunTemplatePayload(this.workflowAccessor, runDetail, sanitizedRunDetail)
+            : sanitizedRunDetail;
         return { success: true, data };
       } catch (error) {
         if (!handle) {
@@ -1094,21 +1095,22 @@ export class WfExecuteNodeTool extends Tool {
       });
       const runResult = await this.accessor.getRunResult(runId);
       const sanitizedRunResult = sanitizeForLlm(runResult);
-      const data = isRecord(runResult) && isRecord(sanitizedRunResult)
-        ? await buildExecuteNodeTemplatePayload(
-            this.accessor,
-            runId,
-            nodeId,
-            runResult,
-            sanitizedRunResult
-          )
-        : {
-            runId,
-            output: null,
-            templateFields: null,
-            run: sanitizedRunResult,
-            nodeTemplateFields: [],
-          };
+      const data =
+        isRecord(runResult) && isRecord(sanitizedRunResult)
+          ? await buildExecuteNodeTemplatePayload(
+              this.accessor,
+              runId,
+              nodeId,
+              runResult,
+              sanitizedRunResult
+            )
+          : {
+              runId,
+              output: null,
+              templateFields: null,
+              run: sanitizedRunResult,
+              nodeTemplateFields: [],
+            };
       return { success: true, data };
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
@@ -1145,9 +1147,10 @@ export class WfGetRunResultTool extends Tool {
 
       const runDetail = await this.accessor.getRunResult(runId);
       const sanitizedRunDetail = sanitizeForLlm(runDetail);
-      const data = isRecord(runDetail) && isRecord(sanitizedRunDetail)
-        ? await buildRunTemplatePayload(this.accessor, runDetail, sanitizedRunDetail)
-        : sanitizedRunDetail;
+      const data =
+        isRecord(runDetail) && isRecord(sanitizedRunDetail)
+          ? await buildRunTemplatePayload(this.accessor, runDetail, sanitizedRunDetail)
+          : sanitizedRunDetail;
       return { success: true, data };
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);

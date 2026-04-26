@@ -56,7 +56,9 @@ describe('nodePromptShared', () => {
     const text = getSharedNodeTypeGuide('llm');
 
     expect(text).toContain('Put upstream template references in params');
-    expect(text).toContain('Do not put bare business placeholders such as {{eco_total_sales}} in the prompt');
+    expect(text).toContain(
+      'Do not put bare business placeholders such as {{eco_total_sales}} in the prompt'
+    );
     expect(text).toContain('refer to injected params by name in natural language');
   });
 

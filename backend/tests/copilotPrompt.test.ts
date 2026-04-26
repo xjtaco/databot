@@ -112,7 +112,9 @@ describe('buildSystemPrompt', () => {
     const prompt = buildSystemPrompt(ALL_CONFIGURED, TEMP_WORKDIR);
 
     expect(prompt).toContain('needsUpstreamFix: true');
-    expect(prompt).toContain('fix and re-run the upstream node before creating/modifying downstream templates');
+    expect(prompt).toContain(
+      'fix and re-run the upstream node before creating/modifying downstream templates'
+    );
   });
 
   it('documents flattened Python and LLM result field references without result prefix', () => {
@@ -129,7 +131,9 @@ describe('buildSystemPrompt', () => {
     const prompt = buildSystemPrompt(ALL_CONFIGURED, TEMP_WORKDIR);
 
     expect(prompt).toContain('For LLM nodes, put upstream template references in `params`');
-    expect(prompt).toContain('do not put bare business placeholders such as `{{eco_total_sales}}` in the prompt');
+    expect(prompt).toContain(
+      'do not put bare business placeholders such as `{{eco_total_sales}}` in the prompt'
+    );
     expect(prompt).toContain('In the prompt, refer to injected params by name in natural language');
   });
 
