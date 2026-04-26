@@ -139,4 +139,4 @@ export type CopilotServerMessage =
   | CopilotErrorEvent;
 
 // ── Agent Configuration ──────────────────────────────────
-export const COPILOT_MAX_TOOL_CALLS_PER_TURN = Infinity;
+export const COPILOT_MAX_TOOL_CALLS_PER_TURN = 80;
