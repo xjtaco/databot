@@ -38,6 +38,7 @@ export class CopilotAgent {
   private isProcessing: boolean;
   private toolRegistry: ToolRegistryClass | undefined;
   private tempWorkdirCleaned: boolean;
+  private workflowSnapshotCache: WorkflowDetail | null | undefined = undefined;
 
   constructor(
     workflowId: string,
@@ -423,8 +424,13 @@ export class CopilotAgent {
   }
 
   private async getWorkflowSnapshot(): Promise<WorkflowDetail | null> {
+    if (this.workflowSnapshotCache !== undefined) {
+      return this.workflowSnapshotCache;
+    }
     try {
-      return await workflowService.getWorkflow(this.workflowId);
+      const workflow = await workflowService.getWorkflow(this.workflowId);
+      this.workflowSnapshotCache = workflow;
+      return workflow;
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       logger.warn('Copilot layout ownership detection failed', {
@@ -433,6 +439,10 @@ export class CopilotAgent {
       });
       return null;
     }
+  }
+
+  private invalidateWorkflowSnapshot(): void {
+    this.workflowSnapshotCache = undefined;
   }
 
   private classifyLayoutOwnership(workflow: WorkflowDetail): CopilotLayoutOwnership {
@@ -515,6 +525,7 @@ export class CopilotAgent {
 
     try {
       await workflowService.reflowWorkflowLayout(this.workflowId);
+      this.invalidateWorkflowSnapshot();
       this.sendEvent({ type: 'workflow_changed', changeType: 'node_updated' });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -530,6 +541,7 @@ export class CopilotAgent {
   /** Emit workflow_changed for mutating tools */
   private emitWorkflowChanged(toolName: string, result: { success: boolean; data: unknown }): void {
     if (!result.success) return;
+    this.invalidateWorkflowSnapshot();
     if (toolName === 'wf_add_node') {
       const data = result.data as Record<string, unknown> | null;
       this.sendEvent({
