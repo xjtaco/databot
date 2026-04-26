@@ -127,7 +127,7 @@ export class Context {
       ];
 
       // Invoke LLM to compress the message history into a structured snapshot
-      const response = await this.llm.chat(messages, { temperature: 0.9 });
+      const response = await this.llm.chat(messages, { temperature: 0.2 });
 
       // Calculate tokens for the compressed message
       const compressedMessage: Message = { role: 'assistant', content: response.content };

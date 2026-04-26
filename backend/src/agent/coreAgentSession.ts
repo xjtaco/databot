@@ -438,7 +438,7 @@ export class CoreAgentSession extends AgentSession {
           break;
         }
 
-        const compressLimit = LLMProviderFactory.getConfig().compressTokenLimit ?? 90000;
+        const compressLimit = LLMProviderFactory.getConfig().compressTokenLimit ?? 60000;
         if (lastUsage && (lastUsage.total_tokens as number) > compressLimit) {
           await this.context.compressContext();
           runRecorder.recordContextCompression();
