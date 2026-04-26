@@ -70,10 +70,220 @@ generate_install_script() {
   local target_path="$1"
   cat >"$target_path" <<'INSTALL_EOF'
 #!/usr/bin/env bash
-# DataBot Install Script (placeholder — full implementation in Task 2)
+#
+# DataBot Install Script
+# Installs or upgrades DataBot from a package archive or extracted directory.
+# Preserves project directory structure (docker/, backend/, .data/).
+#
 set -euo pipefail
-echo "Install script placeholder"
+
+info()  { echo -e "\033[32m[+]\033[0m $*"; }
+warn()  { echo -e "\033[33m[!]\033[0m $*"; }
+error() { echo -e "\033[31m[-]\033[0m $*"; exit 1; }
+WORK_DIR=""
+
+usage() {
+  cat <<'USAGE'
+Usage: ./install.sh --install-dir <dir> [archive.tar.gz]
+
+Install or upgrade DataBot from a package archive.
+
+Options:
+  -h, --help            打印使用说明
+  --install-dir <dir>   目标安装目录（必填）
+
+Arguments:
+  archive               databot-package-*.tar.gz 压缩包路径（可选）
+                        如不提供，则从当前已解压的包目录安装
+
+Notes:
+  - 如果目标环境已有运行中的服务，将执行升级操作（停止 → 更新 → 重启）
+  - 升级时数据目录不会被覆盖
+USAGE
+}
+
+cleanup() {
+  if [ -z "$WORK_DIR" ] || [ ! -d "$WORK_DIR" ]; then
+    return
+  fi
+  echo "[*] Cleaning up temporary files..."
+  rm -rf "$WORK_DIR" 2>/dev/null || true
+}
+
+detect_running_services() {
+  local compose_file="$1"
+  if docker compose -f "$compose_file" ps --services --filter "status=running" 2>/dev/null | grep -q .; then
+    return 0
+  fi
+  return 1
+}
+
+INSTALL_DIR=""
+ARCHIVE=""
+
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    --install-dir)
+      if [ -z "${2:-}" ]; then
+        error "--install-dir requires a directory argument"
+      fi
+      INSTALL_DIR="$2"
+      shift 2
+      ;;
+    -*)
+      error "Unknown option: $1"
+      ;;
+    *)
+      if [ -z "$ARCHIVE" ]; then
+        ARCHIVE="$1"
+        shift
+      else
+        error "Too many arguments"
+      fi
+      ;;
+  esac
+done
+
+if [ -z "$INSTALL_DIR" ]; then
+  error "Missing required option: --install-dir"
+fi
+
+# ---------- Determine source directory ----------
+PKG_DIR=""
+
+if [ -n "$ARCHIVE" ]; then
+  if [ ! -f "$ARCHIVE" ]; then
+    error "Archive not found: $ARCHIVE"
+  fi
+
+  WORK_DIR="$(mktemp -d)"
+  trap cleanup EXIT
+
+  info "Extracting archive..."
+  tar -xzf "$ARCHIVE" -C "$WORK_DIR"
+  PKG_DIR="$(find "$WORK_DIR" -mindepth 1 -maxdepth 1 -type d -name 'databot-package-*' | head -n 1)"
+  if [ -z "$PKG_DIR" ] || [ ! -d "$PKG_DIR" ]; then
+    error "Invalid archive structure — expected databot-package-* directory inside"
+  fi
+  info "Extracted: $(basename "$PKG_DIR")"
+else
+  SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+  PKG_DIR="$SCRIPT_DIR"
+fi
+
+# ---------- Prepare install directory ----------
+INSTALL_DIR="$(mkdir -p "$INSTALL_DIR" && cd "$INSTALL_DIR" && pwd)"
+DOCKER_DIR="$INSTALL_DIR/docker"
+BACKEND_DIR="$INSTALL_DIR/backend"
+mkdir -p "$DOCKER_DIR" "$BACKEND_DIR"
+
+# ---------- Check for existing installation ----------
+COMPOSE_FILE="$DOCKER_DIR/docker-compose.yaml"
+IS_UPGRADE=0
+if [ -f "$COMPOSE_FILE" ] && detect_running_services "$COMPOSE_FILE"; then
+  IS_UPGRADE=1
+  info "Detected existing running installation — performing upgrade"
+fi
+
+# ---------- Load Docker images ----------
+if [ -f "$PKG_DIR/images.tar" ]; then
+  info "Loading Docker images..."
+  docker load -i "$PKG_DIR/images.tar"
+  info "Docker images loaded"
+else
+  warn "No images.tar found, skipping image import"
+fi
+
+# ---------- Stop existing services (upgrade only) ----------
+if [ "$IS_UPGRADE" -eq 1 ]; then
+  info "Stopping existing services..."
+  docker compose -f "$COMPOSE_FILE" down
+fi
+
+# ---------- Write configuration files ----------
+info "Writing configuration files..."
+
+if [ -f "$PKG_DIR/config/docker-compose.yaml" ]; then
+  cp "$PKG_DIR/config/docker-compose.yaml" "$DOCKER_DIR/docker-compose.yaml"
+  info "  Written docker/docker-compose.yaml"
+fi
+
+if [ -f "$PKG_DIR/config/nginx.conf" ]; then
+  cp "$PKG_DIR/config/nginx.conf" "$DOCKER_DIR/nginx.conf"
+  info "  Written docker/nginx.conf"
+fi
+
+if [ -f "$PKG_DIR/config/docker.env" ]; then
+  cp "$PKG_DIR/config/docker.env" "$DOCKER_DIR/.env"
+  info "  Written docker/.env"
+fi
+
+if [ -f "$PKG_DIR/config/backend.env" ]; then
+  cp "$PKG_DIR/config/backend.env" "$BACKEND_DIR/.env"
+  info "  Written backend/.env"
+fi
+
+# ---------- Copy images.tar to docker/ ----------
+if [ -f "$PKG_DIR/images.tar" ]; then
+  cp "$PKG_DIR/images.tar" "$DOCKER_DIR/images.tar"
+fi
+
+# ---------- Copy install.sh to install dir ----------
+cp "$PKG_DIR/install.sh" "$INSTALL_DIR/install.sh"
+chmod +x "$INSTALL_DIR/install.sh"
+
+# ---------- Restore data (fresh install only) ----------
+if [ "$IS_UPGRADE" -eq 0 ] && [ -d "$PKG_DIR/data" ]; then
+  DATA_DIR="$INSTALL_DIR/.data/databot"
+  if [ -d "$INSTALL_DIR/.data" ]; then
+    warn "Detected existing .data directory, skipping data restore"
+  else
+    info "Restoring application data..."
+    mkdir -p "$DATA_DIR"
+
+    for sub in logs workfolder dictionary knowledge uploads; do
+      if [ -d "$PKG_DIR/data/$sub" ]; then
+        cp -a "$PKG_DIR/data/$sub" "$DATA_DIR/$sub"
+        info "  Restored $sub/"
+      fi
+    done
+
+    if [ -d "$PKG_DIR/data/pg_data" ]; then
+      info "Restoring PostgreSQL data (requires root)..."
+      if [ "$(id -u)" -eq 0 ]; then
+        cp -a "$PKG_DIR/data/pg_data" "$DATA_DIR/pg_data"
+      else
+        sudo cp -a "$PKG_DIR/data/pg_data" "$DATA_DIR/pg_data"
+      fi
+      info "  Restored pg_data/"
+    fi
+  fi
+fi
+
+# ---------- Start services ----------
+info "Starting services..."
+docker compose -f "$COMPOSE_FILE" up -d
+
+# ---------- Summary ----------
+echo ""
+if [ "$IS_UPGRADE" -eq 1 ]; then
+  info "Upgrade complete!"
+else
+  info "Installation complete!"
+fi
+echo ""
+echo "Services are running at: $INSTALL_DIR"
+echo ""
+if [ "$IS_UPGRADE" -eq 0 ]; then
+  echo "NOTE: Review docker/.env and backend/.env for environment-specific"
+  echo "      settings (LLM API keys, JWT secrets, etc.)"
+fi
 INSTALL_EOF
+
   chmod +x "$target_path"
 }
 

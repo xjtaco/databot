@@ -258,6 +258,302 @@ test_package_with_data() {
   rm -rf "$unpack_dir"
 }
 
+test_fresh_install_from_extracted_dir() {
+  local fixture="$1"
+  local stub_bin="$2"
+  local log_file
+  log_file="$(mktemp)"
+  CALL_LOG_FILE="$log_file"
+
+  # Package first
+  local output_dir="$fixture/out-fresh"
+  mkdir -p "$output_dir"
+  PATH="$stub_bin:$PATH" "$fixture/docker/package.sh" "$output_dir" >/dev/null 2>&1
+
+  # Extract
+  local archive unpack_dir pkg_dir
+  archive="$(find "$output_dir" -maxdepth 1 -type f -name 'databot-package-*.tar.gz' | head -n 1)"
+  unpack_dir="$(mktemp -d)"
+  pkg_dir="$(extract_package_dir "$archive" "$unpack_dir")"
+
+  # Install
+  local install_dir="$fixture/install-fresh"
+  mkdir -p "$install_dir"
+  PATH="$stub_bin:$PATH" CALL_LOG_FILE="$log_file" "$pkg_dir/install.sh" --install-dir "$install_dir" >/tmp/install-fresh.log 2>&1
+
+  # Files should be in project structure: docker/ and backend/
+  assert_file_exists "$install_dir/docker/docker-compose.yaml"
+  assert_file_exists "$install_dir/docker/nginx.conf"
+  assert_file_exists "$install_dir/docker/.env"
+  assert_file_exists "$install_dir/docker/images.tar"
+  assert_file_exists "$install_dir/backend/.env"
+  assert_file_exists "$install_dir/install.sh"
+
+  local calls
+  calls="$(cat "$log_file")"
+  assert_contains "$calls" "compose"
+  assert_contains "$calls" "up"
+  # Fresh install should NOT call compose down
+  assert_not_contains "$calls" "down"
+
+  rm -rf "$unpack_dir" "$log_file"
+}
+
+test_upgrade_install() {
+  local fixture="$1"
+  local stub_bin="$2"
+  local log_file
+  log_file="$(mktemp)"
+  CALL_LOG_FILE="$log_file"
+
+  # Package first
+  local output_dir="$fixture/out-upgrade"
+  mkdir -p "$output_dir"
+  PATH="$stub_bin:$PATH" "$fixture/docker/package.sh" "$output_dir" >/dev/null 2>&1
+
+  # Extract
+  local archive unpack_dir pkg_dir
+  archive="$(find "$output_dir" -maxdepth 1 -type f -name 'databot-package-*.tar.gz' | head -n 1)"
+  unpack_dir="$(mktemp -d)"
+  pkg_dir="$(extract_package_dir "$archive" "$unpack_dir")"
+
+  # Pre-install (simulate existing installation)
+  local install_dir="$fixture/install-upgrade"
+  mkdir -p "$install_dir/docker"
+  cp "$fixture/docker/docker-compose.yaml" "$install_dir/docker/docker-compose.yaml"
+
+  # Override docker stub to simulate running containers on "compose ps"
+  cat >"$stub_bin/docker" <<'STUB_EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+CALL_LOG_FILE="${CALL_LOG_FILE:-/tmp/docker-call-log}"
+echo "$*" >> "$CALL_LOG_FILE"
+
+cmd="${1:-}"
+shift || true
+
+if [ "$cmd" = "compose" ]; then
+  # Skip flags
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      -f|--env-file|--file) shift 2 ;;
+      -*) shift ;;
+      *) break ;;
+    esac
+  done
+  sub="${1:-}"
+  shift || true
+  case "$sub" in
+    build)
+      exit 0
+      ;;
+    ps)
+      echo "databot-backend   running"
+      exit 0
+      ;;
+    up|down)
+      exit 0
+      ;;
+    *)
+      echo "unsupported docker compose subcommand: $sub" >&2
+      exit 1
+      ;;
+  esac
+fi
+
+if [ "$cmd" = "image" ]; then
+  sub="${1:-}"
+  shift || true
+  case "$sub" in
+    inspect)
+      exit 0
+      ;;
+    *)
+      echo "unsupported docker image subcommand: $sub" >&2
+      exit 1
+      ;;
+  esac
+fi
+
+case "$cmd" in
+  save)
+    out=""
+    while [ "$#" -gt 0 ]; do
+      if [ "$1" = "-o" ]; then
+        out="$2"
+        shift 2
+      else
+        shift
+      fi
+    done
+    [ -n "$out" ] || exit 1
+    printf 'stub docker save\n' >"$out"
+    ;;
+  load)
+    if [ "${1:-}" != "-i" ]; then
+      echo "unsupported docker load args" >&2
+      exit 1
+    fi
+    [ -f "${2:-}" ] || exit 1
+    printf 'Loaded image: stub\n'
+    ;;
+  *)
+    echo "unsupported docker command: $cmd" >&2
+    exit 1
+    ;;
+esac
+STUB_EOF
+  chmod +x "$stub_bin/docker"
+
+  # Install (should detect upgrade)
+  > "$log_file"
+  PATH="$stub_bin:$PATH" CALL_LOG_FILE="$log_file" "$pkg_dir/install.sh" --install-dir "$install_dir" >/tmp/install-upgrade.log 2>&1
+
+  local calls
+  calls="$(cat "$log_file")"
+  assert_contains "$calls" "down"
+  assert_contains "$calls" "up"
+
+  rm -rf "$unpack_dir" "$log_file"
+}
+
+test_data_skip_on_upgrade() {
+  local fixture="$1"
+  local stub_bin="$2"
+  local log_file
+  log_file="$(mktemp)"
+  CALL_LOG_FILE="$log_file"
+
+  # Package with data
+  local output_dir="$fixture/out-data-skip"
+  mkdir -p "$output_dir"
+  PATH="$stub_bin:$PATH" "$fixture/docker/package.sh" --with-data "$output_dir" >/dev/null 2>&1
+
+  # Extract
+  local archive unpack_dir pkg_dir
+  archive="$(find "$output_dir" -maxdepth 1 -type f -name 'databot-package-*.tar.gz' | head -n 1)"
+  unpack_dir="$(mktemp -d)"
+  pkg_dir="$(extract_package_dir "$archive" "$unpack_dir")"
+
+  # Pre-install with existing .data
+  local install_dir="$fixture/install-data-skip"
+  mkdir -p "$install_dir/docker" "$install_dir/.data/databot/existing"
+  cp "$fixture/docker/docker-compose.yaml" "$install_dir/docker/docker-compose.yaml"
+
+  # Override docker stub to simulate running containers
+  cat >"$stub_bin/docker" <<'STUB_EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+CALL_LOG_FILE="${CALL_LOG_FILE:-/tmp/docker-call-log}"
+echo "$*" >> "$CALL_LOG_FILE"
+
+cmd="${1:-}"
+shift || true
+
+if [ "$cmd" = "compose" ]; then
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      -f|--env-file|--file) shift 2 ;;
+      -*) shift ;;
+      *) break ;;
+    esac
+  done
+  sub="${1:-}"
+  shift || true
+  case "$sub" in
+    build)
+      exit 0
+      ;;
+    ps)
+      echo "databot-backend   running"
+      exit 0
+      ;;
+    up|down)
+      exit 0
+      ;;
+    *)
+      echo "unsupported docker compose subcommand: $sub" >&2
+      exit 1
+      ;;
+  esac
+fi
+
+if [ "$cmd" = "image" ]; then
+  sub="${1:-}"
+  shift || true
+  case "$sub" in
+    inspect)
+      exit 0
+      ;;
+    *)
+      echo "unsupported docker image subcommand: $sub" >&2
+      exit 1
+      ;;
+  esac
+fi
+
+case "$cmd" in
+  save)
+    out=""
+    while [ "$#" -gt 0 ]; do
+      if [ "$1" = "-o" ]; then
+        out="$2"
+        shift 2
+      else
+        shift
+      fi
+    done
+    [ -n "$out" ] || exit 1
+    printf 'stub docker save\n' >"$out"
+    ;;
+  load)
+    if [ "${1:-}" != "-i" ]; then
+      echo "unsupported docker load args" >&2
+      exit 1
+    fi
+    [ -f "${2:-}" ] || exit 1
+    printf 'Loaded image: stub\n'
+    ;;
+  *)
+    echo "unsupported docker command: $cmd" >&2
+    exit 1
+    ;;
+esac
+STUB_EOF
+  chmod +x "$stub_bin/docker"
+
+  # Install
+  > "$log_file"
+  PATH="$stub_bin:$PATH" CALL_LOG_FILE="$log_file" "$pkg_dir/install.sh" --install-dir "$install_dir" >/tmp/install-data-skip.log 2>&1
+
+  # Existing data should still exist, package data should NOT be restored
+  assert_file_exists "$install_dir/.data/databot/existing"
+  [ ! -f "$install_dir/.data/databot/logs/app.log" ] || fail "expected data not to be restored during upgrade"
+
+  rm -rf "$unpack_dir" "$log_file"
+}
+
+test_install_requires_install_dir() {
+  local fixture="$1"
+  local stub_bin="$2"
+
+  local output_dir="$fixture/out-no-dir"
+  mkdir -p "$output_dir"
+  PATH="$stub_bin:$PATH" "$fixture/docker/package.sh" "$output_dir" >/dev/null 2>&1
+
+  local archive unpack_dir pkg_dir
+  archive="$(find "$output_dir" -maxdepth 1 -type f -name 'databot-package-*.tar.gz' | head -n 1)"
+  unpack_dir="$(mktemp -d)"
+  pkg_dir="$(extract_package_dir "$archive" "$unpack_dir")"
+
+  # Run without --install-dir — should fail
+  local rc=0
+  PATH="$stub_bin:$PATH" "$pkg_dir/install.sh" >/tmp/install-no-dir.log 2>&1 || rc=$?
+  [ "$rc" -ne 0 ] || fail "expected install.sh to fail without --install-dir"
+
+  rm -rf "$unpack_dir"
+}
+
 main() {
   local stub_bin fixture
   TEST_TEMP_DIR="$(mktemp -d)"
@@ -272,6 +568,11 @@ main() {
   test_docker_compose_build_is_called "$fixture" "$stub_bin"
   test_default_package_without_data "$fixture" "$stub_bin"
   test_package_with_data "$fixture" "$stub_bin"
+
+  test_fresh_install_from_extracted_dir "$fixture" "$stub_bin"
+  test_upgrade_install "$fixture" "$stub_bin"
+  test_data_skip_on_upgrade "$fixture" "$stub_bin"
+  test_install_requires_install_dir "$fixture" "$stub_bin"
 
   echo "PASS: package/install shell tests"
 }
