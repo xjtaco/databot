@@ -138,9 +138,7 @@ export class BashTool extends Tool {
       if (result.error) {
         resultData.error = result.error;
       } else if (!result.success) {
-        const stderrPreview = result.stderr
-          ? result.stderr.slice(0, 500)
-          : '(no stderr)';
+        const stderrPreview = result.stderr ? result.stderr.slice(0, 500) : '(no stderr)';
         resultData.error = `Exit code ${String(result.exitCode ?? 'unknown')}: ${stderrPreview}`;
       }
 

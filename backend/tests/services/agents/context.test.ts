@@ -445,7 +445,7 @@ describe('Context', () => {
 
       await context.compressContext();
 
-      expect(mockLLMProvider.chat).toHaveBeenCalledWith(expect.any(Array), { temperature: 0.9 });
+      expect(mockLLMProvider.chat).toHaveBeenCalledWith(expect.any(Array), { temperature: 0.2 });
     });
 
     it('should preserve system prompt in compressed history', async () => {
