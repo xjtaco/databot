@@ -316,7 +316,7 @@ export class CopilotAgent {
 
   private async maybeCompressContext(totalTokens: number | undefined): Promise<boolean> {
     if (!totalTokens) return false;
-    const compressLimit = LLMProviderFactory.getConfig().compressTokenLimit ?? 90000;
+    const compressLimit = LLMProviderFactory.getConfig().compressTokenLimit ?? 60000;
     if (totalTokens > compressLimit) {
       logger.info('Copilot context compression triggered', {
         workflowId: this.workflowId,
