@@ -152,6 +152,7 @@ export class OpenAIProvider extends LLMProvider {
         max_tokens: options?.maxTokens,
         top_p: options?.topP,
         stream: true,
+        stream_options: { include_usage: true },
       };
 
       // Add tools if provided
