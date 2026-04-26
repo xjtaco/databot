@@ -190,6 +190,60 @@ describe('BashTool - Sandbox Execution', () => {
       expect((result.data as BashResultData).stderr).toBe('command not found');
     });
 
+    it('should include exit code and stderr preview in error when success is false and no result.error', async () => {
+      const { executeInContainer } = await import('../../../../src/infrastructure/sandbox');
+      vi.mocked(executeInContainer).mockResolvedValueOnce({
+        success: false,
+        stdout: '(empty)',
+        stderr: 'bash: some_command: command not found\nsome extra output',
+        exitCode: 127,
+        signal: null,
+      });
+
+      const result = await bashTool.execute({ command: 'some_command' });
+
+      expect(result.success).toBe(false);
+      const data = result.data as BashResultData;
+      expect(data.error).toContain('Exit code 127');
+      expect(data.error).toContain('bash: some_command: command not found');
+    });
+
+    it('should show (no stderr) in error when success is false and stderr is empty', async () => {
+      const { executeInContainer } = await import('../../../../src/infrastructure/sandbox');
+      vi.mocked(executeInContainer).mockResolvedValueOnce({
+        success: false,
+        stdout: '(empty)',
+        stderr: '',
+        exitCode: 1,
+        signal: null,
+      });
+
+      const result = await bashTool.execute({ command: 'false' });
+
+      expect(result.success).toBe(false);
+      const data = result.data as BashResultData;
+      expect(data.error).toContain('Exit code 1');
+      expect(data.error).toContain('(no stderr)');
+    });
+
+    it('should preserve result.error when already set instead of overwriting with stderr', async () => {
+      const { executeInContainer } = await import('../../../../src/infrastructure/sandbox');
+      vi.mocked(executeInContainer).mockResolvedValueOnce({
+        success: false,
+        stdout: '(empty)',
+        stderr: 'some stderr',
+        exitCode: 1,
+        signal: null,
+        error: 'Container not running',
+      });
+
+      const result = await bashTool.execute({ command: 'echo test' });
+
+      expect(result.success).toBe(false);
+      const data = result.data as BashResultData;
+      expect(data.error).toBe('Container not running');
+    });
+
     it('should handle timeout correctly', async () => {
       const { executeInContainer } = await import('../../../../src/infrastructure/sandbox');
       vi.mocked(executeInContainer).mockResolvedValueOnce({

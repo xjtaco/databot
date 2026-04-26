@@ -455,6 +455,7 @@ export class CopilotAgent {
         workflowId: this.workflowId,
         error: message,
       });
+      this.workflowSnapshotCache = null;
       return null;
     }
   }

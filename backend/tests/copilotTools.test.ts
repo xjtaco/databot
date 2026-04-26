@@ -209,6 +209,78 @@ describe('copilotTools', () => {
     });
   });
 
+  describe('wf_add_node validation errors', () => {
+    const WORKFLOW_ID = 'test-wf-id';
+
+    function makeWorkflowWithNodes(names: string[] = []): WorkflowDetail {
+      return {
+        id: WORKFLOW_ID,
+        name: 'Test Workflow',
+        description: null,
+        nodes: names.map((name, index) => ({
+          id: `n${index + 1}`,
+          workflowId: WORKFLOW_ID,
+          name,
+          description: null,
+          type: 'sql' as const,
+          config: {
+            nodeType: 'sql',
+            datasourceId: 'ds-1',
+            params: {},
+            sql: 'select 1',
+            outputVariable: `output_${index + 1}`,
+          },
+          positionX: 200,
+          positionY: 200 + index * 120,
+        })),
+        edges: [],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+    }
+
+    it('includes received type value in error when type is invalid', async () => {
+      vi.mocked(service.getWorkflow).mockResolvedValue(makeWorkflowWithNodes());
+
+      const registry = createCopilotToolRegistry(WORKFLOW_ID);
+      const result = await registry.execute('wf_add_node', {
+        name: 'TestNode',
+        type: 'invalid_type',
+      });
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('invalid_type');
+      expect(result.error).toContain('Received:');
+    });
+
+    it('shows (missing) in error when type is not provided', async () => {
+      vi.mocked(service.getWorkflow).mockResolvedValue(makeWorkflowWithNodes());
+
+      const registry = createCopilotToolRegistry(WORKFLOW_ID);
+      const result = await registry.execute('wf_add_node', {
+        name: 'TestNode',
+      });
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('(missing)');
+    });
+
+    it('lists existing node names in duplicate name error', async () => {
+      vi.mocked(service.getWorkflow).mockResolvedValue(makeWorkflowWithNodes(['Sales', 'Filter']));
+
+      const registry = createCopilotToolRegistry(WORKFLOW_ID);
+      const result = await registry.execute('wf_add_node', {
+        name: 'Sales',
+        type: 'sql',
+      });
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('Sales');
+      expect(result.error).toContain('Existing names:');
+      expect(result.error).toContain('Sales, Filter');
+    });
+  });
+
   describe('wf_connect_nodes with sourceHandle', () => {
     const WORKFLOW_ID = 'test-wf-id';
 

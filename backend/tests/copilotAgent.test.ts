@@ -760,4 +760,63 @@ describe('CopilotAgent', () => {
       },
     });
   });
+
+  describe('node failure count tracking', () => {
+    it('appends failure hint after repeated wf_execute_node failures on the same node', async () => {
+      const toolResponse: ChatResponse = {
+        content: '',
+        finishReason: 'tool_calls',
+        toolCalls: [
+          {
+            id: 'tc1',
+            type: 'function',
+            function: { name: 'wf_execute_node', arguments: '{"nodeId":"node-1"}' },
+          },
+        ],
+      };
+      const textResponse: ChatResponse = {
+        content: 'Let me try again',
+        finishReason: 'tool_calls',
+        toolCalls: [
+          {
+            id: 'tc2',
+            type: 'function',
+            function: { name: 'wf_execute_node', arguments: '{"nodeId":"node-1"}' },
+          },
+        ],
+      };
+      const finalResponse: ChatResponse = {
+        content: 'Still failing',
+        finishReason: 'stop',
+      };
+      baseMockChat
+        .mockResolvedValueOnce(toolResponse)
+        .mockResolvedValueOnce(textResponse)
+        .mockResolvedValueOnce(finalResponse);
+
+      mockToolExecute.mockResolvedValue({
+        success: false,
+        data: null,
+        error: 'Execution failed',
+      });
+
+      await agent.handleUserMessage('Run node-1');
+
+      // Three LLM calls: tc1 (first failure), tc2 (second failure with hint), text response
+      expect(mockChat).toHaveBeenCalledTimes(3);
+      // The hint is appended to the second tool result, which appears in the third chat call's messages
+      const thirdCallMessages = mockChat.mock.calls[2][0] as Message[];
+      // Find the tool result for tc2 (the second failure) — it should have the hint
+      const tc2ToolResult = thirdCallMessages.find(
+        (m) =>
+          m.role === 'tool' &&
+          'toolCallId' in m &&
+          (m as { toolCallId: string }).toolCallId === 'tc2'
+      );
+      expect(tc2ToolResult).toBeDefined();
+      const content = typeof tc2ToolResult!.content === 'string' ? tc2ToolResult!.content : '';
+      expect(content).toContain('failed 2 time(s)');
+      expect(content).toContain('[Hint:');
+    });
+  });
 });
