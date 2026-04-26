@@ -539,6 +539,8 @@ function formatRelativeTime(dateStr: string): string {
 </script>
 
 <style scoped lang="scss">
+@use '@/styles/variables' as *;
+
 .wf-list-view {
   display: flex;
   flex: 1;
@@ -612,23 +614,44 @@ function formatRelativeTime(dateStr: string): string {
 .wf-list-header {
   display: flex;
   flex-shrink: 0;
+  flex-wrap: wrap;
+  gap: 8px;
   align-items: center;
   justify-content: space-between;
   margin-bottom: 16px;
 
   &__left {
     display: flex;
+    flex: 1;
     gap: 8px;
+    min-width: 0;
   }
 
   &__right {
     display: flex;
     gap: 8px;
   }
+
+  @media (max-width: #{$breakpoint-md}) {
+    &__left {
+      flex-basis: 100%;
+    }
+
+    &__right {
+      flex-basis: 100%;
+      justify-content: flex-end;
+    }
+  }
 }
 
 .wf-list-search {
   width: 240px;
+
+  @media (max-width: #{$breakpoint-md}) {
+    flex: 1;
+    width: auto;
+    min-width: 0;
+  }
 }
 
 .wf-list-filter {

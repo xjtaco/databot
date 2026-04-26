@@ -424,6 +424,8 @@ async function handleBatchExport(): Promise<void> {
   &__header {
     display: flex;
     flex-shrink: 0;
+    flex-wrap: wrap;
+    gap: 8px;
     align-items: center;
     justify-content: space-between;
     margin-bottom: 16px;
@@ -431,16 +433,33 @@ async function handleBatchExport(): Promise<void> {
 
   &__header-left {
     display: flex;
+    flex: 1;
     gap: 8px;
+    min-width: 0;
+
+    @media (max-width: #{$breakpoint-md}) {
+      flex-basis: 100%;
+    }
   }
 
   &__header-right {
     display: flex;
     gap: 8px;
+
+    @media (max-width: #{$breakpoint-md}) {
+      flex-basis: 100%;
+      justify-content: flex-end;
+    }
   }
 
   &__search {
     width: 240px;
+
+    @media (max-width: #{$breakpoint-md}) {
+      flex: 1;
+      width: auto;
+      min-width: 0;
+    }
   }
 
   &__empty {

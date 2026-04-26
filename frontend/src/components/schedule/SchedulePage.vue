@@ -229,6 +229,12 @@ function handleFormVisibleChange(val: boolean): void {
     min-height: 0;
   }
 
+  &--mobile {
+    .schedule-page__body {
+      padding: 0 $spacing-md;
+    }
+  }
+
   // Mobile header
   &__mobile-header {
     @include console.console-mobile-header;
@@ -245,7 +251,7 @@ function handleFormVisibleChange(val: boolean): void {
   }
 
   &__mobile-search {
-    padding: $spacing-sm $spacing-sm 0;
+    padding: $spacing-sm $spacing-sm $spacing-md;
   }
 
   &__back-btn,
