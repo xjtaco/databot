@@ -39,6 +39,7 @@ export class CopilotAgent {
   private toolRegistry: ToolRegistryClass | undefined;
   private tempWorkdirCleaned: boolean;
   private workflowSnapshotCache: WorkflowDetail | null | undefined = undefined;
+  private nodeFailureCounts: Map<string, number> = new Map();
 
   constructor(
     workflowId: string,
@@ -116,6 +117,7 @@ export class CopilotAgent {
     }
 
     this.aborted = false;
+    this.nodeFailureCounts = new Map();
 
     // Initialize system prompt on first message
     if (this.context.getTotalTokens() === 0) {
@@ -188,6 +190,22 @@ export class CopilotAgent {
           onToolCallComplete: (tc: ToolCall, result: ToolCallResult) => {
             const status = result.metadata?.status as string | undefined;
             const isSuccess = status === 'success';
+            // Track node execution failures and inject hint for repeated failures
+            if (tc.function.name === 'wf_execute_node' && !isSuccess) {
+              try {
+                const args = JSON.parse(tc.function.arguments) as Record<string, unknown>;
+                const nodeId = args.nodeId as string | undefined;
+                if (nodeId) {
+                  const count = (this.nodeFailureCounts.get(nodeId) ?? 0) + 1;
+                  this.nodeFailureCounts.set(nodeId, count);
+                  if (count >= 2) {
+                    result.content += `\n\n[Hint: This node has failed ${String(count)} time(s). Consider reviewing the root cause, checking upstream data, or asking the user for guidance before retrying.]`;
+                  }
+                }
+              } catch {
+                // ignore parse errors
+              }
+            }
             runRecorder.recordToolComplete({
               toolCallId: tc.id,
               toolName: tc.function.name,
