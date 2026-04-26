@@ -234,7 +234,7 @@ function handleDeleteClick(tableId: string): void {
     display: flex;
     gap: $spacing-sm;
     align-items: center;
-    padding: $spacing-sm $spacing-sm $spacing-sm $spacing-md;
+    padding: $spacing-sm $spacing-sm $spacing-sm ($spacing-lg + $spacing-sm);
     cursor: pointer;
     background-color: var(--bg-secondary);
     border-radius: $radius-sm;
