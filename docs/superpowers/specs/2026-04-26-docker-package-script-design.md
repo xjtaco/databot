@@ -52,47 +52,52 @@ Replace `docker/export.sh` with `docker/package.sh`. The new script builds Docke
 
 ```
 <install-dir>/
-├── docker-compose.yaml
-├── nginx.conf
-├── .env                  # docker environment variables
-├── backend.env           # backend environment variables
-├── images.tar            # Docker images
-├── install.sh            # the install script itself
-└── data/                 # only present when packaged with --with-data
-    ├── logs/
-    ├── workfolder/
-    ├── dictionary/
-    ├── knowledge/
-    ├── uploads/
-    └── pg_data/
+├── docker/
+│   ├── docker-compose.yaml
+│   ├── nginx.conf
+│   ├── .env                  # docker environment variables
+│   └── images.tar            # Docker images
+├── backend/
+│   └── .env                  # backend environment variables
+├── .data/databot/            # only present when packaged with --with-data
+│   ├── logs/
+│   ├── workfolder/
+│   ├── dictionary/
+│   ├── knowledge/
+│   ├── uploads/
+│   └── pg_data/
+└── install.sh
 ```
 
-All files are placed directly in `install-dir` — no nested `docker/` subdirectory.
+Preserves the project's original directory structure so `docker-compose.yaml` volume paths (`../.data/`, `./nginx.conf`) work without modification.
 
 ### Fresh Install Flow
 
-1. `docker load -i images.tar`
-2. Write configuration files (`docker-compose.yaml`, `nginx.conf`, `.env`, `backend.env`)
-3. If `data/` exists in the package and no `.data/` at target, restore data
-4. `docker compose up -d`
-5. Print summary with reminders to configure API keys, JWT secrets, etc.
+1. Create `docker/` and `backend/` directories under `install-dir`
+2. `docker load -i images.tar`
+3. Write configuration files to correct subdirectories (`docker/docker-compose.yaml`, `docker/nginx.conf`, `docker/.env`, `backend/.env`)
+4. Copy `images.tar` to `docker/images.tar`
+5. Copy `install.sh` to `install-dir/install.sh`
+6. If `data/` exists in the package and no `.data/` at target, restore data to `.data/databot/`
+7. `docker compose -f docker/docker-compose.yaml up -d`
+8. Print summary with reminders to configure API keys, JWT secrets, etc.
 
 ### Upgrade Flow
 
-Upgrade is detected when `docker-compose.yaml` exists in `install-dir` and `docker compose ps` shows running databot containers.
+Upgrade is detected when `docker/docker-compose.yaml` exists in `install-dir` and `docker compose ps` shows running databot containers.
 
-1. `docker compose down` — stop existing services
+1. `docker compose -f docker/docker-compose.yaml down` — stop existing services
 2. `docker load -i images.tar` — load new images
-3. **Force replace** all configuration files (`docker-compose.yaml`, `nginx.conf`, `.env`, `backend.env`)
+3. **Force replace** all configuration files in `docker/` and `backend/`
 4. **Skip data directory** — do not overwrite existing `.data/`
-5. `docker compose up -d` — start services with new images and config
+5. `docker compose -f docker/docker-compose.yaml up -d` — start services with new images and config
 6. Print upgrade summary
 
 ### Upgrade Detection
 
 A previous installation is detected when BOTH conditions are true:
-- `docker-compose.yaml` exists in `install-dir`
-- `docker compose ps` (within `install-dir`) returns running containers
+- `docker/docker-compose.yaml` exists in `install-dir`
+- `docker compose -f docker/docker-compose.yaml ps` returns running containers
 
 ## Testing
 

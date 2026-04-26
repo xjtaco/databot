@@ -4,7 +4,7 @@
 
 **Goal:** Replace `docker/export.sh` with `docker/package.sh` that builds images, packages them with an `install.sh` into a tar.gz, supporting `--install-dir` and automatic upgrade detection.
 
-**Architecture:** `package.sh` runs `docker compose build` then saves all service images. It generates an `install.sh` that handles both fresh installs and upgrades by detecting running containers. Everything lands flat in `install-dir`.
+**Architecture:** `package.sh` runs `docker compose build` then saves all service images. It generates an `install.sh` that handles both fresh installs and upgrades by detecting running containers. Files are installed preserving the project's original directory structure (`docker/`, `backend/`, `.data/`) so volume paths in `docker-compose.yaml` require no modification.
 
 **Tech Stack:** Bash, Docker Compose, tar/gzip
 
@@ -89,7 +89,6 @@ cleanup() {
 trap cleanup EXIT
 
 # Parse image names from docker-compose.yaml
-# Handles both "image: xxx" and "build:" + "image: xxx" patterns
 parse_images() {
   local compose_file="$1"
   grep -E '^\s+image:' "$compose_file" \
@@ -268,9 +267,6 @@ assert_dir_missing() {
   [ ! -d "$path" ] || fail "expected directory to be absent: $path"
 }
 
-# Stub bin directory — all docker/sudo subcommands tracked via CALL_LOG
-CALL_LOG=""
-
 make_stub_bin() {
   local stub_dir="$1"
   mkdir -p "$stub_dir"
@@ -278,7 +274,6 @@ make_stub_bin() {
   cat >"$stub_dir/docker" <<'STUB_EOF'
 #!/usr/bin/env bash
 set -euo pipefail
-# Log calls to CALL_LOG file
 CALL_LOG_FILE="${CALL_LOG_FILE:-/tmp/docker-call-log}"
 echo "$*" >> "$CALL_LOG_FILE"
 
@@ -290,7 +285,6 @@ if [ "$cmd" = "compose" ]; then
   shift || true
   case "$sub" in
     build|up|down|ps)
-      # stub — just log and succeed
       exit 0
       ;;
     *)
@@ -510,7 +504,7 @@ main "$@"
 - [ ] **Step 3: Run the tests to see them fail (install.sh generation is not yet wired up)**
 
 Run: `bash docker/tests/package_install_test.sh`
-Expected: Tests fail because `generate_install_script` function is not yet implemented in `package.sh` — the script will error or the `install.sh` file won't be in the package.
+Expected: Tests fail because `generate_install_script` function is not yet implemented in `package.sh`
 
 - [ ] **Step 4: Wire up a minimal `generate_install_script` function placeholder in package.sh**
 
@@ -583,11 +577,13 @@ test_fresh_install_from_extracted_dir() {
   mkdir -p "$install_dir"
   PATH="$stub_bin:$PATH" CALL_LOG_FILE="$log_file" "$pkg_dir/install.sh" --install-dir "$install_dir" >/tmp/install-fresh.log 2>&1
 
-  assert_file_exists "$install_dir/docker-compose.yaml"
-  assert_file_exists "$install_dir/nginx.conf"
-  assert_file_exists "$install_dir/.env"
-  assert_file_exists "$install_dir/backend.env"
-  assert_file_exists "$install_dir/images.tar"
+  # Files should be in project structure: docker/ and backend/
+  assert_file_exists "$install_dir/docker/docker-compose.yaml"
+  assert_file_exists "$install_dir/docker/nginx.conf"
+  assert_file_exists "$install_dir/docker/.env"
+  assert_file_exists "$install_dir/docker/images.tar"
+  assert_file_exists "$install_dir/backend/.env"
+  assert_file_exists "$install_dir/install.sh"
 
   local calls
   calls="$(cat "$log_file")"
@@ -618,8 +614,8 @@ test_upgrade_install() {
 
   # Pre-install (simulate existing installation)
   local install_dir="$fixture/install-upgrade"
-  mkdir -p "$install_dir"
-  cp "$fixture/docker/docker-compose.yaml" "$install_dir/docker-compose.yaml"
+  mkdir -p "$install_dir/docker"
+  cp "$fixture/docker/docker-compose.yaml" "$install_dir/docker/docker-compose.yaml"
 
   # Make docker compose ps return running container
   cat >"$stub_bin/docker" <<'STUB_EOF'
@@ -639,7 +635,6 @@ if [ "$cmd" = "compose" ]; then
       exit 0
       ;;
     ps)
-      # Simulate a running container
       echo "databot-backend   running"
       exit 0
       ;;
@@ -698,7 +693,7 @@ STUB_EOF
   chmod +x "$stub_bin/docker"
 
   # Install (should detect upgrade)
-  > "$log_file" # clear log
+  > "$log_file"
   PATH="$stub_bin:$PATH" CALL_LOG_FILE="$log_file" "$pkg_dir/install.sh" --install-dir "$install_dir" >/tmp/install-upgrade.log 2>&1
 
   local calls
@@ -729,10 +724,10 @@ test_data_skip_on_upgrade() {
 
   # Pre-install with existing .data
   local install_dir="$fixture/install-data-skip"
-  mkdir -p "$install_dir/.data/databot/existing"
-  cp "$fixture/docker/docker-compose.yaml" "$install_dir/docker-compose.yaml"
+  mkdir -p "$install_dir/docker" "$install_dir/.data/databot/existing"
+  cp "$fixture/docker/docker-compose.yaml" "$install_dir/docker/docker-compose.yaml"
 
-  # Use upgrade stub (compose ps returns running container)
+  # Use upgrade stub
   cat >"$stub_bin/docker" <<'STUB_EOF'
 #!/usr/bin/env bash
 set -euo pipefail
@@ -813,7 +808,6 @@ STUB_EOF
 
   # Existing data should still exist, package data should NOT be restored
   assert_file_exists "$install_dir/.data/databot/existing"
-  # The existing .data should be untouched — no logs/app.log from package
   [ ! -f "$install_dir/.data/databot/logs/app.log" ] || fail "expected data not to be restored during upgrade"
 
   rm -rf "$unpack_dir" "$log_file"
@@ -823,12 +817,10 @@ test_install_requires_install_dir() {
   local fixture="$1"
   local stub_bin="$2"
 
-  # Package first
   local output_dir="$fixture/out-no-dir"
   mkdir -p "$output_dir"
   PATH="$stub_bin:$PATH" "$fixture/docker/package.sh" "$output_dir" >/dev/null 2>&1
 
-  # Extract
   local archive unpack_dir pkg_dir
   archive="$(find "$output_dir" -maxdepth 1 -type f -name 'databot-package-*.tar.gz' | head -n 1)"
   unpack_dir="$(mktemp -d)"
@@ -869,6 +861,7 @@ generate_install_script() {
 #
 # DataBot Install Script
 # Installs or upgrades DataBot from a package archive or extracted directory.
+# Preserves project directory structure (docker/, backend/, .data/).
 #
 set -euo pipefail
 
@@ -906,8 +899,8 @@ cleanup() {
 }
 
 detect_running_services() {
-  local install_dir="$1"
-  if docker compose -f "$install_dir/docker-compose.yaml" ps --services --filter "status=running" 2>/dev/null | grep -q .; then
+  local compose_file="$1"
+  if docker compose -f "$compose_file" ps --services --filter "status=running" 2>/dev/null | grep -q .; then
     return 0
   fi
   return 1
@@ -966,17 +959,20 @@ if [ -n "$ARCHIVE" ]; then
   fi
   info "Extracted: $(basename "$PKG_DIR")"
 else
-  # Running from an already-extracted package directory
   SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
   PKG_DIR="$SCRIPT_DIR"
 fi
 
 # ---------- Prepare install directory ----------
 INSTALL_DIR="$(mkdir -p "$INSTALL_DIR" && cd "$INSTALL_DIR" && pwd)"
+DOCKER_DIR="$INSTALL_DIR/docker"
+BACKEND_DIR="$INSTALL_DIR/backend"
+mkdir -p "$DOCKER_DIR" "$BACKEND_DIR"
 
 # ---------- Check for existing installation ----------
+COMPOSE_FILE="$DOCKER_DIR/docker-compose.yaml"
 IS_UPGRADE=0
-if [ -f "$INSTALL_DIR/docker-compose.yaml" ] && detect_running_services "$INSTALL_DIR"; then
+if [ -f "$COMPOSE_FILE" ] && detect_running_services "$COMPOSE_FILE"; then
   IS_UPGRADE=1
   info "Detected existing running installation — performing upgrade"
 fi
@@ -993,35 +989,35 @@ fi
 # ---------- Stop existing services (upgrade only) ----------
 if [ "$IS_UPGRADE" -eq 1 ]; then
   info "Stopping existing services..."
-  docker compose -f "$INSTALL_DIR/docker-compose.yaml" down
+  docker compose -f "$COMPOSE_FILE" down
 fi
 
 # ---------- Write configuration files ----------
 info "Writing configuration files..."
 
 if [ -f "$PKG_DIR/config/docker-compose.yaml" ]; then
-  cp "$PKG_DIR/config/docker-compose.yaml" "$INSTALL_DIR/docker-compose.yaml"
-  info "  Written docker-compose.yaml"
+  cp "$PKG_DIR/config/docker-compose.yaml" "$DOCKER_DIR/docker-compose.yaml"
+  info "  Written docker/docker-compose.yaml"
 fi
 
 if [ -f "$PKG_DIR/config/nginx.conf" ]; then
-  cp "$PKG_DIR/config/nginx.conf" "$INSTALL_DIR/nginx.conf"
-  info "  Written nginx.conf"
+  cp "$PKG_DIR/config/nginx.conf" "$DOCKER_DIR/nginx.conf"
+  info "  Written docker/nginx.conf"
 fi
 
 if [ -f "$PKG_DIR/config/docker.env" ]; then
-  cp "$PKG_DIR/config/docker.env" "$INSTALL_DIR/.env"
-  info "  Written .env"
+  cp "$PKG_DIR/config/docker.env" "$DOCKER_DIR/.env"
+  info "  Written docker/.env"
 fi
 
 if [ -f "$PKG_DIR/config/backend.env" ]; then
-  cp "$PKG_DIR/config/backend.env" "$INSTALL_DIR/backend.env"
-  info "  Written backend.env"
+  cp "$PKG_DIR/config/backend.env" "$BACKEND_DIR/.env"
+  info "  Written backend/.env"
 fi
 
-# ---------- Copy images.tar to install dir ----------
+# ---------- Copy images.tar to docker/ ----------
 if [ -f "$PKG_DIR/images.tar" ]; then
-  cp "$PKG_DIR/images.tar" "$INSTALL_DIR/images.tar"
+  cp "$PKG_DIR/images.tar" "$DOCKER_DIR/images.tar"
 fi
 
 # ---------- Copy install.sh to install dir ----------
@@ -1058,7 +1054,7 @@ fi
 
 # ---------- Start services ----------
 info "Starting services..."
-docker compose -f "$INSTALL_DIR/docker-compose.yaml" up -d
+docker compose -f "$COMPOSE_FILE" up -d
 
 # ---------- Summary ----------
 echo ""
@@ -1071,7 +1067,7 @@ echo ""
 echo "Services are running at: $INSTALL_DIR"
 echo ""
 if [ "$IS_UPGRADE" -eq 0 ]; then
-  echo "NOTE: Review .env and backend.env for environment-specific"
+  echo "NOTE: Review docker/.env and backend/.env for environment-specific"
   echo "      settings (LLM API keys, JWT secrets, etc.)"
 fi
 INSTALL_EOF
@@ -1094,93 +1090,7 @@ git commit -m "feat(docker): implement full install.sh with fresh install and up
 
 ---
 
-### Task 3: Fix docker-compose.yaml volume paths for flat install-dir layout
-
-**Files:**
-- Modify: `docker/package.sh` — add volume path rewriting in `generate_install_script`
-
-The `docker-compose.yaml` has relative paths like `../.data/databot/pg_data` and `./nginx.conf` that assume a `docker/` subdirectory. Since all files are placed flat in `install-dir`, the install.sh needs to rewrite these paths.
-
-- [ ] **Step 1: Add a path rewriting step in install.sh's config writing section**
-
-In the `generate_install_script` function, replace the `docker-compose.yaml` copy block with a sed-based rewrite:
-
-Find this block in the generated install.sh:
-
-```bash
-if [ -f "$PKG_DIR/config/docker-compose.yaml" ]; then
-  cp "$PKG_DIR/config/docker-compose.yaml" "$INSTALL_DIR/docker-compose.yaml"
-  info "  Written docker-compose.yaml"
-fi
-```
-
-Replace with:
-
-```bash
-if [ -f "$PKG_DIR/config/docker-compose.yaml" ]; then
-  sed \
-    -e 's|\.\./\.data/|.data/|g' \
-    -e 's|\./nginx.conf|nginx.conf|g' \
-    "$PKG_DIR/config/docker-compose.yaml" \
-    > "$INSTALL_DIR/docker-compose.yaml"
-  info "  Written docker-compose.yaml"
-fi
-```
-
-- [ ] **Step 2: Add a test that verifies volume paths are rewritten**
-
-Add to `docker/tests/package_install_test.sh` before `main()`:
-
-```bash
-test_volume_paths_rewritten() {
-  local fixture="$1"
-  local stub_bin="$2"
-  local log_file
-  log_file="$(mktemp)"
-  CALL_LOG_FILE="$log_file"
-
-  local output_dir="$fixture/out-volumes"
-  mkdir -p "$output_dir"
-  PATH="$stub_bin:$PATH" "$fixture/docker/package.sh" "$output_dir" >/dev/null 2>&1
-
-  local archive unpack_dir pkg_dir
-  archive="$(find "$output_dir" -maxdepth 1 -type f -name 'databot-package-*.tar.gz' | head -n 1)"
-  unpack_dir="$(mktemp -d)"
-  pkg_dir="$(extract_package_dir "$archive" "$unpack_dir")"
-
-  local install_dir="$fixture/install-volumes"
-  mkdir -p "$install_dir"
-  PATH="$stub_bin:$PATH" CALL_LOG_FILE="$log_file" "$pkg_dir/install.sh" --install-dir "$install_dir" >/tmp/install-volumes.log 2>&1
-
-  # The rewritten compose file should NOT contain ../.data/
-  assert_not_contains "$(cat "$install_dir/docker-compose.yaml")" "../.data"
-  assert_not_contains "$(cat "$install_dir/docker-compose.yaml")" "./nginx.conf"
-
-  rm -rf "$unpack_dir" "$log_file"
-}
-```
-
-Add to `main()`:
-
-```bash
-  test_volume_paths_rewritten "$fixture" "$stub_bin"
-```
-
-- [ ] **Step 3: Run all tests**
-
-Run: `bash docker/tests/package_install_test.sh`
-Expected: All 9 tests pass
-
-- [ ] **Step 4: Commit**
-
-```bash
-git add docker/package.sh docker/tests/package_install_test.sh
-git commit -m "fix(docker): rewrite volume paths in docker-compose.yaml for flat install layout"
-```
-
----
-
-### Task 4: Delete old export.sh and export_load_test.sh
+### Task 3: Delete old export.sh and export_load_test.sh
 
 **Files:**
 - Delete: `docker/export.sh`
@@ -1195,7 +1105,7 @@ git rm docker/export.sh docker/tests/export_load_test.sh
 - [ ] **Step 2: Run all tests to confirm nothing is broken**
 
 Run: `bash docker/tests/package_install_test.sh`
-Expected: All 9 tests pass
+Expected: All 8 tests pass
 
 - [ ] **Step 3: Commit**
 
