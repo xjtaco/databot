@@ -93,6 +93,7 @@ interface AgentToolSummary {
   success?: boolean;
   argumentKeys: string[];
   argumentHash: string | null;
+  resultHash?: string;
   contentLength?: number;
   errorType?: string;
   errorMessageLength?: number;
@@ -251,6 +252,7 @@ export class AgentRunRecorder {
     tool.durationMs = Date.now() - tool.startTimeMs;
     tool.success = input.success;
     tool.contentLength = input.content?.length ?? 0;
+    tool.resultHash = input.content ? hashText(input.content) : undefined;
     tool.errorType = getErrorType(input.error);
     tool.errorMessageLength = input.error?.length;
   }
@@ -304,6 +306,7 @@ export class AgentRunRecorder {
         success: tool.success,
         argumentKeys: tool.argumentKeys,
         argumentHash: tool.argumentHash,
+        resultHash: tool.resultHash,
         contentLength: tool.contentLength,
         errorType: tool.errorType,
         errorMessageLength: tool.errorMessageLength,
@@ -367,9 +370,9 @@ export class AgentRunRecorder {
       issues.push({
         type: 'repeated_tool_call',
         severity: 'medium',
-        evidence: `Repeated tool calls detected: ${repeated.join(', ')}.`,
+        evidence: `Repeated tool calls with identical results detected: ${repeated.join(', ')}.`,
         suggestion:
-          'Cache stable observations within a turn and avoid re-reading unchanged context.',
+          'Cache stable observations within a turn and avoid re-reading unchanged context. Re-queries after mutations or with changed results are expected and excluded.',
       });
     }
 
@@ -415,15 +418,71 @@ export class AgentRunRecorder {
   }
 
   private findRepeatedToolCalls(): string[] {
-    const counts = new Map<string, number>();
-    for (const tool of this.tools) {
+    const MUTATION_TOOLS = new Set([
+      'wf_add_node',
+      'wf_update_node',
+      'wf_patch_node',
+      'wf_replace_node',
+      'wf_delete_node',
+      'wf_connect_nodes',
+      'wf_disconnect_nodes',
+    ]);
+
+    const results: string[] = [];
+
+    // Group by toolName:argumentHash to find same-argument calls
+    const groups = new Map<string, number[]>();
+    this.tools.forEach((tool, index) => {
       const key = `${tool.toolName}:${tool.argumentHash ?? 'no-args'}`;
-      counts.set(key, (counts.get(key) ?? 0) + 1);
+      const indices = groups.get(key) ?? [];
+      indices.push(index);
+      groups.set(key, indices);
+    });
+
+    for (const [key, indices] of groups) {
+      if (indices.length < 2) continue;
+
+      let trulyRepeated = 0;
+      let stateChangedBetween = 0;
+      let resultChangedBetween = 0;
+
+      for (let i = 1; i < indices.length; i++) {
+        const prevIdx = indices[i - 1];
+        const currIdx = indices[i];
+        const prev = this.tools[prevIdx];
+        const curr = this.tools[currIdx];
+
+        // Check if any mutation tool was called between prev and curr
+        const hasMutationBetween = this.tools
+          .slice(prevIdx + 1, currIdx)
+          .some((t) => MUTATION_TOOLS.has(t.toolName) && t.success);
+
+        if (hasMutationBetween) {
+          stateChangedBetween++;
+          continue;
+        }
+
+        // Check if the result content changed
+        if (prev.resultHash && curr.resultHash && prev.resultHash === curr.resultHash) {
+          trulyRepeated++;
+        } else {
+          resultChangedBetween++;
+        }
+      }
+
+      const detail: string[] = [];
+      if (trulyRepeated > 0) detail.push(`${String(trulyRepeated)} identical-result`);
+      if (stateChangedBetween > 0) detail.push(`${String(stateChangedBetween)} after-mutation`);
+      if (resultChangedBetween > 0) detail.push(`${String(resultChangedBetween)} result-changed`);
+
+      const detailStr = detail.length > 0 ? ` (${detail.join(', ')})` : '';
+      results.push(`${key} x${String(indices.length)}${detailStr}`);
     }
 
-    return Array.from(counts.entries())
-      .filter(([, count]) => count > 1)
-      .map(([key, count]) => `${key} x${String(count)}`);
+    return results.filter((r) => {
+      // Only report if there are truly identical-result repeats (no mutation between, same result)
+      return r.includes('identical-result');
+    });
   }
 }
 
