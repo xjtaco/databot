@@ -292,11 +292,20 @@ class WfAddNodeTool extends Tool {
         return {
           success: false,
           data: null,
-          error: `type must be one of: ${this.allowedTypes.join(', ')}`,
+          error: `type must be one of: ${this.allowedTypes.join(', ')}. Received: "${String(type ?? '(missing)')}"`,
         };
       }
 
       const workflow = await service.getWorkflow(this.workflowId);
+
+      // Check for duplicate name
+      if (workflow.nodes.some((n) => n.name === name)) {
+        return {
+          success: false,
+          data: null,
+          error: `Node name "${name}" already exists in this workflow. Existing names: ${workflow.nodes.map((n) => n.name).join(', ') || '(none)'}`,
+        };
+      }
 
       // Auto-position: below the last existing node
       const maxY =
