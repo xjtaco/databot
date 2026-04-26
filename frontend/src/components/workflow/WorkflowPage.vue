@@ -153,6 +153,7 @@
           </template>
         </div>
         <el-button
+          v-show="!showMobileCopilot"
           class="workflow-page__mobile-add-btn"
           :icon="Plus"
           circle

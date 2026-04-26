@@ -28,7 +28,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, nextTick } from 'vue';
+import { ref, watch, nextTick, onMounted } from 'vue';
 import type { CopilotMessage } from '@/stores/copilotStore';
 import type { NodeConfig } from '@/types/workflow';
 import CopilotUserMsg from './CopilotUserMsg.vue';
@@ -47,13 +47,22 @@ defineEmits<{
 
 const listRef = ref<HTMLDivElement | null>(null);
 
+function scrollToBottom(): void {
+  if (listRef.value) {
+    listRef.value.scrollTop = listRef.value.scrollHeight;
+  }
+}
+
+onMounted(async () => {
+  await nextTick();
+  scrollToBottom();
+});
+
 watch(
   () => props.messages.length,
   async () => {
     await nextTick();
-    if (listRef.value) {
-      listRef.value.scrollTop = listRef.value.scrollHeight;
-    }
+    scrollToBottom();
   }
 );
 </script>
