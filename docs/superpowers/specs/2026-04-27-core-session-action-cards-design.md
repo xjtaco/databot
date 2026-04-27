@@ -15,7 +15,7 @@ Included:
 - Schedule operation cards.
 - Workflow Copilot creation cards.
 - Custom node template Copilot creation cards.
-- Structured CoreAgent tool for action card creation.
+- Structured CoreAgent tools for action card discovery and display.
 - Chat card rendering, confirmation, execution state, and history restore.
 - Desktop and mobile navigation integration.
 
@@ -30,17 +30,71 @@ Excluded from the first version:
 
 ### Execution Boundary
 
-The selected approach is structured tool output with frontend execution.
+The selected approach is catalog-backed structured tool output with frontend execution.
 
-CoreSession adds a tool named `ui_action_card`. The LLM calls this tool to create a validated card payload. The tool does not call business services and does not mutate system state. `CoreAgentSession` forwards the card to the browser through a new WebSocket message type.
+CoreSession adds two tools:
+
+- `search_ui_action_card`: searches the backend UI action card catalog and returns a small set of relevant card definitions.
+- `show_ui_action_card`: takes a catalog `cardId` plus optional filled parameters and emits a validated card payload for the browser.
+
+Neither tool calls business services or mutates system state. `CoreAgentSession` forwards the final card to the browser through a new WebSocket message type.
 
 The frontend renders the card and dispatches confirmed actions through a local action registry. The registry maps `domain + action` to existing frontend APIs and stores. This prevents the LLM from choosing arbitrary endpoints or methods.
 
 The payload still includes `executionMode: 'frontend'` so the protocol can later support backend-executed high-risk actions without replacing the card schema.
 
+### Action Card Catalog
+
+Add a backend `UiActionCardCatalog` that is the source of truth for cards the agent may show. The catalog keeps detailed card instructions out of the always-on `CORE_PROMPT` and out of a single oversized tool schema.
+
+Each catalog entry includes:
+
+```ts
+interface UiActionCardDefinition {
+  cardId: string;
+  domain: ActionDomain;
+  action: string;
+  title: string;
+  description: string;
+  usage: string;
+  requiredParams: UiActionCardParamDefinition[];
+  optionalParams: UiActionCardParamDefinition[];
+  riskLevel: RiskLevel;
+  confirmRequired: boolean;
+  targetNav?: 'data' | 'workflow' | 'schedule';
+  targetDataTab?: 'data' | 'knowledge';
+  relatedDomains: ActionDomain[];
+  dependencies: string[];
+}
+
+interface UiActionCardParamDefinition {
+  name: string;
+  type: 'string' | 'number' | 'boolean' | 'object' | 'array';
+  description: string;
+  sensitive?: boolean;
+}
+```
+
+Module relationships live in this catalog. Examples:
+
+- Knowledge base cards can relate to workflow cards because knowledge files can support workflow building context.
+- Workflow cards can relate to schedule cards because schedules run workflows.
+- Custom node template cards can relate to workflow cards because templates are reusable workflow node building blocks.
+
+`search_ui_action_card` returns only the top relevant definitions with concise but sufficient usage details. As new business actions are added, the prompt remains stable; implementation mainly adds catalog entries and frontend registry handlers.
+
+Typical agent flow:
+
+1. User asks for an operation, such as "make a weekly sales workflow" or "create a schedule for this workflow".
+2. CoreAgent calls `search_ui_action_card` with the user's request and optional domain if obvious.
+3. The search tool returns a few relevant card definitions, including their required parameters and related domains.
+4. CoreAgent chooses the best card. If required high-risk parameters are missing, it asks the user a clarifying question.
+5. CoreAgent calls `show_ui_action_card` with `cardId` and known `params`.
+6. The frontend displays the card. Nothing executes until the user confirms in the UI.
+
 ### Action Card Payload
 
-The payload is intentionally restrictive:
+`show_ui_action_card` produces this restrictive payload:
 
 ```ts
 type ActionDomain = 'data' | 'knowledge' | 'schedule' | 'workflow' | 'template';
@@ -49,6 +103,7 @@ type ExecutionMode = 'frontend';
 
 interface UiActionCardPayload {
   id: string;
+  cardId: string;
   domain: ActionDomain;
   action: string;
   title: string;
@@ -63,7 +118,7 @@ interface UiActionCardPayload {
 }
 ```
 
-`action` is also validated against a frontend registry. The backend schema should use enum values for the known first-version actions wherever practical.
+`cardId` and `action` are validated against the backend catalog and frontend registry.
 
 The payload must not contain arbitrary URLs, HTTP methods, or API paths.
 
@@ -248,22 +303,31 @@ If node type is unknown, the card should either ask the user to confirm a defaul
 
 ## Backend Changes
 
-### Tool
+### Tools
 
-Add `UiActionCardTool` under `backend/src/infrastructure/tools`.
+Add UI action card tools under `backend/src/infrastructure/tools`.
 
-Responsibilities:
+`SearchUiActionCardTool` responsibilities:
 
-- Provide strict JSON schema for first-version card payloads.
-- Validate domain, risk level, execution mode, and required top-level fields.
-- Return `ToolResult` metadata containing the card.
+- Accept `query: string` and optional `domain`.
+- Search `UiActionCardCatalog` by card ID, title, description, usage, related domains, and dependencies.
+- Return a small ranked list of candidate card definitions with detailed usage for each returned card.
+- Avoid returning the full catalog for broad queries.
+
+`ShowUiActionCardTool` responsibilities:
+
+- Accept `cardId` and optional `params`.
+- Load the card definition from `UiActionCardCatalog`.
+- Validate card existence, required top-level fields, risk level, execution mode, and supplied parameter names.
+- Allow missing business parameters when the card can be shown as a confirmation or information-gathering card.
+- Return `ToolResult` metadata containing the final card payload.
 - Avoid business service calls.
 
-Register it in `ToolRegistry` and add `ToolName.UiActionCard`.
+Register both tools in `ToolRegistry` and add `ToolName.SearchUiActionCard` and `ToolName.ShowUiActionCard`.
 
 ### CoreAgentSession
 
-When a tool result is from `ui_action_card` and metadata contains a valid card:
+When a tool result is from `show_ui_action_card` and metadata contains a valid card:
 
 - Send `action_card` WebSocket message with the card payload.
 - Persist card metadata if a chat session exists.
@@ -273,11 +337,14 @@ When a tool result is from `ui_action_card` and metadata contains a valid card:
 
 Update `CORE_PROMPT` with operation-card rules:
 
-- Use `ui_action_card` when the user asks to create, modify, delete, open, or prepare managed system objects.
+- Use `search_ui_action_card` when the user asks to create, modify, delete, open, or prepare managed system objects and the right card is not already known from recent context.
+- Use `show_ui_action_card` after choosing a catalog card. Fill known parameters when available; leave optional or missing fields empty if the UI should collect or confirm them.
 - Do not claim an operation has executed before the user confirms.
 - Prefer workflow/template Copilot cards for requests to create workflows or custom node templates.
 - Ask clarifying questions when required fields are missing for risky actions.
 - Never put secrets in normal assistant prose.
+
+The prompt should stay short. Detailed card-specific instructions belong in `UiActionCardCatalog` and are retrieved on demand by `search_ui_action_card`.
 
 ## Security and Risk Controls
 
@@ -327,9 +394,10 @@ Persistence failure:
 
 Backend tests:
 
-- `UiActionCardTool` accepts valid payloads.
-- It rejects invalid enum values and missing required fields.
-- CoreAgentSession forwards `action_card` events for valid tool results.
+- `SearchUiActionCardTool` returns relevant card definitions and does not return the full catalog for broad queries.
+- `ShowUiActionCardTool` accepts valid `cardId` and parameter payloads.
+- `ShowUiActionCardTool` rejects unknown card IDs, invalid enum values, and invalid parameter names.
+- CoreAgentSession forwards `action_card` events for valid `show_ui_action_card` results.
 - Chat message metadata persistence handles action cards.
 
 Frontend tests:
