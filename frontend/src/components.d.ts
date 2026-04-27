@@ -8,6 +8,7 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
+    ActionCard: typeof import('./components/chat/ActionCard.vue')['default']
     AuditLogFilterPanel: typeof import('./components/audit/AuditLogFilterPanel.vue')['default']
     AuditLogPage: typeof import('./components/audit/AuditLogPage.vue')['default']
     ChangePasswordDialog: typeof import('./components/user/ChangePasswordDialog.vue')['default']

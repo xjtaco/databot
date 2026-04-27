@@ -17,7 +17,7 @@ function actionKey(domain: string, action: string): string {
 export function registerActionHandler(
   domain: string,
   action: string,
-  handler: ActionHandler,
+  handler: ActionHandler
 ): void {
   registry.set(actionKey(domain, action), handler);
 }
