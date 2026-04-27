@@ -412,7 +412,7 @@ const catalog: readonly UiActionCardDefinition[] = [
         description: 'Enable or disable the schedule.',
       },
     ],
-    riskLevel: 'medium',
+    riskLevel: 'high',
     confirmRequired: true,
     targetNav: 'schedule',
     relatedDomains: ['workflow'],
