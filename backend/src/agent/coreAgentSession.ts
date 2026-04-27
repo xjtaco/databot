@@ -1,7 +1,8 @@
 import { config } from '../base/config';
 import type { ToolCall, ToolCallResult } from '../infrastructure/llm';
 import { LLMProviderFactory } from '../infrastructure/llm';
-import { ToolName, ToolRegistry } from '../infrastructure/tools';
+import { ToolName } from '../infrastructure/tools/types';
+import { ToolRegistry } from '../infrastructure/tools';
 import logger from '../utils/logger';
 import PQueue from 'p-queue';
 import fs from 'node:fs';
@@ -317,6 +318,17 @@ export class CoreAgentSession extends AgentSession {
                     },
                   },
                 });
+
+                if (
+                  event.toolCallResult?.name === ToolName.ShowUiActionCard &&
+                  event.toolCallResult?.metadata?.cardPayload
+                ) {
+                  this.sendMessage({
+                    type: 'action_card',
+                    timestamp: Date.now(),
+                    data: event.toolCallResult.metadata.cardPayload,
+                  });
+                }
 
                 // Persist tool call result to chat session
                 if (this.chatSessionId) {

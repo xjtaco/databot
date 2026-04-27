@@ -36,6 +36,7 @@ describe('AgentSession Types', () => {
         'user_message',
         'agent_response',
         'tool_call',
+        'action_card',
         'error',
         'usage_report',
         'stop',
