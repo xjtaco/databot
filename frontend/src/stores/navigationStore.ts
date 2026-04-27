@@ -14,7 +14,7 @@ export const useNavigationStore = defineStore('navigation', () => {
 
   function navigateTo(nav: NavType): void {
     activeNav.value = nav;
-    pendingIntent.value = null;
+    // Don't clear pendingIntent here — page components read and resolve it on mount
   }
 
   function setPendingIntent(intent: NavigationIntent): void {
