@@ -134,5 +134,21 @@ describe('chatSession metadata API', () => {
 
       expect(response.body.error).toBeDefined();
     });
+
+    it('should return 400 when message does not belong to the session', async () => {
+      const otherSessionUuid = '550e8400-e29b-41d4-a716-446655440099';
+      mockUpdateMessageMetadata.mockResolvedValue({
+        ...mockMessage,
+        sessionId: otherSessionUuid,
+      });
+
+      const response = await request(app)
+        .put(`/${sessionUuid}/messages/${messageUuid}/metadata`)
+        .send({ metadata: { status: 'succeeded' } })
+        .expect(400);
+
+      expect(response.body.error).toBeDefined();
+      expect(response.body.error.message).toBe('Message does not belong to this session');
+    });
   });
 });

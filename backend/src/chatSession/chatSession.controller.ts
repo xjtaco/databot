@@ -55,5 +55,8 @@ export async function updateMessageMetadataHandler(req: Request, res: Response):
   }
   await chatSessionService.getSession(sessionId);
   const message = await chatSessionService.updateMessageMetadata(messageId, metadata);
+  if (message.sessionId !== sessionId) {
+    throw new ValidationError('Message does not belong to this session');
+  }
   res.json({ message });
 }
