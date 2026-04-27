@@ -63,6 +63,7 @@ function makePrismaMessage(overrides: Record<string, unknown> = {}) {
     sessionId: 'session-1',
     role: 'user',
     content: 'Hello',
+    metadata: null,
     createdAt: now,
     ...overrides,
   };
@@ -194,12 +195,15 @@ describe('chatSession.repository', () => {
       const data = { sessionId: 'session-1', role: 'user', content: 'Hello' };
       const result = await createMessage(data);
 
-      expect(mockMessageCreate).toHaveBeenCalledWith({ data });
+      expect(mockMessageCreate).toHaveBeenCalledWith({
+        data: { sessionId: 'session-1', role: 'user', content: 'Hello' },
+      });
       expect(result).toEqual({
         id: 'msg-1',
         sessionId: 'session-1',
         role: 'user',
         content: 'Hello',
+        metadata: null,
         createdAt: now,
       });
     });

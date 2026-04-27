@@ -23,6 +23,7 @@ function mapMessage(message: PrismaMessage): ChatMessageRecord {
     sessionId: message.sessionId,
     role: message.role,
     content: message.content,
+    metadata: message.metadata as Record<string, unknown> | null,
     createdAt: message.createdAt,
   };
 }
@@ -100,9 +101,19 @@ export async function createMessage(data: {
   sessionId: string;
   role: string;
   content: string | null;
+  metadata?: Record<string, unknown> | null;
 }): Promise<ChatMessageRecord> {
   const prisma = getPrismaClient();
-  const message = await prisma.chatMessage.create({ data });
+  const message = await prisma.chatMessage.create({
+    data: {
+      sessionId: data.sessionId,
+      role: data.role,
+      content: data.content,
+      ...(data.metadata !== undefined
+        ? { metadata: (data.metadata ?? Prisma.JsonNull) as Prisma.InputJsonValue }
+        : {}),
+    },
+  });
   return mapMessage(message);
 }
 
