@@ -1,3 +1,5 @@
+import type { ChatActionCard } from './actionCard';
+
 /**
  * Chat message role
  */
@@ -20,6 +22,7 @@ export interface ChatMessage {
   error?: string;
   toolCallIds?: string[];
   isOutputMd?: boolean;
+  actionCards?: ChatActionCard[];
 }
 
 /**

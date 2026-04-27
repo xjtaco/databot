@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import type { ChatMessage, MessageRole, TokenUsage } from '@/types';
+import type { UiActionCardPayload, ChatActionCard, CardStatus } from '@/types/actionCard';
 
 export const useChatStore = defineStore('chat', () => {
   // State
@@ -115,7 +116,12 @@ export const useChatStore = defineStore('chat', () => {
   }
 
   function loadHistoricalMessages(
-    records: { role: string; content: string | null; createdAt: string }[],
+    records: {
+      role: string;
+      content: string | null;
+      createdAt: string;
+      metadata?: Record<string, unknown> | null;
+    }[],
     onToolCall?: (toolCall: {
       id: string;
       name: string;
@@ -175,6 +181,32 @@ export const useChatStore = defineStore('chat', () => {
           if (toolData.toolName === 'output_md') {
             nextAssistantIsOutputMd = true;
           }
+          // Restore action cards from metadata
+          if (
+            record.metadata &&
+            typeof record.metadata === 'object' &&
+            (record.metadata as Record<string, unknown>).type === 'action_card'
+          ) {
+            const meta = record.metadata as {
+              payload: UiActionCardPayload;
+              status: CardStatus;
+              resultSummary?: string;
+              error?: string;
+            };
+            if (lastAssistantMsg) {
+              const card: ChatActionCard = {
+                id: meta.payload.id,
+                payload: meta.payload,
+                status: meta.status,
+                resultSummary: meta.resultSummary,
+                error: meta.error,
+              };
+              if (!lastAssistantMsg.actionCards) {
+                lastAssistantMsg.actionCards = [];
+              }
+              lastAssistantMsg.actionCards.push(card);
+            }
+          }
         } catch {
           // Skip malformed tool records
         }
@@ -203,6 +235,40 @@ export const useChatStore = defineStore('chat', () => {
         lastAssistantMsg = msg;
       } else {
         lastAssistantMsg = null;
+      }
+    }
+  }
+
+  function addActionCard(payload: UiActionCardPayload): void {
+    const card: ChatActionCard = {
+      id: payload.id,
+      payload,
+      status: 'proposed',
+    };
+    const targetMsg =
+      messages.value.find((m) => m.id === currentMessageId.value) ??
+      [...messages.value].reverse().find((m) => m.role === 'assistant');
+    if (targetMsg) {
+      if (!targetMsg.actionCards) {
+        targetMsg.actionCards = [];
+      }
+      targetMsg.actionCards.push(card);
+    }
+  }
+
+  function updateActionCardStatus(
+    cardId: string,
+    status: CardStatus,
+    opts?: { resultSummary?: string; error?: string }
+  ): void {
+    for (const msg of messages.value) {
+      const card = msg.actionCards?.find((c) => c.id === cardId);
+      if (card) {
+        card.status = status;
+        card.resultSummary = opts?.resultSummary;
+        card.error = opts?.error;
+        card.executedAt = status === 'succeeded' || status === 'failed' ? Date.now() : undefined;
+        return;
       }
     }
   }
@@ -244,6 +310,8 @@ export const useChatStore = defineStore('chat', () => {
     setMessageError,
     setTokenUsage,
     loadHistoricalMessages,
+    addActionCard,
+    updateActionCardStatus,
     clearMessages,
     removeMessage,
   };
