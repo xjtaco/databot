@@ -17,6 +17,7 @@ import type {
   TurnCompleteData,
   SessionInfoData,
 } from '@/types';
+import type { UiActionCardPayload } from '@/types/actionCard';
 
 export interface UseChatOptions {
   websocket: UseWebSocketReturn;
@@ -70,6 +71,9 @@ export function useChat(options: UseChatOptions): UseChatReturn {
         chatSessionStore.fetchSessions();
         break;
       }
+      case 'action_card':
+        handleActionCard(message.data as UiActionCardPayload);
+        break;
     }
   }
 
@@ -154,6 +158,10 @@ export function useChat(options: UseChatOptions): UseChatReturn {
       chatStore.completeCurrentMessage();
       toolCallStore.setAgentRunning(false);
     }
+  }
+
+  function handleActionCard(payload: UiActionCardPayload) {
+    chatStore.addActionCard(payload);
   }
 
   function sendMessage(content: string) {
