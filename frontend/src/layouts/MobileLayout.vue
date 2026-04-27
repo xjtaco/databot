@@ -31,7 +31,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, defineAsyncComponent } from 'vue';
+import { ref, computed, defineAsyncComponent } from 'vue';
 import { useRouter } from 'vue-router';
 import { DataSourceSidebar } from '@/components/sidebar';
 import { ChatContainer } from '@/components/chat';
@@ -98,21 +98,6 @@ async function handleUserCommand(command: string): Promise<void> {
       break;
   }
 }
-
-// Watch for pending navigation intents — page components resolve them on mount
-watch(
-  () => navigationStore.pendingIntent,
-  (intent) => {
-    if (!intent) return;
-    // Allow the target page component to mount and consume the intent,
-    // then clear it after a short delay to avoid stale intents
-    setTimeout(() => {
-      if (navigationStore.pendingIntent) {
-        navigationStore.clearPendingIntent();
-      }
-    }, 150);
-  }
-);
 </script>
 
 <style scoped lang="scss">
