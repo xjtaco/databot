@@ -39,6 +39,14 @@
 
         <MessageToolCalls :tool-calls="associatedToolCalls" />
 
+        <ActionCard
+          v-for="card in message.actionCards"
+          :key="card.id"
+          :card="card"
+          class="chat-message__action-card"
+          @status-change="handleCardStatusChange"
+        />
+
         <div v-if="message.status === 'error'" class="chat-message__error">
           <el-icon><Warning /></el-icon>
           <span>{{ message.error || t('chat.errorOccurred') }}</span>
@@ -68,11 +76,13 @@ import { useI18n } from 'vue-i18n';
 import { ElMessage } from 'element-plus';
 import { Warning, CopyDocument, Download } from '@element-plus/icons-vue';
 import type { ChatMessage } from '@/types';
-import { useToolCallStore } from '@/stores';
+import { useToolCallStore, useChatStore } from '@/stores';
 import { renderMarkdown } from '@/utils/markdown';
 import { usePlotlyRenderer, usePdfExport } from '@/composables';
 import IconButton from '@/components/common/IconButton.vue';
 import MessageToolCalls from './MessageToolCalls.vue';
+import ActionCard from './ActionCard.vue';
+import type { CardStatus } from '@/types/actionCard';
 
 const props = defineProps<{
   message: ChatMessage;
@@ -80,6 +90,7 @@ const props = defineProps<{
 
 const { t } = useI18n();
 const toolCallStore = useToolCallStore();
+const chatStore = useChatStore();
 const messageBodyRef = ref<HTMLElement | null>(null);
 
 const renderedContent = computed(() => {
@@ -112,6 +123,14 @@ async function copyContent() {
   } catch {
     ElMessage.error(t('chat.copyFailed'));
   }
+}
+
+function handleCardStatusChange(
+  cardId: string,
+  status: CardStatus,
+  opts?: { resultSummary?: string; error?: string }
+) {
+  chatStore.updateActionCardStatus(cardId, status, opts);
 }
 </script>
 
@@ -230,6 +249,10 @@ async function copyContent() {
     background-color: var(--error-bg);
     border: 1px solid rgb(239 68 68 / 18%);
     border-radius: $radius-md;
+  }
+
+  &__action-card {
+    margin-top: $spacing-sm;
   }
 
   &__actions {

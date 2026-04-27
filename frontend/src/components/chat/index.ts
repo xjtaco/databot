@@ -6,3 +6,4 @@ export { default as ChatInput } from './ChatInput.vue';
 export { default as ConnectionStatus } from './ConnectionStatus.vue';
 export { default as ChatListDrawer } from './ChatListDrawer.vue';
 export { default as ChatListBottomSheet } from './ChatListBottomSheet.vue';
+export { default as ActionCard } from './ActionCard.vue';
