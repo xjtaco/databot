@@ -52,3 +52,6 @@ export { WebFetchTool } from './webFetch';
 
 // Export OutputMd tool implementation
 export { OutputMdTool } from './outputMdTool';
+
+// Export SearchUiActionCard tool implementation
+export { SearchUiActionCardTool } from './searchUiActionCardTool';

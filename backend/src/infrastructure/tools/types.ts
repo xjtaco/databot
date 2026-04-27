@@ -17,6 +17,8 @@ export const ToolName = {
   WebFetch: 'web_fetch',
   TodosWriter: 'todos_writer',
   OutputMd: 'output_md',
+  SearchUiActionCard: 'search_ui_action_card',
+  ShowUiActionCard: 'show_ui_action_card',
 } as const;
 
 /**
