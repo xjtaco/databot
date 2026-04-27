@@ -19,5 +19,6 @@ export interface ChatMessageRecord {
   sessionId: string;
   role: string;
   content: string | null;
+  metadata?: Record<string, unknown> | null;
   createdAt: string;
 }

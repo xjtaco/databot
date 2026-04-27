@@ -45,3 +45,15 @@ export async function deleteSessionHandler(req: Request, res: Response): Promise
   await chatSessionService.deleteSession(id);
   res.json({ deleted: true });
 }
+
+export async function updateMessageMetadataHandler(req: Request, res: Response): Promise<void> {
+  const sessionId = getValidatedUuid(req, 'id');
+  const messageId = getValidatedUuid(req, 'messageId');
+  const { metadata } = req.body as { metadata?: Record<string, unknown> };
+  if (!metadata || typeof metadata !== 'object') {
+    throw new ValidationError('metadata is required and must be an object');
+  }
+  await chatSessionService.getSession(sessionId);
+  const message = await chatSessionService.updateMessageMetadata(messageId, metadata);
+  res.json({ message });
+}

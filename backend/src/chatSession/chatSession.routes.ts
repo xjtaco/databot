@@ -6,6 +6,7 @@ import {
   getSessionMessagesHandler,
   updateSessionTitleHandler,
   deleteSessionHandler,
+  updateMessageMetadataHandler,
 } from './chatSession.controller';
 
 const router = Router();
@@ -16,5 +17,6 @@ router.get('/:id', getSessionHandler);
 router.get('/:id/messages', getSessionMessagesHandler);
 router.put('/:id', updateSessionTitleHandler);
 router.delete('/:id', deleteSessionHandler);
+router.put('/:id/messages/:messageId/metadata', updateMessageMetadataHandler);
 
 export default router;

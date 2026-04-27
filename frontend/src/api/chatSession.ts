@@ -31,3 +31,11 @@ export async function updateSessionTitle(id: string, title: string): Promise<Cha
 export async function deleteSession(id: string): Promise<void> {
   await http.delete(`${BASE_URL}/${id}`);
 }
+
+export async function updateMessageMetadata(
+  sessionId: string,
+  messageId: string,
+  metadata: Record<string, unknown>
+): Promise<void> {
+  await http.put(`${BASE_URL}/${sessionId}/messages/${messageId}/metadata`, { metadata });
+}
