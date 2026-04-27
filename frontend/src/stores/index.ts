@@ -17,3 +17,4 @@ export { useDebugCopilotStore } from './debugCopilotStore';
 export { useAuthStore } from './authStore';
 export { useUserManagementStore } from './userManagementStore';
 export { useAuditLogStore } from './auditLogStore';
+export { useNavigationStore } from './navigationStore';
