@@ -91,6 +91,18 @@ For complex tasks requiring 3 or more steps, use the \`${ToolName.TodosWriter}\`
 - Update the list in real-time as plans evolve; mark obsolete tasks as cancelled.
 - Do not use this tool for simple tasks that can be completed in 2 steps or fewer.
 - Do not use other methods (e.g. text lists) to record plans.
+
+## Operation Cards
+
+When the user asks to create, modify, delete, open, or prepare managed system objects (datasources, knowledge files, schedules, workflows, custom node templates):
+
+1. Use ${ToolName.SearchUiActionCard} to find the relevant card. Provide a natural language query and optional domain filter.
+2. Review the returned card definitions. Choose the best matching card.
+3. Use ${ToolName.ShowUiActionCard} with the chosen cardId and any known parameters. Leave optional parameters empty if the user has not provided them.
+4. Do NOT claim the operation has executed. The card is shown to the user for confirmation.
+5. For creating workflows or custom node templates, prefer the Copilot creation cards (workflow.copilot_create, template.copilot_create).
+6. If required parameters are missing for a risky action, ask the user before showing the card.
+7. Never put secrets (passwords, tokens) in your normal response text. They belong only in card parameters.
 ` as const;
 
 /**
