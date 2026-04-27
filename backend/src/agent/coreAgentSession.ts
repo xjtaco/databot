@@ -328,6 +328,29 @@ export class CoreAgentSession extends AgentSession {
                     timestamp: Date.now(),
                     data: event.toolCallResult.metadata.cardPayload,
                   });
+
+                  // Persist card metadata to chat session
+                  if (this.chatSessionId) {
+                    chatSessionService
+                      .addMessage(
+                        this.chatSessionId,
+                        'tool',
+                        JSON.stringify({
+                          toolName: 'show_ui_action_card',
+                          toolCallId: event.toolCallResult.toolCallId,
+                          status: 'success',
+                          cardPayload: event.toolCallResult.metadata.cardPayload,
+                        }),
+                        {
+                          type: 'action_card',
+                          payload: event.toolCallResult.metadata.cardPayload,
+                          status: 'proposed',
+                        } as Record<string, unknown>
+                      )
+                      .catch((error) =>
+                        logger.warn('Failed to persist action card metadata', { error })
+                      );
+                  }
                 }
 
                 // Persist tool call result to chat session

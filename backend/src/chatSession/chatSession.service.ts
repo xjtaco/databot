@@ -54,11 +54,21 @@ export async function deleteSession(id: string): Promise<void> {
 export async function addMessage(
   sessionId: string,
   role: string,
-  content: string | null
+  content: string | null,
+  metadata?: Record<string, unknown> | null
 ): Promise<ChatMessageRecord> {
-  const message = await repository.createMessage({ sessionId, role, content });
+  const message = await repository.createMessage({ sessionId, role, content, metadata });
   await repository.updateSessionTimestamp(sessionId);
   logger.info('Added chat message', { sessionId, messageId: message.id, role });
+  return message;
+}
+
+export async function updateMessageMetadata(
+  messageId: string,
+  metadata: Record<string, unknown>
+): Promise<ChatMessageRecord> {
+  const message = await repository.updateMessageMetadata(messageId, metadata);
+  logger.info('Updated chat message metadata', { messageId });
   return message;
 }
 

@@ -117,6 +117,18 @@ export async function createMessage(data: {
   return mapMessage(message);
 }
 
+export async function updateMessageMetadata(
+  messageId: string,
+  metadata: Record<string, unknown>
+): Promise<ChatMessageRecord> {
+  const prisma = getPrismaClient();
+  const message = await prisma.chatMessage.update({
+    where: { id: messageId },
+    data: { metadata: metadata as Prisma.InputJsonValue },
+  });
+  return mapMessage(message);
+}
+
 export async function findMessagesBySessionId(sessionId: string): Promise<ChatMessageRecord[]> {
   const prisma = getPrismaClient();
   const messages = await prisma.chatMessage.findMany({
