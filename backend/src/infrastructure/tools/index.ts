@@ -55,3 +55,6 @@ export { OutputMdTool } from './outputMdTool';
 
 // Export SearchUiActionCard tool implementation
 export { SearchUiActionCardTool } from './searchUiActionCardTool';
+
+// Export ShowUiActionCard tool implementation
+export { ShowUiActionCardTool } from './showUiActionCardTool';
