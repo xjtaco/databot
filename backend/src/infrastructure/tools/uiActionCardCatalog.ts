@@ -353,17 +353,17 @@ const catalog: readonly UiActionCardDefinition[] = [
         description: 'Display name for the scheduled task.',
       },
       {
-        name: 'cron',
-        type: 'string',
-        description: 'Cron expression defining the schedule (e.g. "0 8 * * *").',
-      },
-      {
         name: 'workflowId',
         type: 'string',
         description: 'ID of the workflow to execute on schedule.',
       },
     ],
     optionalParams: [
+      {
+        name: 'cronExpression',
+        type: 'string',
+        description: 'Cron expression defining the schedule (e.g. "0 8 * * *").',
+      },
       {
         name: 'description',
         type: 'string',
