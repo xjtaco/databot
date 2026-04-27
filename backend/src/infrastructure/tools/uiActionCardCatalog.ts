@@ -448,7 +448,13 @@ const catalog: readonly UiActionCardDefinition[] = [
     title: 'Create Workflow with Copilot',
     description: 'Launch the workflow copilot to design and create a new workflow.',
     usage: 'When the user wants to build a new data processing or analysis workflow.',
-    requiredParams: [],
+    requiredParams: [
+      {
+        name: 'name',
+        type: 'string',
+        description: 'Workflow name',
+      },
+    ],
     optionalParams: [
       {
         name: 'description',
@@ -472,7 +478,13 @@ const catalog: readonly UiActionCardDefinition[] = [
     description: 'Launch the template copilot to design a reusable workflow template.',
     usage:
       'When the user wants to create a reusable template from an existing workflow or from scratch.',
-    requiredParams: [],
+    requiredParams: [
+      {
+        name: 'name',
+        type: 'string',
+        description: 'Template name',
+      },
+    ],
     optionalParams: [
       {
         name: 'description',
