@@ -35,7 +35,7 @@ import { ref, computed, defineAsyncComponent } from 'vue';
 import { useRouter } from 'vue-router';
 import { DataSourceSidebar } from '@/components/sidebar';
 import { ChatContainer } from '@/components/chat';
-import { useAuthStore } from '@/stores';
+import { useAuthStore, useNavigationStore } from '@/stores';
 import type { NavType } from '@/types/sidebar';
 
 const SettingsPage = defineAsyncComponent(() => import('@/components/settings/SettingsPage.vue'));
@@ -57,30 +57,30 @@ const ChangePasswordDialog = defineAsyncComponent(
 
 const router = useRouter();
 const authStore = useAuthStore();
+const navigationStore = useNavigationStore();
 
 const sidebarOpen = ref(false);
-const activeNav = ref<NavType>('chat');
 const profileDialogVisible = ref(false);
 const changePasswordDialogVisible = ref(false);
 
-const showSettings = computed(() => activeNav.value === 'settings');
-const showDataManagement = computed(() => activeNav.value === 'data');
-const showWorkflow = computed(() => activeNav.value === 'workflow');
-const showSchedule = computed(() => activeNav.value === 'schedule');
-const showUsers = computed(() => activeNav.value === 'users');
-const showAuditLog = computed(() => activeNav.value === 'auditLog');
+const showSettings = computed(() => navigationStore.activeNav === 'settings');
+const showDataManagement = computed(() => navigationStore.activeNav === 'data');
+const showWorkflow = computed(() => navigationStore.activeNav === 'workflow');
+const showSchedule = computed(() => navigationStore.activeNav === 'schedule');
+const showUsers = computed(() => navigationStore.activeNav === 'users');
+const showAuditLog = computed(() => navigationStore.activeNav === 'auditLog');
 
 function toggleSidebar() {
   sidebarOpen.value = !sidebarOpen.value;
 }
 
 function handleNavChange(nav: NavType): void {
-  activeNav.value = nav;
+  navigationStore.navigateTo(nav);
   sidebarOpen.value = false;
 }
 
 function handleBack(): void {
-  activeNav.value = 'chat';
+  navigationStore.navigateTo('chat');
 }
 
 async function handleUserCommand(command: string): Promise<void> {
