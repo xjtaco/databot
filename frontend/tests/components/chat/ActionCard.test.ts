@@ -111,4 +111,25 @@ describe('ActionCard.vue', () => {
     });
     expect(wrapper.text()).toContain('Editing');
   });
+
+  it('applies editing CSS class and shows editing label for form-backed cards', async () => {
+    const card = makeCard({
+      status: 'editing',
+      payload: { ...makeCard().payload, domain: 'data', action: 'datasource_create' },
+    });
+    const wrapper = mount(ActionCard, {
+      props: { card },
+      global: { plugins: [i18n], stubs: { teleport: true } },
+    });
+    // The editing CSS class should be applied to the root element
+    expect(wrapper.classes()).toContain('action-card--editing');
+    // The editing status label should be shown
+    expect(wrapper.text()).toContain('Editing');
+    // The title should have the pencil indicator via CSS ::after pseudo-element
+    const title = wrapper.find('.action-card__title');
+    expect(title.exists()).toBe(true);
+    expect(title.text()).toContain('Open Data Management');
+    // Actions should not be shown in editing state (form replaces them)
+    expect(wrapper.find('.action-card__actions').exists()).toBe(false);
+  });
 });

@@ -280,6 +280,18 @@ function handleFormSubmit(
     opacity: 0.6;
   }
 
+  &--editing {
+    .action-card__title::after {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      margin-left: $spacing-sm;
+      vertical-align: middle;
+      color: var(--accent);
+      content: '\270E';
+    }
+  }
+
   &__header {
     display: flex;
     gap: $spacing-sm;
