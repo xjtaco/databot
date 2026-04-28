@@ -70,8 +70,8 @@
         <el-button
           type="primary"
           size="small"
-          :loading="knowledgeStore.isLoading"
-          :disabled="!canUpload"
+          :loading="isSubmitting"
+          :disabled="!canUpload || submitting"
           @click="handleUpload"
         >
           {{ t('knowledge.upload') }}
@@ -96,8 +96,8 @@
         <el-button
           type="primary"
           size="small"
-          :loading="knowledgeStore.isLoading"
-          :disabled="moveTargetFolderId === null"
+          :loading="isSubmitting"
+          :disabled="moveTargetFolderId === null || submitting"
           @click="handleMove"
         >
           {{ t('common.confirm') }}
@@ -121,7 +121,8 @@
         <el-button
           type="danger"
           size="small"
-          :loading="knowledgeStore.isLoading"
+          :loading="isSubmitting"
+          :disabled="submitting"
           @click="handleDelete"
         >
           {{ t('common.delete') }}
@@ -143,7 +144,10 @@ import type { UiActionCardPayload } from '@/types/actionCard';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
-const props = defineProps<{ payload: UiActionCardPayload }>();
+const props = defineProps<{
+  payload: UiActionCardPayload;
+  requestConfirmation?: () => Promise<boolean>;
+}>();
 const emit = defineEmits<{
   submit: [status: 'succeeded' | 'failed', opts?: { resultSummary?: string; error?: string }];
   cancel: [];
@@ -157,10 +161,12 @@ const uploadFolderId = ref<string | null>((props.payload.params.folderId as stri
 const selectedFiles = ref<File[]>([]);
 const isDragOver = ref(false);
 const fileInputRef = ref<HTMLInputElement>();
+const submitting = ref(false);
 
 const uploadPath = computed(() => getFolderPath(knowledgeStore.folderTree, uploadFolderId.value));
 
 const canUpload = computed(() => uploadFolderId.value !== null && selectedFiles.value.length > 0);
+const isSubmitting = computed(() => knowledgeStore.isLoading || submitting.value);
 
 // --- file_move state ---
 const moveTargetFolderId = ref<string | null>(
@@ -220,37 +226,60 @@ function removeFile(index: number): void {
 }
 
 async function handleUpload(): Promise<void> {
+  if (submitting.value) return;
   if (!uploadFolderId.value || selectedFiles.value.length === 0) return;
+  submitting.value = true;
   try {
+    if (!(await confirmIfNeeded())) return;
     await knowledgeStore.uploadFiles(uploadFolderId.value, [...selectedFiles.value]);
     emit('submit', 'succeeded', { resultSummary: t('knowledge.uploadSuccess') });
   } catch {
     emit('submit', 'failed', { error: t('knowledge.uploadFailed') });
+  } finally {
+    submitting.value = false;
   }
 }
 
 // --- file_move handler ---
 async function handleMove(): Promise<void> {
+  if (submitting.value) return;
   const fileId = props.payload.params.fileId as string;
   if (!fileId || moveTargetFolderId.value === null) return;
+  submitting.value = true;
   try {
+    if (!(await confirmIfNeeded())) return;
     await knowledgeStore.moveFile(fileId, moveTargetFolderId.value);
     emit('submit', 'succeeded', { resultSummary: t('knowledge.moveSuccess') });
   } catch {
     emit('submit', 'failed', { error: t('common.failed') });
+  } finally {
+    submitting.value = false;
   }
 }
 
 // --- file_delete handler ---
 async function handleDelete(): Promise<void> {
+  if (submitting.value) return;
   const fileId = props.payload.params.fileId as string;
   if (!fileId) return;
+  submitting.value = true;
   try {
+    if (!(await confirmIfNeeded())) return;
     await knowledgeStore.deleteFile(fileId);
     emit('submit', 'succeeded', { resultSummary: t('knowledge.deleteFileSuccess') });
   } catch {
     emit('submit', 'failed', { error: t('common.failed') });
+  } finally {
+    submitting.value = false;
   }
+}
+
+async function confirmIfNeeded(): Promise<boolean> {
+  if (props.payload.confirmationMode !== 'modal') {
+    return true;
+  }
+
+  return props.requestConfirmation ? props.requestConfirmation() : true;
 }
 </script>
 

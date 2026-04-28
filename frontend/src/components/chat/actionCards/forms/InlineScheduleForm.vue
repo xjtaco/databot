@@ -54,7 +54,10 @@ import { useScheduleStore, useWorkflowStore } from '@/stores';
 import ScheduleForm from '@/components/schedule/ScheduleForm.vue';
 import type { UiActionCardPayload } from '@/types/actionCard';
 
-const props = defineProps<{ payload: UiActionCardPayload }>();
+const props = defineProps<{
+  payload: UiActionCardPayload;
+  requestConfirmation?: () => Promise<boolean>;
+}>();
 
 const emit = defineEmits<{
   submit: [status: 'succeeded' | 'failed', opts?: { resultSummary?: string; error?: string }];
@@ -81,6 +84,8 @@ onMounted(async () => {
 const editingSchedule = computed(() => scheduleStore.editingSchedule);
 
 async function handleSubmit(): Promise<void> {
+  if (submitting.value) return;
+
   const form = scheduleFormRef.value;
   if (!form) return;
 
@@ -89,6 +94,7 @@ async function handleSubmit(): Promise<void> {
 
   submitting.value = true;
   try {
+    if (!(await confirmIfNeeded())) return;
     if (props.payload.action === 'create') {
       await scheduleStore.createSchedule(input);
       emit('submit', 'succeeded', { resultSummary: t('schedule.createSuccess') });
@@ -105,10 +111,13 @@ async function handleSubmit(): Promise<void> {
 }
 
 async function handleDelete(): Promise<void> {
+  if (submitting.value) return;
+
   if (!scheduleId.value) return;
 
   submitting.value = true;
   try {
+    if (!(await confirmIfNeeded())) return;
     await scheduleStore.deleteSchedule(scheduleId.value);
     emit('submit', 'succeeded', { resultSummary: t('schedule.deleteSuccess') });
   } catch (err: unknown) {
@@ -117,6 +126,14 @@ async function handleDelete(): Promise<void> {
   } finally {
     submitting.value = false;
   }
+}
+
+async function confirmIfNeeded(): Promise<boolean> {
+  if (props.payload.confirmationMode !== 'modal') {
+    return true;
+  }
+
+  return props.requestConfirmation ? props.requestConfirmation() : true;
 }
 </script>
 

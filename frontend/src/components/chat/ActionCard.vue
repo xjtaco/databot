@@ -52,6 +52,7 @@
       :is="formComponent"
       v-if="card.status === 'editing' && formComponent"
       :payload="card.payload"
+      :request-confirmation="requestInlineFormConfirmation"
       class="action-card__inline-form"
       @submit="handleFormSubmit"
       @cancel="handleFormCancel"
@@ -106,6 +107,18 @@
       @confirm="handleDeferredConfirm"
       @cancel="handleDeferredCancel"
     />
+
+    <ConfirmDialog
+      :visible="showInlineConfirmDialog"
+      type="warning"
+      :title="t('chat.actionCards.common.confirmTitle')"
+      :message="t('chat.actionCards.common.confirmMessage')"
+      :confirm-text="t('chat.actionCards.common.confirm')"
+      :cancel-text="t('chat.actionCards.common.cancel')"
+      @update:visible="handleInlineConfirmVisibilityUpdate"
+      @confirm="handleInlineConfirm"
+      @cancel="handleInlineCancel"
+    />
   </div>
 </template>
 
@@ -147,6 +160,9 @@ const emit = defineEmits<{
 const { t } = useI18n();
 const dangerConfirmText = ref('');
 const showDeferredConfirmDialog = ref(false);
+const showInlineConfirmDialog = ref(false);
+let inlineConfirmationResolver: ((confirmed: boolean) => void) | null = null;
+let inlineConfirmationPromise: Promise<boolean> | null = null;
 
 const titleText = computed(() =>
   props.card.payload.titleKey ? t(props.card.payload.titleKey) : props.card.payload.title
@@ -247,6 +263,47 @@ async function handleDeferredConfirm(): Promise<void> {
 
 function handleDeferredCancel(): void {
   showDeferredConfirmDialog.value = false;
+}
+
+function requestInlineFormConfirmation(): Promise<boolean> {
+  if (props.card.payload.confirmationMode !== 'modal') {
+    return Promise.resolve(true);
+  }
+
+  if (inlineConfirmationPromise) {
+    return inlineConfirmationPromise;
+  }
+
+  showInlineConfirmDialog.value = true;
+  inlineConfirmationPromise = new Promise<boolean>((resolve) => {
+    inlineConfirmationResolver = (confirmed: boolean) => {
+      showInlineConfirmDialog.value = false;
+      inlineConfirmationResolver = null;
+      inlineConfirmationPromise = null;
+      resolve(confirmed);
+    };
+  });
+
+  return inlineConfirmationPromise;
+}
+
+function resolveInlineConfirmation(confirmed: boolean): void {
+  inlineConfirmationResolver?.(confirmed);
+}
+
+function handleInlineConfirmVisibilityUpdate(visible: boolean): void {
+  showInlineConfirmDialog.value = visible;
+  if (!visible) {
+    resolveInlineConfirmation(false);
+  }
+}
+
+function handleInlineConfirm(): void {
+  resolveInlineConfirmation(true);
+}
+
+function handleInlineCancel(): void {
+  resolveInlineConfirmation(false);
 }
 
 function handleCancel(): void {

@@ -84,7 +84,10 @@ import { updateFolder } from '@/api/knowledge';
 import FolderTreeSelector from '@/components/knowledge/FolderTreeSelector.vue';
 import type { UiActionCardPayload } from '@/types/actionCard';
 
-const props = defineProps<{ payload: UiActionCardPayload }>();
+const props = defineProps<{
+  payload: UiActionCardPayload;
+  requestConfirmation?: () => Promise<boolean>;
+}>();
 const emit = defineEmits<{
   submit: [status: 'succeeded' | 'failed', opts?: { resultSummary?: string; error?: string }];
   cancel: [];
@@ -113,6 +116,8 @@ onMounted(async () => {
 });
 
 async function handleSubmit(): Promise<void> {
+  if (submitting.value) return;
+
   if (action.value === 'folder_create') {
     await handleCreate();
   } else if (action.value === 'folder_rename') {
@@ -123,12 +128,15 @@ async function handleSubmit(): Promise<void> {
 }
 
 async function handleCreate(): Promise<void> {
+  if (submitting.value) return;
+
   if (!folderName.value.trim()) {
     emit('submit', 'failed', { error: t('chat.actionCard.inlineForm.folderNameRequired') });
     return;
   }
   submitting.value = true;
   try {
+    if (!(await confirmIfNeeded())) return;
     await knowledgeStore.createFolder(folderName.value.trim(), parentId.value ?? undefined);
     emit('submit', 'succeeded', {
       resultSummary: t('knowledge.createFolderSuccess'),
@@ -142,6 +150,8 @@ async function handleCreate(): Promise<void> {
 }
 
 async function handleRename(): Promise<void> {
+  if (submitting.value) return;
+
   if (!folderName.value.trim()) {
     emit('submit', 'failed', { error: t('chat.actionCard.inlineForm.folderNameRequired') });
     return;
@@ -152,6 +162,7 @@ async function handleRename(): Promise<void> {
   }
   submitting.value = true;
   try {
+    if (!(await confirmIfNeeded())) return;
     await updateFolder(folderId.value, { name: folderName.value.trim() });
     await knowledgeStore.fetchFolderTree();
     emit('submit', 'succeeded', {
@@ -166,12 +177,15 @@ async function handleRename(): Promise<void> {
 }
 
 async function handleMove(): Promise<void> {
+  if (submitting.value) return;
+
   if (!folderId.value) {
     emit('submit', 'failed', { error: t('errors.unknownError') });
     return;
   }
   submitting.value = true;
   try {
+    if (!(await confirmIfNeeded())) return;
     await knowledgeStore.moveFolder(folderId.value, targetParentId.value);
     emit('submit', 'succeeded', {
       resultSummary: t('knowledge.moveSuccess'),
@@ -185,12 +199,15 @@ async function handleMove(): Promise<void> {
 }
 
 async function handleDelete(): Promise<void> {
+  if (submitting.value) return;
+
   if (!folderId.value) {
     emit('submit', 'failed', { error: t('errors.unknownError') });
     return;
   }
   submitting.value = true;
   try {
+    if (!(await confirmIfNeeded())) return;
     await knowledgeStore.deleteFolder(folderId.value);
     emit('submit', 'succeeded', {
       resultSummary: t('knowledge.deleteFolderSuccess'),
@@ -201,6 +218,14 @@ async function handleDelete(): Promise<void> {
   } finally {
     submitting.value = false;
   }
+}
+
+async function confirmIfNeeded(): Promise<boolean> {
+  if (props.payload.confirmationMode !== 'modal') {
+    return true;
+  }
+
+  return props.requestConfirmation ? props.requestConfirmation() : true;
 }
 </script>
 

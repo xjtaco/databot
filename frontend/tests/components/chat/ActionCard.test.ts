@@ -1,18 +1,47 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { mount } from '@vue/test-utils';
+import { mount, type VueWrapper } from '@vue/test-utils';
 import { createI18n } from 'vue-i18n';
+import { createPinia, setActivePinia } from 'pinia';
+import { nextTick } from 'vue';
 import ActionCard from '@/components/chat/ActionCard.vue';
 import type { ChatActionCard } from '@/types/actionCard';
 import enUS from '@/locales/en-US';
 import zhCN from '@/locales/zh-CN';
 
-const { executeActionMock } = vi.hoisted(() => ({
-  executeActionMock: vi.fn(),
-}));
+const { executeActionMock, inlineCreateMock, listFolderTreeMock, knowledgeApiMock } = vi.hoisted(
+  () => ({
+    executeActionMock: vi.fn(),
+    inlineCreateMock: vi.fn(),
+    listFolderTreeMock: vi.fn(),
+    knowledgeApiMock: vi.fn(),
+  })
+);
 
 vi.mock('@/components/chat/actionCards', () => ({
   executeAction: executeActionMock,
 }));
+
+vi.mock('@/api/knowledge', () => ({
+  listFolderTree: listFolderTreeMock,
+  createFolder: inlineCreateMock,
+  deleteFolder: knowledgeApiMock,
+  updateFolder: knowledgeApiMock,
+  uploadFiles: knowledgeApiMock,
+  moveFile: knowledgeApiMock,
+  deleteFile: knowledgeApiMock,
+}));
+
+vi.mock('@/components/chat/actionCards/forms/InlineDataCreateForm.vue', async () => {
+  const { defineComponent } = await vi.importActual<typeof import('vue')>('vue');
+
+  return {
+    __esModule: true,
+    default: defineComponent({
+      name: 'InlineDataCreateFormStub',
+      template: '<div class="inline-data-create-form-stub"></div>',
+    }),
+  };
+});
 
 const i18n = createI18n({
   legacy: false,
@@ -44,7 +73,11 @@ function makeCard(overrides?: Partial<ChatActionCard>): ChatActionCard {
 describe('ActionCard.vue', () => {
   beforeEach(() => {
     vi.useFakeTimers();
+    setActivePinia(createPinia());
     executeActionMock.mockResolvedValue({ success: true, summary: 'Opened successfully' });
+    inlineCreateMock.mockResolvedValue(undefined);
+    listFolderTreeMock.mockResolvedValue({ folders: [] });
+    knowledgeApiMock.mockResolvedValue(undefined);
   });
 
   afterEach(() => {
@@ -63,7 +96,7 @@ describe('ActionCard.vue', () => {
             template: `
               <button
                 class="el-button-stub"
-                :type="nativeType"
+                :type="nativeType || 'button'"
                 :disabled="disabled"
                 @click="$emit('click')"
               >
@@ -74,8 +107,23 @@ describe('ActionCard.vue', () => {
           },
           'el-input': {
             template:
-              '<input class="el-input-stub" :value="modelValue" @input="$emit(\'update:modelValue\', ($event.target as HTMLInputElement).value)" />',
+              '<input class="el-input-stub" :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value)" />',
             props: ['modelValue', 'size', 'placeholder'],
+          },
+          'el-form': {
+            template: '<form @submit.prevent="$emit(\'submit\')"><slot /></form>',
+            props: ['labelPosition'],
+          },
+          'el-form-item': {
+            template: '<label><slot /></label>',
+            props: ['label'],
+          },
+          'el-icon': {
+            template: '<span><slot /></span>',
+          },
+          FolderTreeSelector: {
+            template: '<div class="folder-tree-selector-stub"></div>',
+            props: ['selectedFolderId', 'folders', 'showRoot'],
           },
           ConfirmDialog: {
             template: `
@@ -92,6 +140,27 @@ describe('ActionCard.vue', () => {
         },
       },
     });
+  }
+
+  async function triggerInlineFolderSubmit(wrapper: VueWrapper): Promise<void> {
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      await vi.dynamicImportSettled();
+      await nextTick();
+
+      const stubSubmit = wrapper.find('.inline-folder-submit');
+      if (stubSubmit.exists()) {
+        await stubSubmit.trigger('click');
+        return;
+      }
+
+      const formButtons = wrapper.findAll('.knowledge-folder-form__actions button');
+      if (formButtons[0]) {
+        await formButtons[0].trigger('click');
+        return;
+      }
+    }
+
+    throw new Error('Inline folder submit button was not rendered');
   }
 
   it('renders localized card title and summary from payload keys', () => {
@@ -245,5 +314,97 @@ describe('ActionCard.vue', () => {
     expect(executeActionMock).not.toHaveBeenCalled();
     expect(wrapper.emitted('statusChange')).toBeUndefined();
     expect(wrapper.find('.confirm-dialog-stub').exists()).toBe(false);
+  });
+
+  it('opens modal before modal-confirm inline form submits final create', async () => {
+    const card = makeCard({
+      status: 'editing',
+      payload: {
+        ...makeCard().payload,
+        domain: 'knowledge',
+        action: 'folder_create',
+        presentationMode: 'inline_form',
+        confirmationMode: 'modal',
+        params: { name: 'Research' },
+      },
+    });
+    const wrapper = mountActionCard(card);
+    await vi.dynamicImportSettled();
+
+    await triggerInlineFolderSubmit(wrapper);
+    await vi.dynamicImportSettled();
+
+    expect(wrapper.find('.confirm-dialog-stub').exists()).toBe(true);
+    expect(inlineCreateMock).not.toHaveBeenCalled();
+    expect(wrapper.emitted('statusChange')).toBeUndefined();
+
+    await wrapper.find('.confirm-dialog-confirm').trigger('click');
+    await vi.dynamicImportSettled();
+
+    expect(inlineCreateMock).toHaveBeenCalledTimes(1);
+    expect(wrapper.emitted('statusChange')?.[0]?.[1]).toBe('succeeded');
+  });
+
+  it('does not submit modal-confirm inline form when modal is cancelled or closed', async () => {
+    const card = makeCard({
+      status: 'editing',
+      payload: {
+        ...makeCard().payload,
+        domain: 'knowledge',
+        action: 'folder_create',
+        presentationMode: 'inline_form',
+        confirmationMode: 'modal',
+        params: { name: 'Research' },
+      },
+    });
+    const wrapper = mountActionCard(card);
+    await vi.dynamicImportSettled();
+
+    await triggerInlineFolderSubmit(wrapper);
+    await vi.dynamicImportSettled();
+    await wrapper.find('.confirm-dialog-cancel').trigger('click');
+    await vi.dynamicImportSettled();
+
+    expect(inlineCreateMock).not.toHaveBeenCalled();
+    expect(wrapper.emitted('statusChange')).toBeUndefined();
+    expect(
+      wrapper.find('.inline-folder-submit').exists() ||
+        wrapper.find('.knowledge-folder-form').exists()
+    ).toBe(true);
+
+    await triggerInlineFolderSubmit(wrapper);
+    await vi.dynamicImportSettled();
+    await wrapper.find('.confirm-dialog-close').trigger('click');
+    await vi.dynamicImportSettled();
+
+    expect(inlineCreateMock).not.toHaveBeenCalled();
+    expect(wrapper.emitted('statusChange')).toBeUndefined();
+    expect(
+      wrapper.find('.inline-folder-submit').exists() ||
+        wrapper.find('.knowledge-folder-form').exists()
+    ).toBe(true);
+  });
+
+  it('submits non-modal inline forms directly', async () => {
+    const card = makeCard({
+      status: 'editing',
+      payload: {
+        ...makeCard().payload,
+        domain: 'knowledge',
+        action: 'folder_create',
+        presentationMode: 'inline_form',
+        confirmationMode: 'none',
+        params: { name: 'Research' },
+      },
+    });
+    const wrapper = mountActionCard(card);
+    await vi.dynamicImportSettled();
+
+    await triggerInlineFolderSubmit(wrapper);
+    await vi.dynamicImportSettled();
+
+    expect(wrapper.find('.confirm-dialog-stub').exists()).toBe(false);
+    expect(inlineCreateMock).toHaveBeenCalledTimes(1);
+    expect(wrapper.emitted('statusChange')?.[0]?.[1]).toBe('succeeded');
   });
 });
