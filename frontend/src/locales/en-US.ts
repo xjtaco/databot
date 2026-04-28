@@ -124,8 +124,7 @@ export default {
         templateCreated: 'Template created: {name}',
         templateCreatedWithCopilot: 'Template created and Copilot prompt sent: {name}',
         templateCreateFailed: 'Failed to create template',
-        datasourceTestNavigate:
-          'Open data management to test the data source connection.',
+        datasourceTestNavigate: 'Open data management to test the data source connection.',
         datasourceDeleted: 'Data source deleted',
       },
       data: {
