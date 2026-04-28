@@ -209,6 +209,28 @@ describe('CoreAgentSession', () => {
       expect(systemPrompt).not.toContain("Always concatenate the project root's absolute path");
     });
 
+    it('should include action-card presentation rules in the system prompt', () => {
+      const context = (
+        session as unknown as {
+          context: { validHistory: () => Array<{ content: unknown }> };
+        }
+      ).context;
+      const systemPrompt = context.validHistory()[0].content as string;
+
+      expect(systemPrompt).toContain('Inline form cards');
+      expect(systemPrompt).toContain('data source, knowledge, and schedule create cards');
+      expect(systemPrompt).toContain('do not ask for an extra pre-confirmation');
+      expect(systemPrompt).toContain(
+        'Workflow and node-template cards are deferred navigation actions'
+      );
+      expect(systemPrompt).toContain('jump/open button');
+      expect(systemPrompt).toContain('modal confirmation before leaving CoreAgent chat');
+      expect(systemPrompt).toContain('Never write hard-coded card button labels');
+      expect(systemPrompt).toContain(
+        'catalog metadata and i18n keys returned by show_ui_action_card'
+      );
+    });
+
     it('should remove the session work folder when disconnected', () => {
       const workFolder = (session as any).workFolder as string;
 

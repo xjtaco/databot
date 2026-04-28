@@ -4,7 +4,170 @@ import type { ActionDomain, UiActionCardDefinition } from './uiActionCardTypes';
 // In-memory catalog – single source of truth for all UI action cards
 // ---------------------------------------------------------------------------
 
-const catalog: readonly UiActionCardDefinition[] = [
+type ActionCardPresentationMetadata = Pick<
+  UiActionCardDefinition,
+  'presentationMode' | 'confirmationMode' | 'titleKey' | 'summaryKey'
+>;
+
+type UiActionCardCatalogEntry = Omit<UiActionCardDefinition, keyof ActionCardPresentationMetadata>;
+
+const cardPresentationMetadata = {
+  'data.open': {
+    presentationMode: 'navigate',
+    confirmationMode: 'none',
+    titleKey: 'chat.actionCards.data.open.title',
+    summaryKey: 'chat.actionCards.data.open.summary',
+  },
+  'data.datasource_create': {
+    presentationMode: 'inline_form',
+    confirmationMode: 'none',
+    titleKey: 'chat.actionCards.data.datasourceCreate.title',
+    summaryKey: 'chat.actionCards.data.datasourceCreate.summary',
+  },
+  'data.datasource_test': {
+    presentationMode: 'inline_form',
+    confirmationMode: 'none',
+    titleKey: 'chat.actionCards.data.datasourceTest.title',
+    summaryKey: 'chat.actionCards.data.datasourceTest.summary',
+  },
+  'data.datasource_delete': {
+    presentationMode: 'inline_form',
+    confirmationMode: 'modal',
+    titleKey: 'chat.actionCards.data.datasourceDelete.title',
+    summaryKey: 'chat.actionCards.data.datasourceDelete.summary',
+  },
+  'data.file_upload': {
+    presentationMode: 'inline_form',
+    confirmationMode: 'none',
+    titleKey: 'chat.actionCards.data.fileUpload.title',
+    summaryKey: 'chat.actionCards.data.fileUpload.summary',
+  },
+  'knowledge.open': {
+    presentationMode: 'navigate',
+    confirmationMode: 'none',
+    titleKey: 'chat.actionCards.knowledge.open.title',
+    summaryKey: 'chat.actionCards.knowledge.open.summary',
+  },
+  'knowledge.folder_create': {
+    presentationMode: 'inline_form',
+    confirmationMode: 'modal',
+    titleKey: 'chat.actionCards.knowledge.folderCreate.title',
+    summaryKey: 'chat.actionCards.knowledge.folderCreate.summary',
+  },
+  'knowledge.folder_rename': {
+    presentationMode: 'inline_form',
+    confirmationMode: 'none',
+    titleKey: 'chat.actionCards.knowledge.folderRename.title',
+    summaryKey: 'chat.actionCards.knowledge.folderRename.summary',
+  },
+  'knowledge.folder_move': {
+    presentationMode: 'inline_form',
+    confirmationMode: 'none',
+    titleKey: 'chat.actionCards.knowledge.folderMove.title',
+    summaryKey: 'chat.actionCards.knowledge.folderMove.summary',
+  },
+  'knowledge.folder_delete': {
+    presentationMode: 'inline_form',
+    confirmationMode: 'modal',
+    titleKey: 'chat.actionCards.knowledge.folderDelete.title',
+    summaryKey: 'chat.actionCards.knowledge.folderDelete.summary',
+  },
+  'knowledge.file_open': {
+    presentationMode: 'navigate',
+    confirmationMode: 'none',
+    titleKey: 'chat.actionCards.knowledge.fileOpen.title',
+    summaryKey: 'chat.actionCards.knowledge.fileOpen.summary',
+  },
+  'knowledge.file_create': {
+    presentationMode: 'inline_form',
+    confirmationMode: 'modal',
+    titleKey: 'chat.actionCards.knowledge.fileCreate.title',
+    summaryKey: 'chat.actionCards.knowledge.fileCreate.summary',
+  },
+  'knowledge.file_upload': {
+    presentationMode: 'inline_form',
+    confirmationMode: 'none',
+    titleKey: 'chat.actionCards.knowledge.fileUpload.title',
+    summaryKey: 'chat.actionCards.knowledge.fileUpload.summary',
+  },
+  'knowledge.file_move': {
+    presentationMode: 'inline_form',
+    confirmationMode: 'none',
+    titleKey: 'chat.actionCards.knowledge.fileMove.title',
+    summaryKey: 'chat.actionCards.knowledge.fileMove.summary',
+  },
+  'knowledge.file_delete': {
+    presentationMode: 'inline_form',
+    confirmationMode: 'modal',
+    titleKey: 'chat.actionCards.knowledge.fileDelete.title',
+    summaryKey: 'chat.actionCards.knowledge.fileDelete.summary',
+  },
+  'schedule.open': {
+    presentationMode: 'navigate',
+    confirmationMode: 'none',
+    titleKey: 'chat.actionCards.schedule.open.title',
+    summaryKey: 'chat.actionCards.schedule.open.summary',
+  },
+  'schedule.create': {
+    presentationMode: 'inline_form',
+    confirmationMode: 'modal',
+    titleKey: 'chat.actionCards.schedule.create.title',
+    summaryKey: 'chat.actionCards.schedule.create.summary',
+  },
+  'schedule.update': {
+    presentationMode: 'inline_form',
+    confirmationMode: 'none',
+    titleKey: 'chat.actionCards.schedule.update.title',
+    summaryKey: 'chat.actionCards.schedule.update.summary',
+  },
+  'schedule.delete': {
+    presentationMode: 'inline_form',
+    confirmationMode: 'modal',
+    titleKey: 'chat.actionCards.schedule.delete.title',
+    summaryKey: 'chat.actionCards.schedule.delete.summary',
+  },
+  'workflow.open': {
+    presentationMode: 'navigate',
+    confirmationMode: 'none',
+    titleKey: 'chat.actionCards.workflow.open.title',
+    summaryKey: 'chat.actionCards.workflow.open.summary',
+  },
+  'workflow.copilot_create': {
+    presentationMode: 'deferred_navigation',
+    confirmationMode: 'modal',
+    titleKey: 'chat.actionCards.workflow.copilotCreate.title',
+    summaryKey: 'chat.actionCards.workflow.copilotCreate.summary',
+  },
+  'workflow.template_node': {
+    presentationMode: 'deferred_navigation',
+    confirmationMode: 'modal',
+    titleKey: 'chat.actionCards.workflow.templateNode.title',
+    summaryKey: 'chat.actionCards.workflow.templateNode.summary',
+  },
+  'workflow.template_etl': {
+    presentationMode: 'deferred_navigation',
+    confirmationMode: 'modal',
+    titleKey: 'chat.actionCards.workflow.templateEtl.title',
+    summaryKey: 'chat.actionCards.workflow.templateEtl.summary',
+  },
+  'workflow.template_report': {
+    presentationMode: 'deferred_navigation',
+    confirmationMode: 'modal',
+    titleKey: 'chat.actionCards.workflow.templateReport.title',
+    summaryKey: 'chat.actionCards.workflow.templateReport.summary',
+  },
+  'template.copilot_create': {
+    presentationMode: 'deferred_navigation',
+    confirmationMode: 'modal',
+    titleKey: 'chat.actionCards.template.copilotCreate.title',
+    summaryKey: 'chat.actionCards.template.copilotCreate.summary',
+  },
+} satisfies Record<string, ActionCardPresentationMetadata>;
+
+const presentationMetadataByCardId: Record<string, ActionCardPresentationMetadata> =
+  cardPresentationMetadata;
+
+const baseCatalog: readonly UiActionCardCatalogEntry[] = [
   // ── data ──────────────────────────────────────────────────────────────────
   {
     cardId: 'data.open',
@@ -290,6 +453,39 @@ const catalog: readonly UiActionCardDefinition[] = [
     dependencies: [],
   },
   {
+    cardId: 'knowledge.file_create',
+    domain: 'knowledge',
+    action: 'file_create',
+    title: 'Create Knowledge File',
+    description: 'Create a new Markdown file in the knowledge base.',
+    usage: 'When the user wants to create or write a new knowledge file.',
+    requiredParams: [
+      {
+        name: 'name',
+        type: 'string',
+        description: 'Name of the file to create.',
+      },
+    ],
+    optionalParams: [
+      {
+        name: 'folderId',
+        type: 'string',
+        description: 'Target folder ID. If omitted, creates at root.',
+      },
+      {
+        name: 'content',
+        type: 'string',
+        description: 'Initial Markdown content.',
+      },
+    ],
+    riskLevel: 'low',
+    confirmRequired: false,
+    targetNav: 'data',
+    targetDataTab: 'knowledge',
+    relatedDomains: [],
+    dependencies: [],
+  },
+  {
     cardId: 'knowledge.file_upload',
     domain: 'knowledge',
     action: 'file_upload',
@@ -480,6 +676,21 @@ const catalog: readonly UiActionCardDefinition[] = [
 
   // ── workflow ─────────────────────────────────────────────────────────────
   {
+    cardId: 'workflow.open',
+    domain: 'workflow',
+    action: 'open',
+    title: 'Open Workflow Panel',
+    description: 'Navigate to the workflow panel to browse and manage workflows.',
+    usage: 'When the user wants to view or manage workflows.',
+    requiredParams: [],
+    optionalParams: [],
+    riskLevel: 'low',
+    confirmRequired: false,
+    targetNav: 'workflow',
+    relatedDomains: ['data', 'schedule', 'template'],
+    dependencies: [],
+  },
+  {
     cardId: 'workflow.copilot_create',
     domain: 'workflow',
     action: 'copilot_create',
@@ -504,6 +715,102 @@ const catalog: readonly UiActionCardDefinition[] = [
     confirmRequired: false,
     targetNav: 'workflow',
     relatedDomains: ['data', 'schedule', 'template'],
+    dependencies: [],
+  },
+  {
+    cardId: 'workflow.template_node',
+    domain: 'workflow',
+    action: 'template_node',
+    title: 'Create Node Template Workflow',
+    description: 'Open the workflow editor with a node template creation flow.',
+    usage: 'When the user wants to create a reusable node template or custom workflow node.',
+    requiredParams: [
+      {
+        name: 'name',
+        type: 'string',
+        description: 'Template or workflow name.',
+      },
+    ],
+    optionalParams: [
+      {
+        name: 'description',
+        type: 'string',
+        description: 'Brief description of the template to create.',
+      },
+      {
+        name: 'copilotPrompt',
+        type: 'string',
+        description: 'Prompt to send to Copilot after navigation.',
+      },
+    ],
+    riskLevel: 'low',
+    confirmRequired: false,
+    targetNav: 'workflow',
+    relatedDomains: ['template'],
+    dependencies: [],
+  },
+  {
+    cardId: 'workflow.template_etl',
+    domain: 'workflow',
+    action: 'template_etl',
+    title: 'Create ETL Workflow from Template',
+    description: 'Open the workflow editor with an ETL template creation flow.',
+    usage: 'When the user wants to create an ETL, data pipeline, or data processing workflow.',
+    requiredParams: [
+      {
+        name: 'name',
+        type: 'string',
+        description: 'Workflow name.',
+      },
+    ],
+    optionalParams: [
+      {
+        name: 'description',
+        type: 'string',
+        description: 'Brief description of the ETL workflow.',
+      },
+      {
+        name: 'copilotPrompt',
+        type: 'string',
+        description: 'Prompt to send to Copilot after navigation.',
+      },
+    ],
+    riskLevel: 'low',
+    confirmRequired: false,
+    targetNav: 'workflow',
+    relatedDomains: ['data', 'schedule'],
+    dependencies: [],
+  },
+  {
+    cardId: 'workflow.template_report',
+    domain: 'workflow',
+    action: 'template_report',
+    title: 'Create Report Workflow from Template',
+    description: 'Open the workflow editor with a report template creation flow.',
+    usage: 'When the user wants to create a reporting or dashboard generation workflow.',
+    requiredParams: [
+      {
+        name: 'name',
+        type: 'string',
+        description: 'Workflow name.',
+      },
+    ],
+    optionalParams: [
+      {
+        name: 'description',
+        type: 'string',
+        description: 'Brief description of the report workflow.',
+      },
+      {
+        name: 'copilotPrompt',
+        type: 'string',
+        description: 'Prompt to send to Copilot after navigation.',
+      },
+    ],
+    riskLevel: 'low',
+    confirmRequired: false,
+    targetNav: 'workflow',
+    relatedDomains: ['data', 'schedule'],
     dependencies: [],
   },
 
@@ -542,6 +849,18 @@ const catalog: readonly UiActionCardDefinition[] = [
     dependencies: ['workflow.copilot_create'],
   },
 ] as const;
+
+const catalog: readonly UiActionCardDefinition[] = baseCatalog.map((entry) => {
+  const metadata = presentationMetadataByCardId[entry.cardId];
+  if (!metadata) {
+    throw new Error(`Missing action-card presentation metadata: ${entry.cardId}`);
+  }
+
+  return {
+    ...entry,
+    ...metadata,
+  };
+});
 
 // ---------------------------------------------------------------------------
 // Index for fast lookup

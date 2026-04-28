@@ -61,6 +61,32 @@ describe('SearchUiActionCardTool', () => {
     expect(result.error).toContain('Invalid regex');
   });
 
+  it('returns presentation and i18n metadata for every catalog result', async () => {
+    const tool = ToolRegistry.get(ToolName.SearchUiActionCard);
+    const result = await tool.execute({
+      query: '.*',
+      queryMode: 'regex',
+      maxResults: 100,
+    });
+
+    expect(result.success).toBe(true);
+    expect(Array.isArray(result.data)).toBe(true);
+
+    const cards = result.data as Array<{
+      presentationMode?: string;
+      confirmationMode?: string;
+      titleKey?: string;
+      summaryKey?: string;
+    }>;
+    expect(cards.length).toBeGreaterThan(0);
+    for (const card of cards) {
+      expect(card.presentationMode).toBeTruthy();
+      expect(card.confirmationMode).toBeTruthy();
+      expect(card.titleKey).toBeTruthy();
+      expect(card.summaryKey).toBeTruthy();
+    }
+  });
+
   it('returns cards filtered by domain "knowledge" for query "folder"', async () => {
     const tool = ToolRegistry.get(ToolName.SearchUiActionCard);
     const result = await tool.execute({ query: 'folder', domain: 'knowledge' });

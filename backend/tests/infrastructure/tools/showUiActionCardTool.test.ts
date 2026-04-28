@@ -127,4 +127,21 @@ describe('ShowUiActionCardTool', () => {
     const cardPayload = result.metadata?.cardPayload as UiActionCardPayload;
     expect(cardPayload.copilotPrompt).toBe('Create a daily ETL workflow');
   });
+
+  it('includes presentation and i18n metadata in workflow copilot cardPayload', async () => {
+    const tool = ToolRegistry.get(ToolName.ShowUiActionCard);
+    const result = await tool.execute({ cardId: 'workflow.copilot_create' });
+
+    expect(result.success).toBe(true);
+
+    const cardPayload = result.metadata?.cardPayload as UiActionCardPayload;
+    expect(cardPayload.presentationMode).toBe('deferred_navigation');
+    expect(cardPayload.confirmationMode).toBe('modal');
+    expect(cardPayload.titleKey).toBe('chat.actionCards.workflow.copilotCreate.title');
+    expect(cardPayload.summaryKey).toBe('chat.actionCards.workflow.copilotCreate.summary');
+    expect(cardPayload.title).toBe('Create Workflow with Copilot');
+    expect(cardPayload.summary).toBe(
+      'Launch the workflow copilot to design and create a new workflow.'
+    );
+  });
 });

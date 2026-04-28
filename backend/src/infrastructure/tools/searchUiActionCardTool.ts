@@ -42,6 +42,10 @@ card IDs, titles, descriptions, usage text, and parameter descriptions.`;
         description:
           'Search mode. Use "text" for whitespace token matching or "regex" for grep-like regular expression matching.',
       },
+      maxResults: {
+        type: 'number',
+        description: 'Maximum number of matching cards to return.',
+      },
     },
     required: ['query'],
   };
@@ -68,6 +72,7 @@ card IDs, titles, descriptions, usage text, and parameter descriptions.`;
     const query = params.query as string;
     const domain = params.domain as ActionDomain | undefined;
     const queryMode = (params.queryMode as SearchQueryMode | undefined) ?? 'text';
+    const maxResults = typeof params.maxResults === 'number' ? params.maxResults : undefined;
 
     if (queryMode !== 'text' && queryMode !== 'regex') {
       const errorMessage = 'queryMode must be either text or regex';
@@ -103,7 +108,7 @@ card IDs, titles, descriptions, usage text, and parameter descriptions.`;
 
     logger.info('Searching UI action card catalog', { query, domain, queryMode });
 
-    const cards = searchCatalog(query, { domain, queryMode });
+    const cards = searchCatalog(query, { domain, queryMode, maxResults });
 
     logger.info('SearchUiActionCardTool completed', {
       query,

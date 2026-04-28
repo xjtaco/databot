@@ -1,6 +1,8 @@
 export type ActionDomain = 'data' | 'knowledge' | 'schedule' | 'workflow' | 'template';
 export type RiskLevel = 'low' | 'medium' | 'high' | 'danger';
 export type ExecutionMode = 'frontend';
+export type ActionCardPresentationMode = 'inline_form' | 'navigate' | 'deferred_navigation';
+export type ActionCardConfirmationMode = 'none' | 'modal';
 export type CardStatus =
   | 'proposed'
   | 'confirming'
@@ -22,6 +24,10 @@ export interface UiActionCardDefinition {
   action: string;
   title: string;
   description: string;
+  presentationMode: ActionCardPresentationMode;
+  confirmationMode: ActionCardConfirmationMode;
+  titleKey: string;
+  summaryKey: string;
   usage: string;
   requiredParams: UiActionCardParamDefinition[];
   optionalParams: UiActionCardParamDefinition[];
@@ -40,6 +46,10 @@ export interface UiActionCardPayload {
   action: string;
   title: string;
   summary: string;
+  presentationMode?: ActionCardPresentationMode;
+  confirmationMode?: ActionCardConfirmationMode;
+  titleKey?: string;
+  summaryKey?: string;
   params: Record<string, unknown>;
   riskLevel: RiskLevel;
   confirmRequired: boolean;

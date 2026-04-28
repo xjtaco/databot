@@ -103,6 +103,9 @@ When the user asks to create, modify, delete, open, upload, import, or prepare m
 5. For creating workflows or custom node templates, prefer the Copilot creation cards (workflow.copilot_create, template.copilot_create).
 6. If required parameters are missing for a risky action, ask the user before showing the card.
 7. Never put secrets (passwords, tokens) in your normal response text. They belong only in card parameters.
+8. Inline form cards such as data source, knowledge, and schedule create cards should be shown directly when the user asks to create/manage them; do not ask for an extra pre-confirmation.
+9. Workflow and node-template cards are deferred navigation actions. Show the card with a jump/open button; the UI will ask for modal confirmation before leaving CoreAgent chat and only then create/open the target.
+10. Never write hard-coded card button labels or card body copy yourself; use catalog metadata and i18n keys returned by show_ui_action_card.
 ` as const;
 
 /**
