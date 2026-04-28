@@ -56,7 +56,7 @@
       <el-button
         type="primary"
         :loading="isUploading"
-        :disabled="selectedFiles.length === 0"
+        :disabled="selectedFiles.length === 0 || isUploading"
         @click="handleUpload"
       >
         {{
@@ -81,7 +81,10 @@ const ACCEPTED_EXTENSIONS = ['.csv', '.xls', '.xlsx', '.db', '.sqlite', '.sqlite
 const SQLITE_EXTENSIONS = ['.db', '.sqlite', '.sqlite3'];
 const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
 
-defineProps<{ payload: UiActionCardPayload }>();
+const props = defineProps<{
+  payload: UiActionCardPayload;
+  requestConfirmation?: () => Promise<boolean>;
+}>();
 
 const emit = defineEmits<{
   submit: [status: 'succeeded' | 'failed', opts?: { resultSummary?: string; error?: string }];
@@ -152,6 +155,7 @@ function removeFile(index: number): void {
 }
 
 async function handleUpload(): Promise<void> {
+  if (isUploading.value) return;
   if (selectedFiles.value.length === 0) return;
 
   isUploading.value = true;
@@ -159,6 +163,7 @@ async function handleUpload(): Promise<void> {
   const files = [...selectedFiles.value];
 
   try {
+    if (!(await confirmIfNeeded())) return;
     for (const file of files) {
       if (isSqliteFile(file.name)) {
         await datafileStore.uploadSqliteFile(file);
@@ -179,6 +184,14 @@ async function handleUpload(): Promise<void> {
   } finally {
     isUploading.value = false;
   }
+}
+
+async function confirmIfNeeded(): Promise<boolean> {
+  if (props.payload.confirmationMode !== 'modal') {
+    return true;
+  }
+
+  return props.requestConfirmation ? props.requestConfirmation() : true;
 }
 </script>
 

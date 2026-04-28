@@ -190,7 +190,10 @@ const SCHEMA_SUPPORTED_TYPES: Set<DatabaseType> = new Set([
   'prestodb',
 ]);
 
-const props = defineProps<{ payload: UiActionCardPayload }>();
+const props = defineProps<{
+  payload: UiActionCardPayload;
+  requestConfirmation?: () => Promise<boolean>;
+}>();
 
 const emit = defineEmits<{
   submit: [status: 'succeeded' | 'failed', opts?: { resultSummary?: string; error?: string }];
@@ -350,12 +353,15 @@ async function handleTestConnection(): Promise<void> {
 }
 
 async function handleSubmit(): Promise<void> {
+  if (isSubmitting.value) return;
+
   const valid = await formRef.value?.validate().catch(() => false);
   if (!valid) return;
 
   feedbackMessage.value = '';
   isSubmitting.value = true;
   try {
+    if (!(await confirmIfNeeded())) return;
     const config = buildConfig();
     await datafileStore.createDatasource(config);
     emit('submit', 'succeeded', {
@@ -370,6 +376,14 @@ async function handleSubmit(): Promise<void> {
   } finally {
     isSubmitting.value = false;
   }
+}
+
+async function confirmIfNeeded(): Promise<boolean> {
+  if (props.payload.confirmationMode !== 'modal') {
+    return true;
+  }
+
+  return props.requestConfirmation ? props.requestConfirmation() : true;
 }
 </script>
 

@@ -2,20 +2,27 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { mount, type VueWrapper } from '@vue/test-utils';
 import { createI18n } from 'vue-i18n';
 import { createPinia, setActivePinia } from 'pinia';
-import { nextTick } from 'vue';
+import { defineComponent, h, nextTick } from 'vue';
 import ActionCard from '@/components/chat/ActionCard.vue';
 import type { ChatActionCard } from '@/types/actionCard';
 import enUS from '@/locales/en-US';
 import zhCN from '@/locales/zh-CN';
 
-const { executeActionMock, inlineCreateMock, listFolderTreeMock, knowledgeApiMock } = vi.hoisted(
-  () => ({
-    executeActionMock: vi.fn(),
-    inlineCreateMock: vi.fn(),
-    listFolderTreeMock: vi.fn(),
-    knowledgeApiMock: vi.fn(),
-  })
-);
+const {
+  executeActionMock,
+  inlineCreateMock,
+  listFolderTreeMock,
+  knowledgeApiMock,
+  createDatasourceMock,
+  datafileApiMock,
+} = vi.hoisted(() => ({
+  executeActionMock: vi.fn(),
+  inlineCreateMock: vi.fn(),
+  listFolderTreeMock: vi.fn(),
+  knowledgeApiMock: vi.fn(),
+  createDatasourceMock: vi.fn(),
+  datafileApiMock: vi.fn(),
+}));
 
 vi.mock('@/components/chat/actionCards', () => ({
   executeAction: executeActionMock,
@@ -31,17 +38,25 @@ vi.mock('@/api/knowledge', () => ({
   deleteFile: knowledgeApiMock,
 }));
 
-vi.mock('@/components/chat/actionCards/forms/InlineDataCreateForm.vue', async () => {
-  const { defineComponent } = await vi.importActual<typeof import('vue')>('vue');
+vi.mock('@/api/datasource', () => ({
+  createDatasource: createDatasourceMock,
+  testConnection: datafileApiMock,
+  updateDatasource: datafileApiMock,
+  deleteDatasource: datafileApiMock,
+}));
 
-  return {
-    __esModule: true,
-    default: defineComponent({
-      name: 'InlineDataCreateFormStub',
-      template: '<div class="inline-data-create-form-stub"></div>',
-    }),
-  };
-});
+vi.mock('@/api/datafile', () => ({
+  uploadFile: datafileApiMock,
+  uploadSqliteFile: datafileApiMock,
+  listTables: datafileApiMock,
+  listDatasources: datafileApiMock,
+  getTable: datafileApiMock,
+  getDictionaryContent: datafileApiMock,
+  updateTable: datafileApiMock,
+  deleteTable: datafileApiMock,
+  deleteDatasource: datafileApiMock,
+  getTablePreview: datafileApiMock,
+}));
 
 const i18n = createI18n({
   legacy: false,
@@ -78,6 +93,17 @@ describe('ActionCard.vue', () => {
     inlineCreateMock.mockResolvedValue(undefined);
     listFolderTreeMock.mockResolvedValue({ folders: [] });
     knowledgeApiMock.mockResolvedValue(undefined);
+    createDatasourceMock.mockResolvedValue({
+      datasourceId: 'ds-1',
+      databaseName: 'analytics',
+      tableIds: [],
+    });
+    datafileApiMock.mockImplementation((arg?: unknown) => {
+      if (arg instanceof File) {
+        return Promise.resolve({ tableIds: ['table-1'] });
+      }
+      return Promise.resolve({ tables: [], datasources: [] });
+    });
   });
 
   afterEach(() => {
@@ -93,6 +119,7 @@ describe('ActionCard.vue', () => {
         stubs: {
           teleport: true,
           'el-button': {
+            inheritAttrs: false,
             template: `
               <button
                 class="el-button-stub"
@@ -103,6 +130,7 @@ describe('ActionCard.vue', () => {
                 <slot />
               </button>
             `,
+            emits: ['click'],
             props: ['size', 'type', 'nativeType', 'disabled'],
           },
           'el-input': {
@@ -110,16 +138,54 @@ describe('ActionCard.vue', () => {
               '<input class="el-input-stub" :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value)" />',
             props: ['modelValue', 'size', 'placeholder'],
           },
-          'el-form': {
-            template: '<form @submit.prevent="$emit(\'submit\')"><slot /></form>',
-            props: ['labelPosition'],
-          },
+          'el-form': defineComponent({
+            props: ['labelPosition', 'model', 'rules', 'labelWidth'],
+            emits: ['submit'],
+            setup(_, { emit, expose, slots }) {
+              expose({
+                validate: () => Promise.resolve(true),
+              });
+              return () =>
+                h(
+                  'form',
+                  {
+                    onSubmit: (event: Event) => {
+                      event.preventDefault();
+                      emit('submit');
+                    },
+                  },
+                  slots.default?.()
+                );
+            },
+          }),
           'el-form-item': {
             template: '<label><slot /></label>',
-            props: ['label'],
+            props: ['label', 'prop'],
           },
           'el-icon': {
             template: '<span><slot /></span>',
+          },
+          'el-select': {
+            template:
+              '<select :value="modelValue" @change="$emit(\'update:modelValue\', $event.target.value)"><slot /></select>',
+            props: ['modelValue', 'placeholder', 'disabled'],
+          },
+          'el-option': {
+            template: '<option :value="value">{{ label }}</option>',
+            props: ['label', 'value'],
+          },
+          'el-input-number': {
+            template:
+              '<input type="number" :value="modelValue" @input="$emit(\'update:modelValue\', Number($event.target.value))" />',
+            props: ['modelValue', 'min', 'max', 'disabled', 'controlsPosition'],
+          },
+          'el-radio-group': {
+            template: '<div><slot /></div>',
+            props: ['modelValue', 'disabled'],
+          },
+          'el-radio': {
+            template: '<label><slot /></label>',
+            props: ['value'],
           },
           FolderTreeSelector: {
             template: '<div class="folder-tree-selector-stub"></div>',
@@ -161,6 +227,21 @@ describe('ActionCard.vue', () => {
     }
 
     throw new Error('Inline folder submit button was not rendered');
+  }
+
+  async function triggerDatasourceSubmit(wrapper: VueWrapper): Promise<void> {
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      await vi.dynamicImportSettled();
+      await nextTick();
+
+      const formButtons = wrapper.findAll('.form-actions__right button');
+      if (formButtons[1]) {
+        await formButtons[1].trigger('click');
+        return;
+      }
+    }
+
+    throw new Error('Datasource submit button was not rendered');
   }
 
   it('renders localized card title and summary from payload keys', () => {
@@ -383,6 +464,72 @@ describe('ActionCard.vue', () => {
       wrapper.find('.inline-folder-submit').exists() ||
         wrapper.find('.knowledge-folder-form').exists()
     ).toBe(true);
+  });
+
+  it('opens modal before modal-confirm datasource create submits final create', async () => {
+    const card = makeCard({
+      status: 'editing',
+      payload: {
+        ...makeCard().payload,
+        domain: 'data',
+        action: 'datasource_create',
+        presentationMode: 'inline_form',
+        confirmationMode: 'modal',
+        params: {
+          type: 'postgresql',
+          host: 'localhost',
+          port: 5432,
+          database: 'analytics',
+          user: 'reporter',
+          password: 'secret',
+        },
+      },
+    });
+    const wrapper = mountActionCard(card);
+    await vi.dynamicImportSettled();
+
+    await triggerDatasourceSubmit(wrapper);
+    await vi.dynamicImportSettled();
+
+    expect(wrapper.find('.confirm-dialog-stub').exists()).toBe(true);
+    expect(createDatasourceMock).not.toHaveBeenCalled();
+    expect(wrapper.emitted('statusChange')).toBeUndefined();
+
+    await wrapper.find('.confirm-dialog-confirm').trigger('click');
+    await vi.dynamicImportSettled();
+
+    expect(createDatasourceMock).toHaveBeenCalledTimes(1);
+    expect(wrapper.emitted('statusChange')?.[0]?.[1]).toBe('succeeded');
+  });
+
+  it('submits non-modal datasource create directly', async () => {
+    const card = makeCard({
+      status: 'editing',
+      payload: {
+        ...makeCard().payload,
+        domain: 'data',
+        action: 'datasource_create',
+        presentationMode: 'inline_form',
+        confirmationMode: 'none',
+        params: {
+          type: 'postgresql',
+          host: 'localhost',
+          port: 5432,
+          database: 'analytics',
+          user: 'reporter',
+          password: 'secret',
+        },
+      },
+    });
+    const wrapper = mountActionCard(card);
+    await vi.dynamicImportSettled();
+
+    await triggerDatasourceSubmit(wrapper);
+    await vi.dynamicImportSettled();
+
+    expect(wrapper.find('.confirm-dialog-stub').exists()).toBe(false);
+    expect(createDatasourceMock).toHaveBeenCalledTimes(1);
+    expect(wrapper.emitted('statusChange')?.[0]?.[1]).toBe('succeeded');
   });
 
   it('submits non-modal inline forms directly', async () => {
