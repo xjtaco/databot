@@ -577,6 +577,40 @@ describe('ActionCard.vue', () => {
     expect(wrapper.emitted('statusChange')?.[0]?.[1]).toBe('succeeded');
   });
 
+  it('creates knowledge files as inline markdown uploads', async () => {
+    const card = makeCard({
+      status: 'editing',
+      payload: {
+        ...makeCard().payload,
+        cardId: 'knowledge.file_create',
+        domain: 'knowledge',
+        action: 'file_create',
+        presentationMode: 'inline_form',
+        confirmationMode: 'none',
+        params: {
+          folderId: 'folder-1',
+          name: 'Research Notes',
+          content: '# Notes',
+        },
+      },
+    });
+    const wrapper = mountActionCard(card);
+    await vi.dynamicImportSettled();
+
+    const createButtons = wrapper.findAll('.knowledge-file-form__actions button');
+    expect(createButtons[1]).toBeDefined();
+    await createButtons[1].trigger('click');
+    await vi.dynamicImportSettled();
+
+    expect(knowledgeApiMock).toHaveBeenCalledTimes(1);
+    const [folderId, files] = knowledgeApiMock.mock.calls[0] as [string, File[]];
+    expect(folderId).toBe('folder-1');
+    expect(files[0].name).toBe('Research Notes.md');
+    expect(files[0].size).toBeGreaterThan(0);
+    expect(files[0].type).toBe('text/markdown');
+    expect(wrapper.emitted('statusChange')?.[0]?.[1]).toBe('succeeded');
+  });
+
   it('deletes schedules using scheduleId payload parameter', async () => {
     const card = makeCard({
       status: 'editing',

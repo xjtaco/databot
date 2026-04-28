@@ -4,6 +4,7 @@ import type { UiActionCardPayload } from '@/types/actionCard';
 import type { DatabaseDatasourceType } from '@/types/datafile';
 import type { NodeConfig, WorkflowNodeType } from '@/types/workflow';
 import { useNavigationStore } from '@/stores/navigationStore';
+import { i18n } from '@/locales';
 
 // ── Navigation Handlers ────────────────────────────────────
 
@@ -12,7 +13,7 @@ function navigationHandler(
   targetTab?: 'data' | 'knowledge'
 ): ActionHandler {
   return async (
-    payload: UiActionCardPayload,
+    _payload: UiActionCardPayload,
     _callbacks: ActionCallbacks
   ): Promise<ActionResult> => {
     const navigationStore = useNavigationStore();
@@ -20,7 +21,7 @@ function navigationHandler(
       navigationStore.setPendingIntent({ type: 'open_data_management', tab: targetTab });
     }
     navigationStore.navigateTo(targetNav);
-    return { success: true, summary: `Navigated to ${payload.title}` };
+    return { success: true };
   };
 }
 
@@ -31,6 +32,10 @@ registerActionHandler('workflow', 'open', navigationHandler('workflow'));
 
 // ── Workflow Handlers ──────────────────────────────────────
 
+function t(key: string, params?: Record<string, string>): string {
+  return i18n.global.t(key, params ?? {});
+}
+
 function getParamString(payload: UiActionCardPayload, key: string): string | undefined {
   const value = payload.params[key];
   return typeof value === 'string' && value.trim() ? value : undefined;
@@ -40,8 +45,8 @@ function getCopilotPrompt(payload: UiActionCardPayload): string | undefined {
   return payload.copilotPrompt ?? getParamString(payload, 'copilotPrompt');
 }
 
-function getWorkflowName(payload: UiActionCardPayload, fallback: string): string {
-  return getParamString(payload, 'name') ?? fallback;
+function getWorkflowName(payload: UiActionCardPayload, fallbackKey: string): string {
+  return getParamString(payload, 'name') ?? t(fallbackKey);
 }
 
 function getDescription(payload: UiActionCardPayload): string | undefined {
@@ -50,10 +55,10 @@ function getDescription(payload: UiActionCardPayload): string | undefined {
 
 async function createWorkflowAndOpen(
   payload: UiActionCardPayload,
-  fallbackName: string
+  fallbackNameKey: string
 ): Promise<ActionResult> {
   const navigationStore = useNavigationStore();
-  const name = getWorkflowName(payload, fallbackName);
+  const name = getWorkflowName(payload, fallbackNameKey);
   const description = getDescription(payload);
   const copilotPrompt = getCopilotPrompt(payload);
 
@@ -71,13 +76,18 @@ async function createWorkflowAndOpen(
 
     return {
       success: true,
-      summary: `Created workflow "${name}"${copilotPrompt ? ' and sent prompt to Copilot' : ''}`,
+      summary: t(
+        copilotPrompt
+          ? 'chat.actionCards.results.workflowCreatedWithCopilot'
+          : 'chat.actionCards.results.workflowCreated',
+        { name }
+      ),
     };
   } catch (err) {
     return {
       success: false,
       error: err instanceof Error ? err.message : String(err),
-      summary: 'Failed to create workflow.',
+      summary: t('chat.actionCards.results.workflowCreateFailed'),
     };
   }
 }
@@ -145,7 +155,7 @@ function createDefaultNodeConfig(nodeType: WorkflowNodeType): NodeConfig {
 
 async function createTemplateAndOpen(payload: UiActionCardPayload): Promise<ActionResult> {
   const navigationStore = useNavigationStore();
-  const name = getWorkflowName(payload, 'Untitled Template');
+  const name = getWorkflowName(payload, 'chat.actionCards.results.untitledTemplate');
   const description = getDescription(payload);
   const copilotPrompt = getCopilotPrompt(payload);
   const nodeType = parseWorkflowNodeType(payload.params.nodeType);
@@ -168,13 +178,18 @@ async function createTemplateAndOpen(payload: UiActionCardPayload): Promise<Acti
 
     return {
       success: true,
-      summary: `Created template "${name}"${copilotPrompt ? ' and sent prompt to Copilot' : ''}`,
+      summary: t(
+        copilotPrompt
+          ? 'chat.actionCards.results.templateCreatedWithCopilot'
+          : 'chat.actionCards.results.templateCreated',
+        { name }
+      ),
     };
   } catch (err) {
     return {
       success: false,
       error: err instanceof Error ? err.message : String(err),
-      summary: 'Failed to create template.',
+      summary: t('chat.actionCards.results.templateCreateFailed'),
     };
   }
 }
@@ -183,7 +198,7 @@ registerActionHandler(
   'workflow',
   'copilot_create',
   async (payload: UiActionCardPayload, _callbacks: ActionCallbacks): Promise<ActionResult> =>
-    createWorkflowAndOpen(payload, 'Untitled Workflow')
+    createWorkflowAndOpen(payload, 'chat.actionCards.results.untitledWorkflow')
 );
 
 registerActionHandler(
@@ -197,14 +212,14 @@ registerActionHandler(
   'workflow',
   'template_etl',
   async (payload: UiActionCardPayload, _callbacks: ActionCallbacks): Promise<ActionResult> =>
-    createWorkflowAndOpen(payload, 'Untitled ETL Workflow')
+    createWorkflowAndOpen(payload, 'chat.actionCards.results.untitledEtlWorkflow')
 );
 
 registerActionHandler(
   'workflow',
   'template_report',
   async (payload: UiActionCardPayload, _callbacks: ActionCallbacks): Promise<ActionResult> =>
-    createWorkflowAndOpen(payload, 'Untitled Report Workflow')
+    createWorkflowAndOpen(payload, 'chat.actionCards.results.untitledReportWorkflow')
 );
 
 // ── Template copilot_create Handler ────────────────────────
@@ -214,7 +229,7 @@ registerActionHandler(
   'copilot_create',
   async (payload: UiActionCardPayload, _callbacks: ActionCallbacks): Promise<ActionResult> => {
     const navigationStore = useNavigationStore();
-    const name = getWorkflowName(payload, 'Untitled Template');
+    const name = getWorkflowName(payload, 'chat.actionCards.results.untitledTemplate');
     const description = getDescription(payload);
     const copilotPrompt = getCopilotPrompt(payload);
     const nodeType = parseWorkflowNodeType(payload.params.nodeType);
@@ -237,13 +252,18 @@ registerActionHandler(
 
       return {
         success: true,
-        summary: `Created template "${name}"${copilotPrompt ? ' and sent prompt to Copilot' : ''}`,
+        summary: t(
+          copilotPrompt
+            ? 'chat.actionCards.results.templateCreatedWithCopilot'
+            : 'chat.actionCards.results.templateCreated',
+          { name }
+        ),
       };
     } catch (err) {
       return {
         success: false,
         error: err instanceof Error ? err.message : String(err),
-        summary: 'Failed to create template.',
+        summary: t('chat.actionCards.results.templateCreateFailed'),
       };
     }
   }
@@ -260,7 +280,7 @@ registerActionHandler(
     navigationStore.navigateTo('data');
     return {
       success: false,
-      summary: 'Please test the datasource connection from the Data Management page.',
+      summary: t('chat.actionCards.results.datasourceTestNavigate'),
     };
   }
 );
@@ -277,7 +297,7 @@ registerActionHandler(
       const datasourceId = payload.params.datasourceId as string;
       const datasourceType = payload.params.type as string;
       await datafileStore.deleteDatasource(datasourceId, datasourceType as DatabaseDatasourceType);
-      return { success: true, summary: 'Datasource deleted successfully.' };
+      return { success: true, summary: t('chat.actionCards.results.datasourceDeleted') };
     } catch (err) {
       return { success: false, error: err instanceof Error ? err.message : String(err) };
     }

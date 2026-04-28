@@ -1,7 +1,47 @@
 <template>
   <div class="knowledge-file-form">
+    <!-- file_create -->
+    <template v-if="payload.action === 'file_create'">
+      <div class="knowledge-file-form__section">
+        <el-form label-position="top" @submit.prevent="handleCreate">
+          <el-form-item :label="t('knowledge.fileName')">
+            <el-input v-model="createFileName" :placeholder="t('knowledge.fileNamePlaceholder')" />
+          </el-form-item>
+          <el-form-item :label="t('knowledge.selectTargetFolder')">
+            <FolderTreeSelector
+              :folders="knowledgeStore.folderTree"
+              :selected-folder-id="createFolderId"
+              :show-root="false"
+              @update:selected-folder-id="createFolderId = $event"
+            />
+          </el-form-item>
+          <el-form-item :label="t('knowledge.fileContent')">
+            <el-input
+              v-model="createContent"
+              type="textarea"
+              :rows="6"
+              :placeholder="t('knowledge.fileContentPlaceholder')"
+            />
+          </el-form-item>
+        </el-form>
+      </div>
+
+      <div class="knowledge-file-form__actions">
+        <el-button size="small" @click="emit('cancel')">{{ t('common.cancel') }}</el-button>
+        <el-button
+          type="primary"
+          size="small"
+          :loading="isSubmitting"
+          :disabled="!canCreate || submitting"
+          @click="handleCreate"
+        >
+          {{ t('common.create') }}
+        </el-button>
+      </div>
+    </template>
+
     <!-- file_upload -->
-    <template v-if="payload.action === 'file_upload'">
+    <template v-else-if="payload.action === 'file_upload'">
       <div class="knowledge-file-form__section">
         <div class="knowledge-file-form__label">{{ t('knowledge.selectTargetFolder') }}</div>
         <FolderTreeSelector
@@ -156,6 +196,11 @@ const emit = defineEmits<{
 const { t } = useI18n();
 const knowledgeStore = useKnowledgeStore();
 
+// --- file_create state ---
+const createFolderId = ref<string | null>((props.payload.params.folderId as string) ?? null);
+const createFileName = ref((props.payload.params.name as string) ?? '');
+const createContent = ref((props.payload.params.content as string) ?? '');
+
 // --- file_upload state ---
 const uploadFolderId = ref<string | null>((props.payload.params.folderId as string) ?? null);
 const selectedFiles = ref<File[]>([]);
@@ -165,6 +210,7 @@ const submitting = ref(false);
 
 const uploadPath = computed(() => getFolderPath(knowledgeStore.folderTree, uploadFolderId.value));
 
+const canCreate = computed(() => createFolderId.value !== null && createFileName.value.trim());
 const canUpload = computed(() => uploadFolderId.value !== null && selectedFiles.value.length > 0);
 const isSubmitting = computed(() => knowledgeStore.isLoading || submitting.value);
 
@@ -223,6 +269,29 @@ function handleFileInputChange(event: Event): void {
 
 function removeFile(index: number): void {
   selectedFiles.value.splice(index, 1);
+}
+
+function normalizeMarkdownFileName(name: string): string {
+  const trimmed = name.trim();
+  return trimmed.endsWith('.md') || trimmed.endsWith('.markdown') ? trimmed : `${trimmed}.md`;
+}
+
+async function handleCreate(): Promise<void> {
+  if (submitting.value) return;
+  if (!createFolderId.value || !createFileName.value.trim()) return;
+  submitting.value = true;
+  try {
+    if (!(await confirmIfNeeded())) return;
+    const file = new File([createContent.value], normalizeMarkdownFileName(createFileName.value), {
+      type: 'text/markdown',
+    });
+    await knowledgeStore.uploadFiles(createFolderId.value, [file]);
+    emit('submit', 'succeeded', { resultSummary: t('knowledge.createFileSuccess') });
+  } catch {
+    emit('submit', 'failed', { error: t('knowledge.createFileFailed') });
+  } finally {
+    submitting.value = false;
+  }
 }
 
 async function handleUpload(): Promise<void> {

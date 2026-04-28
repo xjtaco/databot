@@ -55,7 +55,6 @@ describe('chatStore action card actions', () => {
     const unsupportedCards: Partial<UiActionCardPayload>[] = [
       { cardId: 'data.datasource_test', domain: 'data', action: 'datasource_test' },
       { cardId: 'data.datasource_delete', domain: 'data', action: 'datasource_delete' },
-      { cardId: 'knowledge.file_create', domain: 'knowledge', action: 'file_create' },
     ];
 
     for (const payload of unsupportedCards) {
@@ -65,6 +64,21 @@ describe('chatStore action card actions', () => {
       const msg = store.messages[store.messages.length - 1];
       expect(msg.actionCards![0].status).toBe('proposed');
     }
+  });
+
+  it('initializes knowledge file create inline form action cards as editing', () => {
+    const store = useChatStore();
+    store.addAssistantMessage('Inline form:');
+    store.addActionCard(
+      makePayload({
+        cardId: 'knowledge.file_create',
+        domain: 'knowledge',
+        action: 'file_create',
+        presentationMode: 'inline_form',
+      })
+    );
+    const msg = store.messages[store.messages.length - 1];
+    expect(msg.actionCards![0].status).toBe('editing');
   });
 
   it('initializes deferred navigation action cards as proposed', () => {
@@ -147,7 +161,7 @@ describe('chatStore action card actions', () => {
     expect(msg.actionCards![0].status).toBe('editing');
   });
 
-  it('loadHistoricalMessages restores unsupported initial inline form action cards as proposed', () => {
+  it('loadHistoricalMessages restores knowledge file create inline form action cards as editing', () => {
     const store = useChatStore();
     store.loadHistoricalMessages([
       { role: 'assistant', content: 'Here is the card:', createdAt: '2026-01-01T00:00:00Z' },
@@ -168,7 +182,7 @@ describe('chatStore action card actions', () => {
       },
     ]);
     const msg = store.messages[store.messages.length - 1];
-    expect(msg.actionCards![0].status).toBe('proposed');
+    expect(msg.actionCards![0].status).toBe('editing');
   });
 
   it('loadHistoricalMessages keeps terminal inline form action card status', () => {

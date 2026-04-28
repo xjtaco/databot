@@ -2,6 +2,7 @@ import { describe, it, expect, beforeAll, beforeEach, vi } from 'vitest';
 import { createPinia, setActivePinia } from 'pinia';
 import { executeAction, getRegistry } from '@/components/chat/actionCards/actionCardRegistry';
 import { useNavigationStore } from '@/stores/navigationStore';
+import { i18n } from '@/locales';
 import type { UiActionCardPayload } from '@/types/actionCard';
 
 const { createTemplateMock, createWorkflowMock } = vi.hoisted(() => ({
@@ -48,6 +49,8 @@ describe('action card handlers', () => {
 
   beforeEach(() => {
     setActivePinia(createPinia());
+    vi.clearAllMocks();
+    i18n.global.locale.value = 'en-US';
     createWorkflowMock.mockResolvedValue('workflow-1');
     createTemplateMock.mockResolvedValue({
       id: 'template-1',
@@ -115,6 +118,23 @@ describe('action card handlers', () => {
     const navigationStore = useNavigationStore();
     expect(result.success).toBe(true);
     expect(navigationStore.activeNav).toBe('workflow');
+  });
+
+  it('returns localized workflow creation summaries', async () => {
+    const result = await executeAction(
+      makePayload({
+        cardId: 'workflow.template_etl',
+        action: 'template_etl',
+        params: { name: 'Daily ETL' },
+      }),
+      {
+        setStatus: vi.fn(),
+        setResult: vi.fn(),
+        setError: vi.fn(),
+      }
+    );
+
+    expect(result.summary).toBe('Workflow created: Daily ETL');
   });
 
   it('executes workflow.template_node by creating a template and opening it', async () => {
@@ -189,6 +209,7 @@ describe('action card handlers', () => {
       'knowledge:folder_rename',
       'knowledge:folder_move',
       'knowledge:folder_delete',
+      'knowledge:file_create',
       'knowledge:file_upload',
       'knowledge:file_move',
       'knowledge:file_delete',

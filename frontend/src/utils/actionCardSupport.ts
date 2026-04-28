@@ -5,6 +5,7 @@ const INLINE_FORM_ACTION_KEYS = new Set([
   'knowledge:folder_rename',
   'knowledge:folder_move',
   'knowledge:folder_delete',
+  'knowledge:file_create',
   'knowledge:file_upload',
   'knowledge:file_move',
   'knowledge:file_delete',

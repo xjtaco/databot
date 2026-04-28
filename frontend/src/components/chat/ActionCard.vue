@@ -144,6 +144,7 @@ const formComponentMap: Record<string, () => Promise<{ default: Component }>> = 
   'knowledge:folder_rename': InlineKnowledgeFolderForm,
   'knowledge:folder_move': InlineKnowledgeFolderForm,
   'knowledge:folder_delete': InlineKnowledgeFolderForm,
+  'knowledge:file_create': InlineKnowledgeFileForm,
   'knowledge:file_upload': InlineKnowledgeFileForm,
   'knowledge:file_move': InlineKnowledgeFileForm,
   'knowledge:file_delete': InlineKnowledgeFileForm,
