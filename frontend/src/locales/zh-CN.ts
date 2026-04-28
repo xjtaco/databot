@@ -52,6 +52,7 @@ export default {
     actionCard: {
       proposed: '建议操作',
       confirming: '确认操作',
+      editing: '编辑中...',
       running: '执行中...',
       succeeded: '已完成',
       failed: '执行失败',

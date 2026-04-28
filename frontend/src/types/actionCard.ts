@@ -4,6 +4,7 @@ export type ExecutionMode = 'frontend';
 export type CardStatus =
   | 'proposed'
   | 'confirming'
+  | 'editing'
   | 'running'
   | 'succeeded'
   | 'failed'

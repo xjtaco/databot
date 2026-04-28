@@ -102,4 +102,13 @@ describe('ActionCard.vue', () => {
     });
     expect(wrapper.text()).toContain('Build a sales report');
   });
+
+  it('shows editing status label when card is in editing state', () => {
+    const card = makeCard({ status: 'editing' });
+    const wrapper = mount(ActionCard, {
+      props: { card },
+      global: { plugins: [i18n], stubs: { teleport: true } },
+    });
+    expect(wrapper.text()).toContain('Editing');
+  });
 });

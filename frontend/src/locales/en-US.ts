@@ -52,6 +52,7 @@ export default {
     actionCard: {
       proposed: 'Proposed Action',
       confirming: 'Confirm Action',
+      editing: 'Editing...',
       running: 'Executing...',
       succeeded: 'Completed',
       failed: 'Failed',
