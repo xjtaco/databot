@@ -1,6 +1,7 @@
 import type { ActionResult, ActionHandler } from './actionCardRegistry';
 import { registerActionHandler } from './actionCardRegistry';
 import type { UiActionCardPayload } from '@/types/actionCard';
+import type { DatabaseDatasourceType } from '@/types/datafile';
 import type { NodeConfig, WorkflowNodeType } from '@/types/workflow';
 import { useNavigationStore } from '@/stores/navigationStore';
 
@@ -113,7 +114,7 @@ registerActionHandler(
 registerActionHandler(
   'data',
   'datasource_test',
-  async (payload: UiActionCardPayload): Promise<ActionResult> => {
+  async (_payload: UiActionCardPayload): Promise<ActionResult> => {
     const navigationStore = useNavigationStore();
     navigationStore.setPendingIntent({ type: 'open_data_management', tab: 'data' });
     navigationStore.navigateTo('data');
@@ -135,7 +136,7 @@ registerActionHandler(
       const datafileStore = useDatafileStore();
       const datasourceId = payload.params.datasourceId as string;
       const datasourceType = payload.params.type as string;
-      await datafileStore.deleteDatasource(datasourceId, datasourceType as 'sqlite' | 'database');
+      await datafileStore.deleteDatasource(datasourceId, datasourceType as DatabaseDatasourceType);
       return { success: true, summary: 'Datasource deleted successfully.' };
     } catch (err) {
       return { success: false, error: err instanceof Error ? err.message : String(err) };
