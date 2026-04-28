@@ -9,11 +9,33 @@
           </el-form-item>
           <el-form-item :label="t('knowledge.selectTargetFolder')">
             <FolderTreeSelector
+              v-if="hasFolders"
               :folders="knowledgeStore.folderTree"
               :selected-folder-id="createFolderId"
               :show-root="false"
               @update:selected-folder-id="createFolderId = $event"
             />
+            <div v-else class="knowledge-file-form__folder-create">
+              <el-alert
+                type="warning"
+                :closable="false"
+                :description="t('knowledge.selectFolderFirst')"
+              />
+              <el-input
+                v-model="newFolderName"
+                :placeholder="t('knowledge.folderNamePlaceholder')"
+                clearable
+              />
+              <el-button
+                size="small"
+                type="primary"
+                :loading="submitting"
+                :disabled="!newFolderName.trim() || submitting"
+                @click="handleCreateTargetFolder"
+              >
+                {{ t('common.create') }}
+              </el-button>
+            </div>
           </el-form-item>
           <el-form-item :label="t('knowledge.fileContent')">
             <el-input
@@ -43,13 +65,37 @@
     <!-- file_upload -->
     <template v-else-if="payload.action === 'file_upload'">
       <div class="knowledge-file-form__section">
-        <div class="knowledge-file-form__label">{{ t('knowledge.selectTargetFolder') }}</div>
+        <div class="knowledge-file-form__label">
+          {{ hasFolders ? t('knowledge.selectTargetFolder') : t('knowledge.selectFolderFirst') }}
+        </div>
         <FolderTreeSelector
+          v-if="hasFolders"
           :folders="knowledgeStore.folderTree"
           :selected-folder-id="uploadFolderId"
           :show-root="false"
           @update:selected-folder-id="uploadFolderId = $event"
         />
+        <div v-else class="knowledge-file-form__folder-create">
+          <el-alert
+            type="warning"
+            :closable="false"
+            :description="t('knowledge.selectFolderFirst')"
+          />
+          <el-input
+            v-model="newFolderName"
+            :placeholder="t('knowledge.folderNamePlaceholder')"
+            clearable
+          />
+          <el-button
+            size="small"
+            type="primary"
+            :loading="submitting"
+            :disabled="!newFolderName.trim() || submitting"
+            @click="handleCreateTargetFolder"
+          >
+            {{ t('common.create') }}
+          </el-button>
+        </div>
         <div v-if="uploadPath.length > 0" class="knowledge-file-form__path">
           {{ t('knowledge.currentPath') }}: {{ uploadPath.join(' / ') }}
         </div>
@@ -200,6 +246,7 @@ const knowledgeStore = useKnowledgeStore();
 const createFolderId = ref<string | null>((props.payload.params.folderId as string) ?? null);
 const createFileName = ref((props.payload.params.name as string) ?? '');
 const createContent = ref((props.payload.params.content as string) ?? '');
+const newFolderName = ref((props.payload.params.folderName as string) ?? '');
 
 // --- file_upload state ---
 const uploadFolderId = ref<string | null>((props.payload.params.folderId as string) ?? null);
@@ -213,6 +260,7 @@ const uploadPath = computed(() => getFolderPath(knowledgeStore.folderTree, uploa
 const canCreate = computed(() => createFolderId.value !== null && createFileName.value.trim());
 const canUpload = computed(() => uploadFolderId.value !== null && selectedFiles.value.length > 0);
 const isSubmitting = computed(() => knowledgeStore.isLoading || submitting.value);
+const hasFolders = computed(() => knowledgeStore.folderTree.length > 0);
 
 // --- file_move state ---
 const moveTargetFolderId = ref<string | null>(
@@ -233,6 +281,10 @@ function formatFileSize(bytes: number): string {
 
 // --- file_upload handlers ---
 function addFiles(files: FileList | File[]): void {
+  if (!hasFolders.value) {
+    ElMessage.warning(t('knowledge.selectFolderFirst'));
+    return;
+  }
   for (const file of Array.from(files)) {
     if (!file.name.endsWith('.md') && !file.name.endsWith('.markdown')) {
       ElMessage.warning(t('knowledge.invalidFileType'));
@@ -256,7 +308,33 @@ function handleDrop(event: DragEvent): void {
 }
 
 function openFilePicker(): void {
+  if (!hasFolders.value) {
+    ElMessage.warning(t('knowledge.selectFolderFirst'));
+    return;
+  }
   fileInputRef.value?.click();
+}
+
+async function handleCreateTargetFolder(): Promise<void> {
+  if (submitting.value) return;
+  const folderName = newFolderName.value.trim();
+  if (!folderName) {
+    ElMessage.warning(t('chat.actionCard.inlineForm.folderNameRequired'));
+    return;
+  }
+
+  submitting.value = true;
+  try {
+    if (!(await confirmIfNeeded())) return;
+    const folder = await knowledgeStore.createFolder(folderName, undefined);
+    createFolderId.value = folder.id;
+    uploadFolderId.value = folder.id;
+    newFolderName.value = '';
+  } catch {
+    emit('submit', 'failed', { error: t('common.failed') });
+  } finally {
+    submitting.value = false;
+  }
 }
 
 function handleFileInputChange(event: Event): void {

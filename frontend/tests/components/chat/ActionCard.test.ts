@@ -106,7 +106,18 @@ describe('ActionCard.vue', () => {
     vi.useFakeTimers();
     setActivePinia(createPinia());
     executeActionMock.mockResolvedValue({ success: true, summary: 'Opened successfully' });
-    inlineCreateMock.mockResolvedValue(undefined);
+    inlineCreateMock.mockResolvedValue({
+      folder: {
+        id: 'folder-1',
+        name: 'Research',
+        parentId: null,
+        sortOrder: 0,
+        children: [],
+        files: [],
+        createdAt: '2026-01-01T00:00:00Z',
+        updatedAt: '2026-01-01T00:00:00Z',
+      },
+    });
     listFolderTreeMock.mockResolvedValue({ folders: [] });
     knowledgeApiMock.mockResolvedValue(undefined);
     createDatasourceMock.mockResolvedValue({
@@ -631,6 +642,60 @@ describe('ActionCard.vue', () => {
     expect(files[0].name).toBe('Research Notes.md');
     expect(files[0].size).toBeGreaterThan(0);
     expect(files[0].type).toBe('text/markdown');
+    expect(wrapper.emitted('statusChange')?.[0]?.[1]).toBe('succeeded');
+  });
+
+  it('creates a knowledge folder before uploading when no folders exist', async () => {
+    const folder = {
+      id: 'folder-1',
+      name: 'Uploads',
+      parentId: null,
+      sortOrder: 0,
+      children: [],
+      files: [],
+      createdAt: '2026-01-01T00:00:00Z',
+      updatedAt: '2026-01-01T00:00:00Z',
+    };
+    inlineCreateMock.mockResolvedValue({ folder });
+    listFolderTreeMock
+      .mockResolvedValueOnce({ folders: [] })
+      .mockResolvedValueOnce({ folders: [folder] })
+      .mockResolvedValue({ folders: [folder] });
+    const card = makeCard({
+      status: 'editing',
+      payload: {
+        ...makeCard().payload,
+        cardId: 'knowledge.file_upload',
+        domain: 'knowledge',
+        action: 'file_upload',
+        presentationMode: 'inline_form',
+        confirmationMode: 'none',
+        params: {},
+      },
+    });
+    const wrapper = mountActionCard(card);
+    await vi.dynamicImportSettled();
+
+    expect(wrapper.text()).toContain('Please create a folder first');
+
+    await wrapper.find('.knowledge-file-form__folder-create input').setValue('Uploads');
+    const createFolderButtons = wrapper.findAll('.knowledge-file-form__folder-create button');
+    expect(createFolderButtons[0]).toBeDefined();
+    await createFolderButtons[0].trigger('click');
+    await vi.dynamicImportSettled();
+
+    expect(inlineCreateMock).toHaveBeenCalledWith('Uploads', undefined);
+
+    const file = new File(['# Notes'], 'notes.md', { type: 'text/markdown' });
+    await wrapper.find('.knowledge-file-form__dropzone').trigger('drop', {
+      dataTransfer: { files: [file] },
+    });
+    const uploadButtons = wrapper.findAll('.knowledge-file-form__actions button');
+    expect(uploadButtons[1]).toBeDefined();
+    await uploadButtons[1].trigger('click');
+    await vi.dynamicImportSettled();
+
+    expect(knowledgeApiMock).toHaveBeenCalledWith('folder-1', [file]);
     expect(wrapper.emitted('statusChange')?.[0]?.[1]).toBe('succeeded');
   });
 

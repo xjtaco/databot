@@ -14,10 +14,13 @@ export const useKnowledgeStore = defineStore('knowledge', () => {
     folderTree.value = result.folders;
   });
 
-  const createFolder = wrapAction(async (name: string, parentId?: string): Promise<void> => {
-    await knowledgeApi.createFolder(name, parentId);
-    await fetchFolderTree();
-  });
+  const createFolder = wrapAction(
+    async (name: string, parentId?: string): Promise<KnowledgeFolder> => {
+      const result = await knowledgeApi.createFolder(name, parentId);
+      await fetchFolderTree();
+      return result.folder;
+    }
+  );
 
   const deleteFolder = wrapAction(async (id: string): Promise<void> => {
     await knowledgeApi.deleteFolder(id);
