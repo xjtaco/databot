@@ -119,6 +119,13 @@ export const useChatStore = defineStore('chat', () => {
     return payload.presentationMode === 'inline_form' ? 'editing' : 'proposed';
   }
 
+  function getRestoredActionCardStatus(
+    payload: UiActionCardPayload,
+    persistedStatus: CardStatus
+  ): CardStatus {
+    return persistedStatus === 'proposed' ? getInitialActionCardStatus(payload) : persistedStatus;
+  }
+
   function loadHistoricalMessages(
     records: {
       role: string;
@@ -201,7 +208,7 @@ export const useChatStore = defineStore('chat', () => {
               const card: ChatActionCard = {
                 id: meta.payload.id,
                 payload: meta.payload,
-                status: meta.status,
+                status: getRestoredActionCardStatus(meta.payload, meta.status),
                 resultSummary: meta.resultSummary,
                 error: meta.error,
               };

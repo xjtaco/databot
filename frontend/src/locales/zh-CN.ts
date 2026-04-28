@@ -112,6 +112,18 @@ export default {
           title: '创建数据源',
           summary: '在当前对话中填写连接信息并创建数据源。',
         },
+        datasourceTest: {
+          title: '测试数据源连接',
+          summary: '在当前对话中测试已有数据源连接。',
+        },
+        datasourceDelete: {
+          title: '删除数据源',
+          summary: '确认后删除指定数据源。',
+        },
+        fileUpload: {
+          title: '上传数据文件',
+          summary: '在当前对话中上传 CSV、Excel 或 SQLite 文件。',
+        },
       },
       knowledge: {
         open: {
@@ -122,9 +134,37 @@ export default {
           title: '创建知识库目录',
           summary: '在当前对话中填写目录信息并创建目录。',
         },
+        folderRename: {
+          title: '重命名知识库目录',
+          summary: '在当前对话中填写新名称并重命名目录。',
+        },
+        folderMove: {
+          title: '移动知识库目录',
+          summary: '在当前对话中选择目标位置并移动目录。',
+        },
+        folderDelete: {
+          title: '删除知识库目录',
+          summary: '确认后删除指定知识库目录。',
+        },
+        fileOpen: {
+          title: '打开知识库文件',
+          summary: '进入知识库文件详情页面。',
+        },
         fileCreate: {
           title: '添加知识库文件',
           summary: '在当前对话中填写文件信息并创建知识库文件。',
+        },
+        fileUpload: {
+          title: '上传知识库文件',
+          summary: '在当前对话中上传文件并加入知识库。',
+        },
+        fileMove: {
+          title: '移动知识库文件',
+          summary: '在当前对话中选择目标目录并移动文件。',
+        },
+        fileDelete: {
+          title: '删除知识库文件',
+          summary: '确认后删除指定知识库文件。',
         },
       },
       schedule: {
@@ -135,6 +175,14 @@ export default {
         create: {
           title: '创建定时任务',
           summary: '在当前对话中填写任务配置并创建定时任务。',
+        },
+        update: {
+          title: '更新定时任务',
+          summary: '在当前对话中修改任务配置并保存。',
+        },
+        delete: {
+          title: '删除定时任务',
+          summary: '确认后删除指定定时任务。',
         },
       },
       workflow: {
@@ -157,6 +205,12 @@ export default {
         templateReport: {
           title: '创建报告工作流模板',
           summary: '跳转到工作流编辑器并创建报告模板。',
+        },
+      },
+      template: {
+        copilotCreate: {
+          title: '通过模板创建工作流',
+          summary: '跳转到工作流 Copilot 并基于模板创建工作流。',
         },
       },
     },

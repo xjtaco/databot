@@ -112,6 +112,18 @@ export default {
           title: 'Create data source',
           summary: 'Enter connection details in this chat and create a data source.',
         },
+        datasourceTest: {
+          title: 'Test data source connection',
+          summary: 'Test an existing data source connection in this chat.',
+        },
+        datasourceDelete: {
+          title: 'Delete data source',
+          summary: 'Confirm and delete the selected data source.',
+        },
+        fileUpload: {
+          title: 'Upload data file',
+          summary: 'Upload a CSV, Excel, or SQLite file in this chat.',
+        },
       },
       knowledge: {
         open: {
@@ -122,9 +134,37 @@ export default {
           title: 'Create knowledge folder',
           summary: 'Enter folder details in this chat and create a folder.',
         },
+        folderRename: {
+          title: 'Rename knowledge folder',
+          summary: 'Enter a new name in this chat and rename the folder.',
+        },
+        folderMove: {
+          title: 'Move knowledge folder',
+          summary: 'Choose a destination in this chat and move the folder.',
+        },
+        folderDelete: {
+          title: 'Delete knowledge folder',
+          summary: 'Confirm and delete the selected knowledge folder.',
+        },
+        fileOpen: {
+          title: 'Open knowledge file',
+          summary: 'Go to the knowledge file details page.',
+        },
         fileCreate: {
           title: 'Add knowledge file',
           summary: 'Enter file details in this chat and create a knowledge file.',
+        },
+        fileUpload: {
+          title: 'Upload knowledge file',
+          summary: 'Upload a file in this chat and add it to the knowledge base.',
+        },
+        fileMove: {
+          title: 'Move knowledge file',
+          summary: 'Choose a target folder in this chat and move the file.',
+        },
+        fileDelete: {
+          title: 'Delete knowledge file',
+          summary: 'Confirm and delete the selected knowledge file.',
         },
       },
       schedule: {
@@ -135,6 +175,14 @@ export default {
         create: {
           title: 'Create scheduled task',
           summary: 'Enter task settings in this chat and create a scheduled task.',
+        },
+        update: {
+          title: 'Update scheduled task',
+          summary: 'Edit task settings in this chat and save the changes.',
+        },
+        delete: {
+          title: 'Delete scheduled task',
+          summary: 'Confirm and delete the selected scheduled task.',
         },
       },
       workflow: {
@@ -157,6 +205,12 @@ export default {
         templateReport: {
           title: 'Create report workflow template',
           summary: 'Open the workflow editor and create a report template.',
+        },
+      },
+      template: {
+        copilotCreate: {
+          title: 'Create workflow from template',
+          summary: 'Open Workflow Copilot and create a workflow from a template.',
         },
       },
     },

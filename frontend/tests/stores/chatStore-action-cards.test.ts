@@ -99,4 +99,42 @@ describe('chatStore action card actions', () => {
     expect(msg.actionCards!.length).toBe(1);
     expect(msg.actionCards![0].status).toBe('succeeded');
   });
+
+  it('loadHistoricalMessages restores initial inline form action cards as editing', () => {
+    const store = useChatStore();
+    store.loadHistoricalMessages([
+      { role: 'assistant', content: 'Here is the card:', createdAt: '2026-01-01T00:00:00Z' },
+      {
+        role: 'tool',
+        content: '{"toolName":"show_ui_action_card"}',
+        createdAt: '2026-01-01T00:00:01Z',
+        metadata: {
+          type: 'action_card',
+          payload: makePayload({ presentationMode: 'inline_form' }),
+          status: 'proposed',
+        },
+      },
+    ]);
+    const msg = store.messages[store.messages.length - 1];
+    expect(msg.actionCards![0].status).toBe('editing');
+  });
+
+  it('loadHistoricalMessages keeps terminal inline form action card status', () => {
+    const store = useChatStore();
+    store.loadHistoricalMessages([
+      { role: 'assistant', content: 'Here is the card:', createdAt: '2026-01-01T00:00:00Z' },
+      {
+        role: 'tool',
+        content: '{"toolName":"show_ui_action_card"}',
+        createdAt: '2026-01-01T00:00:01Z',
+        metadata: {
+          type: 'action_card',
+          payload: makePayload({ presentationMode: 'inline_form' }),
+          status: 'succeeded',
+        },
+      },
+    ]);
+    const msg = store.messages[store.messages.length - 1];
+    expect(msg.actionCards![0].status).toBe('succeeded');
+  });
 });
