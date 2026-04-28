@@ -15,6 +15,8 @@ const {
   knowledgeApiMock,
   createDatasourceMock,
   datafileApiMock,
+  scheduleApiMock,
+  listWorkflowsMock,
 } = vi.hoisted(() => ({
   executeActionMock: vi.fn(),
   inlineCreateMock: vi.fn(),
@@ -22,6 +24,8 @@ const {
   knowledgeApiMock: vi.fn(),
   createDatasourceMock: vi.fn(),
   datafileApiMock: vi.fn(),
+  scheduleApiMock: vi.fn(),
+  listWorkflowsMock: vi.fn(),
 }));
 
 vi.mock('@/components/chat/actionCards', () => ({
@@ -56,6 +60,18 @@ vi.mock('@/api/datafile', () => ({
   deleteTable: datafileApiMock,
   deleteDatasource: datafileApiMock,
   getTablePreview: datafileApiMock,
+}));
+
+vi.mock('@/api/schedule', () => ({
+  listSchedules: scheduleApiMock,
+  createSchedule: scheduleApiMock,
+  updateSchedule: scheduleApiMock,
+  deleteSchedule: scheduleApiMock,
+  getSchedule: scheduleApiMock,
+}));
+
+vi.mock('@/api/workflow', () => ({
+  listWorkflows: listWorkflowsMock,
 }));
 
 const i18n = createI18n({
@@ -104,6 +120,8 @@ describe('ActionCard.vue', () => {
       }
       return Promise.resolve({ tables: [], datasources: [] });
     });
+    scheduleApiMock.mockResolvedValue([]);
+    listWorkflowsMock.mockResolvedValue([]);
   });
 
   afterEach(() => {
@@ -164,6 +182,10 @@ describe('ActionCard.vue', () => {
           },
           'el-icon': {
             template: '<span><slot /></span>',
+          },
+          'el-alert': {
+            template: '<div class="el-alert-stub">{{ description }}</div>',
+            props: ['type', 'closable', 'showIcon', 'description'],
           },
           'el-select': {
             template:
@@ -552,6 +574,31 @@ describe('ActionCard.vue', () => {
 
     expect(wrapper.find('.confirm-dialog-stub').exists()).toBe(false);
     expect(inlineCreateMock).toHaveBeenCalledTimes(1);
+    expect(wrapper.emitted('statusChange')?.[0]?.[1]).toBe('succeeded');
+  });
+
+  it('deletes schedules using scheduleId payload parameter', async () => {
+    const card = makeCard({
+      status: 'editing',
+      payload: {
+        ...makeCard().payload,
+        cardId: 'schedule.delete',
+        domain: 'schedule',
+        action: 'delete',
+        presentationMode: 'inline_form',
+        confirmationMode: 'none',
+        params: { scheduleId: 'schedule-1' },
+      },
+    });
+    const wrapper = mountActionCard(card);
+    await vi.dynamicImportSettled();
+
+    const deleteButtons = wrapper.findAll('.inline-schedule-form__actions button');
+    expect(deleteButtons[0]).toBeDefined();
+    await deleteButtons[0].trigger('click');
+    await vi.dynamicImportSettled();
+
+    expect(scheduleApiMock).toHaveBeenCalledWith('schedule-1');
     expect(wrapper.emitted('statusChange')?.[0]?.[1]).toBe('succeeded');
   });
 });

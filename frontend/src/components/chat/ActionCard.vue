@@ -128,6 +128,7 @@ import { useI18n } from 'vue-i18n';
 import ConfirmDialog from '@/components/common/ConfirmDialog.vue';
 import { executeAction } from './actionCards';
 import type { ChatActionCard, CardStatus } from '@/types/actionCard';
+import { getActionCardKey } from '@/utils/actionCardSupport';
 
 // Lazy-loaded inline form components (async, no top-level await)
 const InlineDataCreateForm = () => import('./actionCards/forms/InlineDataCreateForm.vue');
@@ -206,7 +207,7 @@ const showActions = computed(() => {
 });
 
 const formComponent = computed<Component | null>(() => {
-  const key = `${props.card.payload.domain}:${props.card.payload.action}`;
+  const key = getActionCardKey(props.card.payload.domain, props.card.payload.action);
   const loader = formComponentMap[key];
   return loader ? defineAsyncComponent(loader) : null;
 });

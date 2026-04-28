@@ -2,6 +2,7 @@ import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import type { ChatMessage, MessageRole, TokenUsage } from '@/types';
 import type { UiActionCardPayload, ChatActionCard, CardStatus } from '@/types/actionCard';
+import { isInlineFormSupported } from '@/utils/actionCardSupport';
 
 export const useChatStore = defineStore('chat', () => {
   // State
@@ -116,7 +117,10 @@ export const useChatStore = defineStore('chat', () => {
   }
 
   function getInitialActionCardStatus(payload: UiActionCardPayload): CardStatus {
-    return payload.presentationMode === 'inline_form' ? 'editing' : 'proposed';
+    return payload.presentationMode === 'inline_form' &&
+      isInlineFormSupported(payload.domain, payload.action)
+      ? 'editing'
+      : 'proposed';
   }
 
   function getRestoredActionCardStatus(

@@ -71,7 +71,10 @@ const workflowStore = useWorkflowStore();
 const scheduleFormRef = ref<InstanceType<typeof ScheduleForm> | null>(null);
 const submitting = ref(false);
 
-const scheduleId = computed(() => (props.payload.params.id as string) ?? '');
+const scheduleId = computed(() => {
+  const id = props.payload.params.scheduleId ?? props.payload.params.id;
+  return typeof id === 'string' ? id : '';
+});
 
 onMounted(async () => {
   workflowStore.fetchWorkflows();
