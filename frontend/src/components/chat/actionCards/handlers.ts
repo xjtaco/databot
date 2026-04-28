@@ -1,4 +1,4 @@
-import type { ActionResult, ActionHandler } from './actionCardRegistry';
+import type { ActionCallbacks, ActionResult, ActionHandler } from './actionCardRegistry';
 import { registerActionHandler } from './actionCardRegistry';
 import type { UiActionCardPayload } from '@/types/actionCard';
 import type { DatabaseDatasourceType } from '@/types/datafile';
@@ -11,7 +11,10 @@ function navigationHandler(
   targetNav: 'data' | 'workflow' | 'schedule',
   targetTab?: 'data' | 'knowledge'
 ): ActionHandler {
-  return async (payload: UiActionCardPayload): Promise<ActionResult> => {
+  return async (
+    payload: UiActionCardPayload,
+    _callbacks: ActionCallbacks
+  ): Promise<ActionResult> => {
     const navigationStore = useNavigationStore();
     if (targetTab) {
       navigationStore.setPendingIntent({ type: 'open_data_management', tab: targetTab });
@@ -30,7 +33,7 @@ registerActionHandler('schedule', 'open', navigationHandler('schedule'));
 registerActionHandler(
   'workflow',
   'copilot_create',
-  async (payload: UiActionCardPayload): Promise<ActionResult> => {
+  async (payload: UiActionCardPayload, _callbacks: ActionCallbacks): Promise<ActionResult> => {
     const navigationStore = useNavigationStore();
     const name = (payload.params.name as string) || 'Untitled Workflow';
     const description = payload.params.description as string | undefined;
@@ -67,7 +70,7 @@ registerActionHandler(
 registerActionHandler(
   'template',
   'copilot_create',
-  async (payload: UiActionCardPayload): Promise<ActionResult> => {
+  async (payload: UiActionCardPayload, _callbacks: ActionCallbacks): Promise<ActionResult> => {
     const navigationStore = useNavigationStore();
     const name = (payload.params.name as string) || 'Untitled Template';
     const description = payload.params.description as string | undefined;
@@ -114,12 +117,12 @@ registerActionHandler(
 registerActionHandler(
   'data',
   'datasource_test',
-  async (_payload: UiActionCardPayload): Promise<ActionResult> => {
+  async (_payload: UiActionCardPayload, _callbacks: ActionCallbacks): Promise<ActionResult> => {
     const navigationStore = useNavigationStore();
     navigationStore.setPendingIntent({ type: 'open_data_management', tab: 'data' });
     navigationStore.navigateTo('data');
     return {
-      success: true,
+      success: false,
       summary: 'Please test the datasource connection from the Data Management page.',
     };
   }
@@ -130,7 +133,7 @@ registerActionHandler(
 registerActionHandler(
   'data',
   'datasource_delete',
-  async (payload: UiActionCardPayload): Promise<ActionResult> => {
+  async (payload: UiActionCardPayload, _callbacks: ActionCallbacks): Promise<ActionResult> => {
     try {
       const { useDatafileStore } = await import('@/stores/datafileStore');
       const datafileStore = useDatafileStore();
