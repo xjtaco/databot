@@ -21,8 +21,8 @@
     </div>
 
     <!-- Title and summary -->
-    <div class="action-card__title">{{ card.payload.title }}</div>
-    <div class="action-card__summary">{{ card.payload.summary }}</div>
+    <div class="action-card__title">{{ titleText }}</div>
+    <div class="action-card__summary">{{ summaryText }}</div>
 
     <!-- Params -->
     <div v-if="hasParams" class="action-card__params">
@@ -64,42 +64,55 @@
         <el-input
           v-model="dangerConfirmText"
           size="small"
-          :placeholder="t('chat.actionCard.dangerConfirm', { name: card.payload.title })"
+          :placeholder="t('chat.actionCard.dangerConfirm', { name: titleText })"
           class="action-card__danger-input"
         />
         <el-button
           size="small"
           type="danger"
-          :disabled="dangerConfirmText !== card.payload.title"
+          :disabled="dangerConfirmText !== titleText"
           @click="handleConfirm"
         >
-          {{ t('chat.actionCard.confirm') }}
+          {{ t('chat.actionCards.common.confirm') }}
         </el-button>
       </template>
 
       <!-- Confirm required: show cancel + confirm -->
       <template v-else-if="card.payload.confirmRequired && card.status === 'proposed'">
         <el-button size="small" @click="handleCancel">
-          {{ t('chat.actionCard.cancel') }}
+          {{ t('chat.actionCards.common.cancel') }}
         </el-button>
         <el-button size="small" type="primary" @click="handleConfirm">
-          {{ t('chat.actionCard.confirm') }}
+          {{ t('chat.actionCards.common.confirm') }}
         </el-button>
       </template>
 
       <!-- No confirm required: just confirm/open button -->
       <template v-else>
         <el-button size="small" type="primary" @click="handleConfirm">
-          {{ t('chat.actionCard.confirm') }}
+          {{ actionButtonLabel }}
         </el-button>
       </template>
     </div>
+
+    <ConfirmDialog
+      :visible="showDeferredConfirmDialog"
+      type="warning"
+      :title="t('chat.actionCards.common.confirmTitle')"
+      :message="t('chat.actionCards.common.confirmMessage')"
+      :confirm-text="t('chat.actionCards.common.confirm')"
+      :cancel-text="t('chat.actionCards.common.cancel')"
+      @update:visible="showDeferredConfirmDialog = $event"
+      @confirm="handleDeferredConfirm"
+      @cancel="handleDeferredCancel"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, defineAsyncComponent, type Component } from 'vue';
 import { useI18n } from 'vue-i18n';
+import ConfirmDialog from '@/components/common/ConfirmDialog.vue';
 import { executeAction } from './actionCards';
 import type { ChatActionCard, CardStatus } from '@/types/actionCard';
 
@@ -133,14 +146,36 @@ const emit = defineEmits<{
 
 const { t } = useI18n();
 const dangerConfirmText = ref('');
+const showDeferredConfirmDialog = ref(false);
+
+const titleText = computed(() =>
+  props.card.payload.titleKey ? t(props.card.payload.titleKey) : props.card.payload.title
+);
+
+const summaryText = computed(() =>
+  props.card.payload.summaryKey ? t(props.card.payload.summaryKey) : props.card.payload.summary
+);
+
+const isDeferredModalAction = computed(
+  () =>
+    props.card.payload.presentationMode === 'deferred_navigation' &&
+    props.card.payload.confirmationMode === 'modal'
+);
 
 const riskLabel = computed(() => {
   const level = props.card.payload.riskLevel;
   const capitalized = level.charAt(0).toUpperCase() + level.slice(1);
-  return t(`chat.actionCard.risk${capitalized}`);
+  return t(`chat.actionCards.common.risk${capitalized}`);
 });
 
-const statusLabel = computed(() => t(`chat.actionCard.${props.card.status}`));
+const statusLabel = computed(() => t(`chat.actionCards.common.${props.card.status}`));
+
+const actionButtonLabel = computed(() =>
+  props.card.payload.presentationMode === 'navigate' ||
+  props.card.payload.presentationMode === 'deferred_navigation'
+    ? t('chat.actionCards.common.open')
+    : t('chat.actionCards.common.confirm')
+);
 
 const displayParams = computed(() => {
   const params = { ...props.card.payload.params };
@@ -172,6 +207,15 @@ async function handleConfirm(): Promise<void> {
     return;
   }
 
+  if (isDeferredModalAction.value && props.card.status === 'proposed') {
+    showDeferredConfirmDialog.value = true;
+    return;
+  }
+
+  await runAction();
+}
+
+async function runAction(): Promise<void> {
   // Direct execution (workflow/template create, navigation, etc.)
   emit('statusChange', props.card.id, 'running');
   try {
@@ -194,6 +238,15 @@ async function handleConfirm(): Promise<void> {
       error: err instanceof Error ? err.message : String(err),
     });
   }
+}
+
+async function handleDeferredConfirm(): Promise<void> {
+  showDeferredConfirmDialog.value = false;
+  await runAction();
+}
+
+function handleDeferredCancel(): void {
+  showDeferredConfirmDialog.value = false;
 }
 
 function handleCancel(): void {
