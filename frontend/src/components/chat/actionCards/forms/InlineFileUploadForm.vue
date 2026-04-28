@@ -242,8 +242,8 @@ async function handleUpload(): Promise<void> {
     display: flex;
     flex-direction: column;
     gap: $spacing-xs;
-    margin-bottom: $spacing-md;
     max-height: 200px;
+    margin-bottom: $spacing-md;
     overflow-y: auto;
   }
 
@@ -278,12 +278,12 @@ async function handleUpload(): Promise<void> {
 
   &__actions {
     display: flex;
-    justify-content: flex-end;
     gap: $spacing-sm;
+    justify-content: flex-end;
   }
 }
 
-@media (max-width: 768px) {
+@media (width <= 768px) {
   .file-upload-form {
     &__dropzone {
       padding: $spacing-md;
@@ -302,8 +302,8 @@ async function handleUpload(): Promise<void> {
     }
 
     &__file-item {
-      padding: 4px $spacing-xs;
       gap: $spacing-xs;
+      padding: 4px $spacing-xs;
     }
   }
 }
