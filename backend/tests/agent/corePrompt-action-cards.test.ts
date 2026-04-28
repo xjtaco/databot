@@ -41,6 +41,12 @@ describe('CORE_PROMPT action card rules', () => {
     expect(corePrompt).toContain('confirm');
   });
 
+  it('explicitly requires action cards for uploading data files', () => {
+    expect(corePrompt).toContain('upload');
+    expect(corePrompt).toContain('CSV');
+    expect(corePrompt).toContain('regex');
+  });
+
   it('references workflow (Copilot card preference) in CORE_PROMPT', () => {
     expect(corePrompt).toContain('workflow');
   });

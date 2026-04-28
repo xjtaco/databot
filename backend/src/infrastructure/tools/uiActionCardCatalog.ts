@@ -553,13 +553,32 @@ const byId = new Map<string, UiActionCardDefinition>(catalog.map((def) => [def.c
 // Relevance scoring
 // ---------------------------------------------------------------------------
 
-function matchScore(def: UiActionCardDefinition, queryWords: string[]): number {
+export type SearchQueryMode = 'text' | 'regex';
+
+function buildSearchableText(def: UiActionCardDefinition): string {
+  const paramText = [...def.requiredParams, ...def.optionalParams]
+    .map((p) => `${p.name} ${p.description}`)
+    .join(' ');
+
+  return [
+    def.cardId,
+    def.domain,
+    def.action,
+    def.title,
+    def.description,
+    def.usage,
+    paramText,
+  ].join(' ');
+}
+
+function textMatchScore(def: UiActionCardDefinition, queryWords: string[]): number {
   // Empty query → base score so every card is reachable via domain-only search
   if (queryWords.length === 0) return 1;
 
   const fullId = def.cardId.toLowerCase();
   const title = def.title.toLowerCase();
   const action = def.action.toLowerCase();
+  const description = def.description.toLowerCase();
   const usage = def.usage.toLowerCase();
 
   // Collect all param-related text for matching
@@ -581,11 +600,18 @@ function matchScore(def: UiActionCardDefinition, queryWords: string[]): number {
     if (fullId.includes(w)) score += 10;
     if (title.includes(w)) score += 8;
     if (action.includes(w)) score += 6;
+    if (description.includes(w)) score += 5;
     if (usage.includes(w)) score += 4;
     if (paramText.includes(w)) score += 2;
   }
 
   return score;
+}
+
+function regexMatchScore(def: UiActionCardDefinition, regex: RegExp): number {
+  const searchableText = buildSearchableText(def);
+  const matches = searchableText.match(regex);
+  return matches ? matches.length : 0;
 }
 
 // ---------------------------------------------------------------------------
@@ -598,20 +624,26 @@ function matchScore(def: UiActionCardDefinition, queryWords: string[]): number {
  * @param query  Free-text query; words are matched against cardId, title,
  *               action, usage, and param fields.
  * @param options.domain  If provided, only cards from this domain are returned.
+ * @param options.queryMode  Use `regex` to match query as a JavaScript regular expression.
  * @param options.maxResults  Maximum number of results (default 5).
  */
 export function searchCatalog(
   query: string,
-  options?: { domain?: ActionDomain; maxResults?: number }
+  options?: { domain?: ActionDomain; queryMode?: SearchQueryMode; maxResults?: number }
 ): UiActionCardDefinition[] {
   const domain = options?.domain;
+  const queryMode = options?.queryMode ?? 'text';
   const maxResults = options?.maxResults ?? 5;
 
-  const words = query.split(/\s+/).filter(Boolean);
+  const words = query.toLowerCase().split(/\s+/).filter(Boolean);
+  const regex = queryMode === 'regex' ? new RegExp(query, 'gi') : null;
 
   const scored = catalog
     .filter((def) => (domain ? def.domain === domain : true))
-    .map((def) => ({ def, score: matchScore(def, words) }))
+    .map((def) => ({
+      def,
+      score: regex ? regexMatchScore(def, regex) : textMatchScore(def, words),
+    }))
     .filter((entry) => entry.score > 0)
     .sort((a, b) => b.score - a.score)
     .slice(0, maxResults)

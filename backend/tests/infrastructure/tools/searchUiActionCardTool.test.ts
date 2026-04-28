@@ -39,6 +39,28 @@ describe('SearchUiActionCardTool', () => {
     expect(cards.some((c) => c.cardId === 'data.datasource_create')).toBe(true);
   });
 
+  it('supports regex search for upload file intent', async () => {
+    const tool = ToolRegistry.get(ToolName.SearchUiActionCard);
+    const result = await tool.execute({
+      query: 'upload|csv|excel|sqlite|file',
+      queryMode: 'regex',
+      domain: 'data',
+    });
+
+    expect(result.success).toBe(true);
+    expect(Array.isArray(result.data)).toBe(true);
+    const cards = result.data as Array<{ cardId: string }>;
+    expect(cards[0]?.cardId).toBe('data.file_upload');
+  });
+
+  it('fails for invalid regex search query', async () => {
+    const tool = ToolRegistry.get(ToolName.SearchUiActionCard);
+    const result = await tool.execute({ query: '[', queryMode: 'regex' });
+
+    expect(result.success).toBe(false);
+    expect(result.error).toContain('Invalid regex');
+  });
+
   it('returns cards filtered by domain "knowledge" for query "folder"', async () => {
     const tool = ToolRegistry.get(ToolName.SearchUiActionCard);
     const result = await tool.execute({ query: 'folder', domain: 'knowledge' });
