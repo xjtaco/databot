@@ -384,9 +384,9 @@ async function handleSubmit(): Promise<void> {
 
 .form-feedback {
   padding: $spacing-sm $spacing-md;
-  border-radius: $radius-sm;
   font-size: $font-size-sm;
   line-height: $line-height-normal;
+  border-radius: $radius-sm;
 
   &.success {
     color: $success;
@@ -429,9 +429,9 @@ async function handleSubmit(): Promise<void> {
     gap: $spacing-sm;
 
     &__right {
-      width: 100%;
       display: flex;
       gap: $spacing-sm;
+      width: 100%;
 
       .el-button {
         flex: 1;

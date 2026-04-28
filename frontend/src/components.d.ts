@@ -40,6 +40,7 @@ declare module 'vue' {
     DataSourceSidebar: typeof import('./components/sidebar/DataSourceSidebar.vue')['default']
     DataTreeContent: typeof import('./components/data-management/DataTreeContent.vue')['default']
     DictionaryPreview: typeof import('./components/datafile/DictionaryPreview.vue')['default']
+    ElAlert: typeof import('element-plus/es')['ElAlert']
     ElButton: typeof import('element-plus/es')['ElButton']
     ElCheckbox: typeof import('element-plus/es')['ElCheckbox']
     ElDatePicker: typeof import('element-plus/es')['ElDatePicker']

@@ -211,11 +211,11 @@ async function handleDelete(): Promise<void> {
     gap: 8px;
     align-items: flex-start;
     padding: 12px;
-    background-color: var(--el-color-danger-light-9);
-    border-radius: 6px;
-    color: var(--el-color-danger);
     font-size: 14px;
     line-height: 1.5;
+    color: var(--el-color-danger);
+    background-color: var(--el-color-danger-light-9);
+    border-radius: 6px;
   }
 
   &__delete-icon {
