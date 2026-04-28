@@ -47,30 +47,6 @@ registerActionHandler(
       });
       navigationStore.navigateTo('workflow');
 
-      if (copilotPrompt) {
-        const { useCopilotStore } = await import('@/stores/copilotStore');
-        const copilotStore = useCopilotStore();
-
-        // Wait for copilot connection with timeout
-        const waitForConnection = (): Promise<void> =>
-          new Promise((resolve, reject) => {
-            let attempts = 0;
-            const maxAttempts = 50;
-            const interval = setInterval(() => {
-              if (copilotStore.isConnected && copilotStore.workflowId === workflowId) {
-                clearInterval(interval);
-                resolve();
-              } else if (++attempts >= maxAttempts) {
-                clearInterval(interval);
-                reject(new Error('Copilot connection timeout'));
-              }
-            }, 200);
-          });
-
-        await waitForConnection();
-        copilotStore.sendMessage(copilotPrompt);
-      }
-
       return {
         success: true,
         summary: `Created workflow "${name}"${copilotPrompt ? ' and sent prompt to Copilot' : ''}`,
@@ -79,7 +55,7 @@ registerActionHandler(
       return {
         success: false,
         error: err instanceof Error ? err.message : String(err),
-        summary: 'Workflow draft created but Copilot auto-send failed.',
+        summary: 'Failed to create workflow.',
       };
     }
   }
@@ -118,29 +94,6 @@ registerActionHandler(
       });
       navigationStore.navigateTo('workflow');
 
-      if (copilotPrompt) {
-        const { useDebugCopilotStore } = await import('@/stores/debugCopilotStore');
-        const debugCopilotStore = useDebugCopilotStore();
-
-        const waitForConnection = (): Promise<void> =>
-          new Promise((resolve, reject) => {
-            let attempts = 0;
-            const maxAttempts = 50;
-            const interval = setInterval(() => {
-              if (debugCopilotStore.isConnected) {
-                clearInterval(interval);
-                resolve();
-              } else if (++attempts >= maxAttempts) {
-                clearInterval(interval);
-                reject(new Error('Debug Copilot connection timeout'));
-              }
-            }, 200);
-          });
-
-        await waitForConnection();
-        debugCopilotStore.sendMessage(copilotPrompt);
-      }
-
       return {
         success: true,
         summary: `Created template "${name}"${copilotPrompt ? ' and sent prompt to Copilot' : ''}`,
@@ -149,7 +102,7 @@ registerActionHandler(
       return {
         success: false,
         error: err instanceof Error ? err.message : String(err),
-        summary: 'Template draft created but Copilot auto-send failed.',
+        summary: 'Failed to create template.',
       };
     }
   }

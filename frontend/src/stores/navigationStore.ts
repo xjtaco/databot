@@ -14,7 +14,6 @@ export const useNavigationStore = defineStore('navigation', () => {
 
   function navigateTo(nav: NavType): void {
     activeNav.value = nav;
-    pendingIntent.value = null;
   }
 
   function setPendingIntent(intent: NavigationIntent): void {

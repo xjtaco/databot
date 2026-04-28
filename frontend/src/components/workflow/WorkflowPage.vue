@@ -257,7 +257,13 @@ import {
   MessageSquare,
   Trash2,
 } from 'lucide-vue-next';
-import { useWorkflowStore, useDatafileStore, useCopilotStore } from '@/stores';
+import {
+  useWorkflowStore,
+  useDatafileStore,
+  useCopilotStore,
+  useDebugCopilotStore,
+} from '@/stores';
+import { useNavigationStore } from '@/stores/navigationStore';
 import type { WorkflowNodeType } from '@/types/workflow';
 import { NODE_COLORS } from '@/constants/workflow';
 import WfListView from './WfListView.vue';
@@ -293,6 +299,8 @@ const { t } = useI18n();
 const store = useWorkflowStore();
 const datafileStore = useDatafileStore();
 const copilotStore = useCopilotStore();
+const navigationStore = useNavigationStore();
+const debugCopilotStore = useDebugCopilotStore();
 
 const activeView = ref<'list' | 'editor' | 'history' | 'customNodeEditor'>('list');
 const historyWorkflowId = ref('');
@@ -350,6 +358,61 @@ onMounted(async () => {
     store.fetchTemplates(),
     datafileStore.fetchDatasources(),
   ]);
+
+  // Consume pending intent from action card navigation
+  const intent = navigationStore.pendingIntent;
+  if (!intent) return;
+
+  if (intent.type === 'open_workflow_editor') {
+    navigationStore.clearPendingIntent();
+    try {
+      await store.loadForEditing(intent.workflowId);
+      copilotStore.connect(intent.workflowId);
+      activeView.value = 'editor';
+      if (intent.copilotPrompt) {
+        await new Promise<void>((resolve, reject) => {
+          let attempts = 0;
+          const interval = setInterval(() => {
+            if (copilotStore.isConnected && copilotStore.workflowId === intent.workflowId) {
+              clearInterval(interval);
+              resolve();
+            } else if (++attempts >= 50) {
+              clearInterval(interval);
+              reject(new Error('Copilot connection timeout'));
+            }
+          }, 200);
+        });
+        copilotStore.sendMessage(intent.copilotPrompt);
+      }
+    } catch {
+      ElMessage.error(t('common.failed'));
+    }
+  } else if (intent.type === 'open_template_editor') {
+    navigationStore.clearPendingIntent();
+    try {
+      store.enterCustomNodeEditor(intent.templateId);
+      activeView.value = 'customNodeEditor';
+      if (intent.copilotPrompt) {
+        await new Promise<void>((resolve, reject) => {
+          let attempts = 0;
+          const interval = setInterval(() => {
+            if (debugCopilotStore.isConnected) {
+              clearInterval(interval);
+              resolve();
+            } else if (++attempts >= 50) {
+              clearInterval(interval);
+              reject(new Error('Debug Copilot connection timeout'));
+            }
+          }, 200);
+        });
+        debugCopilotStore.sendMessage(intent.copilotPrompt);
+      }
+    } catch {
+      ElMessage.error(t('common.failed'));
+    }
+  } else {
+    navigationStore.clearPendingIntent();
+  }
 });
 
 async function handleEdit(id: string): Promise<void> {
