@@ -14,12 +14,13 @@ function navigationHandler(
 ): ActionHandler {
   return async (
     _payload: UiActionCardPayload,
-    _callbacks: ActionCallbacks
+    callbacks: ActionCallbacks
   ): Promise<ActionResult> => {
     const navigationStore = useNavigationStore();
     if (targetTab) {
       navigationStore.setPendingIntent({ type: 'open_data_management', tab: targetTab });
     }
+    callbacks.setStatus('succeeded');
     navigationStore.navigateTo(targetNav);
     return { success: true };
   };
@@ -55,7 +56,8 @@ function getDescription(payload: UiActionCardPayload): string | undefined {
 
 async function createWorkflowAndOpen(
   payload: UiActionCardPayload,
-  fallbackNameKey: string
+  fallbackNameKey: string,
+  callbacks: ActionCallbacks
 ): Promise<ActionResult> {
   const navigationStore = useNavigationStore();
   const name = getWorkflowName(payload, fallbackNameKey);
@@ -67,6 +69,13 @@ async function createWorkflowAndOpen(
     const workflowStore = useWorkflowStore();
     const workflowId = await workflowStore.createWorkflow(name, description);
 
+    const summary = t(
+      copilotPrompt
+        ? 'chat.actionCards.results.workflowCreatedWithCopilot'
+        : 'chat.actionCards.results.workflowCreated',
+      { name }
+    );
+    callbacks.setResult(summary);
     navigationStore.setPendingIntent({
       type: 'open_workflow_editor',
       workflowId,
@@ -76,19 +85,12 @@ async function createWorkflowAndOpen(
 
     return {
       success: true,
-      summary: t(
-        copilotPrompt
-          ? 'chat.actionCards.results.workflowCreatedWithCopilot'
-          : 'chat.actionCards.results.workflowCreated',
-        { name }
-      ),
+      summary,
     };
   } catch (err) {
-    return {
-      success: false,
-      error: err instanceof Error ? err.message : String(err),
-      summary: t('chat.actionCards.results.workflowCreateFailed'),
-    };
+    const error = err instanceof Error ? err.message : String(err);
+    callbacks.setError(error);
+    return { success: false, error, summary: t('chat.actionCards.results.workflowCreateFailed') };
   }
 }
 
@@ -153,7 +155,10 @@ function createDefaultNodeConfig(nodeType: WorkflowNodeType): NodeConfig {
   }
 }
 
-async function createTemplateAndOpen(payload: UiActionCardPayload): Promise<ActionResult> {
+async function createTemplateAndOpen(
+  payload: UiActionCardPayload,
+  callbacks: ActionCallbacks
+): Promise<ActionResult> {
   const navigationStore = useNavigationStore();
   const name = getWorkflowName(payload, 'chat.actionCards.results.untitledTemplate');
   const description = getDescription(payload);
@@ -169,6 +174,13 @@ async function createTemplateAndOpen(payload: UiActionCardPayload): Promise<Acti
       config: createDefaultNodeConfig(nodeType),
     });
 
+    const summary = t(
+      copilotPrompt
+        ? 'chat.actionCards.results.templateCreatedWithCopilot'
+        : 'chat.actionCards.results.templateCreated',
+      { name }
+    );
+    callbacks.setResult(summary);
     navigationStore.setPendingIntent({
       type: 'open_template_editor',
       templateId: template.id,
@@ -178,48 +190,41 @@ async function createTemplateAndOpen(payload: UiActionCardPayload): Promise<Acti
 
     return {
       success: true,
-      summary: t(
-        copilotPrompt
-          ? 'chat.actionCards.results.templateCreatedWithCopilot'
-          : 'chat.actionCards.results.templateCreated',
-        { name }
-      ),
+      summary,
     };
   } catch (err) {
-    return {
-      success: false,
-      error: err instanceof Error ? err.message : String(err),
-      summary: t('chat.actionCards.results.templateCreateFailed'),
-    };
+    const error = err instanceof Error ? err.message : String(err);
+    callbacks.setError(error);
+    return { success: false, error, summary: t('chat.actionCards.results.templateCreateFailed') };
   }
 }
 
 registerActionHandler(
   'workflow',
   'copilot_create',
-  async (payload: UiActionCardPayload, _callbacks: ActionCallbacks): Promise<ActionResult> =>
-    createWorkflowAndOpen(payload, 'chat.actionCards.results.untitledWorkflow')
+  async (payload: UiActionCardPayload, callbacks: ActionCallbacks): Promise<ActionResult> =>
+    createWorkflowAndOpen(payload, 'chat.actionCards.results.untitledWorkflow', callbacks)
 );
 
 registerActionHandler(
   'workflow',
   'template_node',
-  async (payload: UiActionCardPayload, _callbacks: ActionCallbacks): Promise<ActionResult> =>
-    createTemplateAndOpen(payload)
+  async (payload: UiActionCardPayload, callbacks: ActionCallbacks): Promise<ActionResult> =>
+    createTemplateAndOpen(payload, callbacks)
 );
 
 registerActionHandler(
   'workflow',
   'template_etl',
-  async (payload: UiActionCardPayload, _callbacks: ActionCallbacks): Promise<ActionResult> =>
-    createWorkflowAndOpen(payload, 'chat.actionCards.results.untitledEtlWorkflow')
+  async (payload: UiActionCardPayload, callbacks: ActionCallbacks): Promise<ActionResult> =>
+    createWorkflowAndOpen(payload, 'chat.actionCards.results.untitledEtlWorkflow', callbacks)
 );
 
 registerActionHandler(
   'workflow',
   'template_report',
-  async (payload: UiActionCardPayload, _callbacks: ActionCallbacks): Promise<ActionResult> =>
-    createWorkflowAndOpen(payload, 'chat.actionCards.results.untitledReportWorkflow')
+  async (payload: UiActionCardPayload, callbacks: ActionCallbacks): Promise<ActionResult> =>
+    createWorkflowAndOpen(payload, 'chat.actionCards.results.untitledReportWorkflow', callbacks)
 );
 
 // ── Template copilot_create Handler ────────────────────────
@@ -227,7 +232,7 @@ registerActionHandler(
 registerActionHandler(
   'template',
   'copilot_create',
-  async (payload: UiActionCardPayload, _callbacks: ActionCallbacks): Promise<ActionResult> => {
+  async (payload: UiActionCardPayload, callbacks: ActionCallbacks): Promise<ActionResult> => {
     const navigationStore = useNavigationStore();
     const name = getWorkflowName(payload, 'chat.actionCards.results.untitledTemplate');
     const description = getDescription(payload);
@@ -243,6 +248,13 @@ registerActionHandler(
         config: createDefaultNodeConfig(nodeType),
       });
 
+      const summary = t(
+        copilotPrompt
+          ? 'chat.actionCards.results.templateCreatedWithCopilot'
+          : 'chat.actionCards.results.templateCreated',
+        { name }
+      );
+      callbacks.setResult(summary);
       navigationStore.setPendingIntent({
         type: 'open_template_editor',
         templateId: template.id,
@@ -252,19 +264,12 @@ registerActionHandler(
 
       return {
         success: true,
-        summary: t(
-          copilotPrompt
-            ? 'chat.actionCards.results.templateCreatedWithCopilot'
-            : 'chat.actionCards.results.templateCreated',
-          { name }
-        ),
+        summary,
       };
     } catch (err) {
-      return {
-        success: false,
-        error: err instanceof Error ? err.message : String(err),
-        summary: t('chat.actionCards.results.templateCreateFailed'),
-      };
+      const error = err instanceof Error ? err.message : String(err);
+      callbacks.setError(error);
+      return { success: false, error, summary: t('chat.actionCards.results.templateCreateFailed') };
     }
   }
 );
@@ -274,14 +279,13 @@ registerActionHandler(
 registerActionHandler(
   'data',
   'datasource_test',
-  async (_payload: UiActionCardPayload, _callbacks: ActionCallbacks): Promise<ActionResult> => {
+  async (_payload: UiActionCardPayload, callbacks: ActionCallbacks): Promise<ActionResult> => {
     const navigationStore = useNavigationStore();
+    const summary = t('chat.actionCards.results.datasourceTestNavigate');
+    callbacks.setResult(summary);
     navigationStore.setPendingIntent({ type: 'open_data_management', tab: 'data' });
     navigationStore.navigateTo('data');
-    return {
-      success: false,
-      summary: t('chat.actionCards.results.datasourceTestNavigate'),
-    };
+    return { success: true, summary };
   }
 );
 

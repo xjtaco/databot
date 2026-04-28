@@ -384,6 +384,29 @@ describe('ActionCard.vue', () => {
     ]);
   });
 
+  it('does not emit duplicate completion when handler reports result through callbacks', async () => {
+    executeActionMock.mockImplementation(async (_payload, callbacks) => {
+      callbacks.setResult('Workflow created: Monthly Revenue');
+      return { success: true, summary: 'Workflow created: Monthly Revenue' };
+    });
+    const card = makeCard({
+      payload: {
+        ...makeCard().payload,
+        presentationMode: 'deferred_navigation',
+        confirmationMode: 'modal',
+      },
+    });
+    const wrapper = mountActionCard(card);
+
+    await wrapper.find('.action-card__actions button').trigger('click');
+    await wrapper.find('.confirm-dialog-confirm').trigger('click');
+
+    expect(wrapper.emitted('statusChange')).toEqual([
+      ['card-1', 'running'],
+      ['card-1', 'succeeded', { resultSummary: 'Workflow created: Monthly Revenue' }],
+    ]);
+  });
+
   it('does not execute deferred navigation when modal is cancelled', async () => {
     const card = makeCard({
       payload: {

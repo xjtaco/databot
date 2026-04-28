@@ -236,13 +236,25 @@ async function handleConfirm(): Promise<void> {
 async function runAction(): Promise<void> {
   // Direct execution (workflow/template create, navigation, etc.)
   emit('statusChange', props.card.id, 'running');
+  let terminalCallbackEmitted = false;
   try {
     const result = await executeAction(props.card.payload, {
-      setStatus: (status) => emit('statusChange', props.card.id, status),
-      setResult: (summary) =>
-        emit('statusChange', props.card.id, 'succeeded', { resultSummary: summary }),
-      setError: (error) => emit('statusChange', props.card.id, 'failed', { error }),
+      setStatus: (status) => {
+        terminalCallbackEmitted = status === 'succeeded' || status === 'failed';
+        emit('statusChange', props.card.id, status);
+      },
+      setResult: (summary) => {
+        terminalCallbackEmitted = true;
+        emit('statusChange', props.card.id, 'succeeded', { resultSummary: summary });
+      },
+      setError: (error) => {
+        terminalCallbackEmitted = true;
+        emit('statusChange', props.card.id, 'failed', { error });
+      },
     });
+    if (terminalCallbackEmitted) {
+      return;
+    }
     if (result.success) {
       emit('statusChange', props.card.id, 'succeeded', { resultSummary: result.summary });
     } else {

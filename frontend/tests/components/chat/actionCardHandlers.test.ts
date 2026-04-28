@@ -137,6 +137,56 @@ describe('action card handlers', () => {
     expect(result.summary).toBe('Workflow created: Daily ETL');
   });
 
+  it('marks workflow creation complete before leaving chat', async () => {
+    const navigationStore = useNavigationStore();
+    const setResult = vi.fn(() => {
+      expect(navigationStore.activeNav).toBe('chat');
+    });
+
+    const result = await executeAction(
+      makePayload({
+        cardId: 'workflow.copilot_create',
+        action: 'copilot_create',
+        params: { name: 'Monthly Revenue' },
+      }),
+      {
+        setStatus: vi.fn(),
+        setResult,
+        setError: vi.fn(),
+      }
+    );
+
+    expect(result.success).toBe(true);
+    expect(setResult).toHaveBeenCalledWith('Workflow created: Monthly Revenue');
+    expect(navigationStore.activeNav).toBe('workflow');
+  });
+
+  it('marks data source test navigation complete before leaving chat', async () => {
+    const navigationStore = useNavigationStore();
+    const setResult = vi.fn(() => {
+      expect(navigationStore.activeNav).toBe('chat');
+    });
+
+    const result = await executeAction(
+      makePayload({
+        cardId: 'data.datasource_test',
+        domain: 'data',
+        action: 'datasource_test',
+      }),
+      {
+        setStatus: vi.fn(),
+        setResult,
+        setError: vi.fn(),
+      }
+    );
+
+    expect(result.success).toBe(true);
+    expect(setResult).toHaveBeenCalledWith(
+      'Open data management to test the data source connection.'
+    );
+    expect(navigationStore.activeNav).toBe('data');
+  });
+
   it('executes workflow.template_node by creating a template and opening it', async () => {
     const result = await executeAction(
       makePayload({
