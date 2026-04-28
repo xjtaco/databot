@@ -91,6 +91,75 @@ export default {
         renameSuccess: 'Folder renamed',
       },
     },
+    actionCards: {
+      common: {
+        confirm: 'Confirm',
+        cancel: 'Cancel',
+        open: 'Open',
+        submitting: 'Submitting',
+        completed: 'Completed',
+        failed: 'Failed',
+        editing: 'Editing',
+        confirmTitle: 'Confirm action',
+        confirmMessage: 'This action will leave the current chat or create an object. Continue?',
+      },
+      data: {
+        open: {
+          title: 'Open data management',
+          summary: 'Go to data source and table management.',
+        },
+        datasourceCreate: {
+          title: 'Create data source',
+          summary: 'Enter connection details in this chat and create a data source.',
+        },
+      },
+      knowledge: {
+        open: {
+          title: 'Open knowledge base',
+          summary: 'Go to knowledge base file and folder management.',
+        },
+        folderCreate: {
+          title: 'Create knowledge folder',
+          summary: 'Enter folder details in this chat and create a folder.',
+        },
+        fileCreate: {
+          title: 'Add knowledge file',
+          summary: 'Enter file details in this chat and create a knowledge file.',
+        },
+      },
+      schedule: {
+        open: {
+          title: 'Open schedules',
+          summary: 'Go to scheduled task management.',
+        },
+        create: {
+          title: 'Create scheduled task',
+          summary: 'Enter task settings in this chat and create a scheduled task.',
+        },
+      },
+      workflow: {
+        open: {
+          title: 'Open workflows',
+          summary: 'Go to workflow editing and management.',
+        },
+        copilotCreate: {
+          title: 'Create workflow',
+          summary: 'Open Workflow Copilot to create a workflow.',
+        },
+        templateNode: {
+          title: 'Add node template',
+          summary: 'Open the workflow editor and apply a node template.',
+        },
+        templateEtl: {
+          title: 'Create ETL workflow template',
+          summary: 'Open the workflow editor and create an ETL template.',
+        },
+        templateReport: {
+          title: 'Create report workflow template',
+          summary: 'Open the workflow editor and create a report template.',
+        },
+      },
+    },
     thinking: 'Thinking...',
     streaming: 'Responding...',
     errorOccurred: 'An error occurred',

@@ -91,6 +91,75 @@ export default {
         renameSuccess: '文件夹已重命名',
       },
     },
+    actionCards: {
+      common: {
+        confirm: '确认',
+        cancel: '取消',
+        open: '打开',
+        submitting: '提交中',
+        completed: '已完成',
+        failed: '失败',
+        editing: '编辑中',
+        confirmTitle: '确认操作',
+        confirmMessage: '此操作会离开当前对话或创建对象，确认继续吗？',
+      },
+      data: {
+        open: {
+          title: '打开数据管理',
+          summary: '进入数据源和数据表管理页面。',
+        },
+        datasourceCreate: {
+          title: '创建数据源',
+          summary: '在当前对话中填写连接信息并创建数据源。',
+        },
+      },
+      knowledge: {
+        open: {
+          title: '打开知识库管理',
+          summary: '进入知识库文件和目录管理页面。',
+        },
+        folderCreate: {
+          title: '创建知识库目录',
+          summary: '在当前对话中填写目录信息并创建目录。',
+        },
+        fileCreate: {
+          title: '添加知识库文件',
+          summary: '在当前对话中填写文件信息并创建知识库文件。',
+        },
+      },
+      schedule: {
+        open: {
+          title: '打开定时任务',
+          summary: '进入定时任务管理页面。',
+        },
+        create: {
+          title: '创建定时任务',
+          summary: '在当前对话中填写任务配置并创建定时任务。',
+        },
+      },
+      workflow: {
+        open: {
+          title: '打开工作流',
+          summary: '进入工作流编辑和管理页面。',
+        },
+        copilotCreate: {
+          title: '创建工作流',
+          summary: '跳转到工作流 Copilot 创建工作流。',
+        },
+        templateNode: {
+          title: '添加节点模板',
+          summary: '跳转到工作流编辑器并应用节点模板。',
+        },
+        templateEtl: {
+          title: '创建 ETL 工作流模板',
+          summary: '跳转到工作流编辑器并创建 ETL 模板。',
+        },
+        templateReport: {
+          title: '创建报告工作流模板',
+          summary: '跳转到工作流编辑器并创建报告模板。',
+        },
+      },
+    },
     thinking: '正在思考...',
     streaming: '正在回复...',
     errorOccurred: '发生错误',

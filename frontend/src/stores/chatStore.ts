@@ -115,6 +115,10 @@ export const useChatStore = defineStore('chat', () => {
     tokenUsage.value = usage;
   }
 
+  function getInitialActionCardStatus(payload: UiActionCardPayload): CardStatus {
+    return payload.presentationMode === 'inline_form' ? 'editing' : 'proposed';
+  }
+
   function loadHistoricalMessages(
     records: {
       role: string;
@@ -243,7 +247,7 @@ export const useChatStore = defineStore('chat', () => {
     const card: ChatActionCard = {
       id: payload.id,
       payload,
-      status: 'proposed',
+      status: getInitialActionCardStatus(payload),
     };
     const targetMsg =
       messages.value.find((m) => m.id === currentMessageId.value) ??

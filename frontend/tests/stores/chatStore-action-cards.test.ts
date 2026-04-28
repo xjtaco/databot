@@ -36,6 +36,30 @@ describe('chatStore action card actions', () => {
     expect(msg.actionCards![0].status).toBe('proposed');
   });
 
+  it('initializes inline form action cards as editing', () => {
+    const store = useChatStore();
+    store.addAssistantMessage('Inline form:');
+    store.addActionCard(makePayload({ presentationMode: 'inline_form' }));
+    const msg = store.messages[store.messages.length - 1];
+    expect(msg.actionCards![0].status).toBe('editing');
+  });
+
+  it('initializes deferred navigation action cards as proposed', () => {
+    const store = useChatStore();
+    store.addAssistantMessage('Deferred navigation:');
+    store.addActionCard(makePayload({ presentationMode: 'deferred_navigation' }));
+    const msg = store.messages[store.messages.length - 1];
+    expect(msg.actionCards![0].status).toBe('proposed');
+  });
+
+  it('initializes legacy action cards without presentation metadata as proposed', () => {
+    const store = useChatStore();
+    store.addAssistantMessage('Legacy card:');
+    store.addActionCard(makePayload());
+    const msg = store.messages[store.messages.length - 1];
+    expect(msg.actionCards![0].status).toBe('proposed');
+  });
+
   it('updateActionCardStatus updates card status', () => {
     const store = useChatStore();
     store.addAssistantMessage('Card:');
