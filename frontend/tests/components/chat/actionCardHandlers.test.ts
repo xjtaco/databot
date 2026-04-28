@@ -1,9 +1,8 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import { getRegistry } from '@/components/chat/actionCards/actionCardRegistry';
 
-describe('first-version action handlers', () => {
+describe('action card handlers', () => {
   beforeAll(async () => {
-    // Clear any previous registrations, then import handlers to trigger registration
     getRegistry().clear();
     await import('@/components/chat/actionCards');
   });
@@ -28,24 +27,35 @@ describe('first-version action handlers', () => {
     expect(getRegistry().has('template:copilot_create')).toBe(true);
   });
 
-  it('registers all stub handlers', () => {
-    const expectedStubs = [
+  it('registers datasource_test handler', () => {
+    expect(getRegistry().has('data:datasource_test')).toBe(true);
+  });
+
+  it('registers datasource_delete handler', () => {
+    expect(getRegistry().has('data:datasource_delete')).toBe(true);
+  });
+
+  it('registers knowledge.file_open handler', () => {
+    expect(getRegistry().has('knowledge:file_open')).toBe(true);
+  });
+
+  it('does NOT register handlers for form-based cards', () => {
+    const formCards = [
       'data:datasource_create',
-      'data:datasource_test',
-      'data:datasource_delete',
+      'data:file_upload',
       'knowledge:folder_create',
       'knowledge:folder_rename',
       'knowledge:folder_move',
       'knowledge:folder_delete',
-      'knowledge:file_open',
+      'knowledge:file_upload',
       'knowledge:file_move',
       'knowledge:file_delete',
       'schedule:create',
       'schedule:update',
       'schedule:delete',
     ];
-    for (const key of expectedStubs) {
-      expect(getRegistry().has(key)).toBe(true);
+    for (const key of formCards) {
+      expect(getRegistry().has(key)).toBe(false);
     }
   });
 });

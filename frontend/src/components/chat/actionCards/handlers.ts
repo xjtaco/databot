@@ -108,31 +108,41 @@ registerActionHandler(
   }
 );
 
-// ── Stub Handlers (not yet fully implemented) ──────────────
+// ── Datasource Test Handler (navigation) ───────────────────
 
-const stubActions = [
-  ['data', 'datasource_create'],
-  ['data', 'datasource_test'],
-  ['data', 'datasource_delete'],
-  ['knowledge', 'folder_create'],
-  ['knowledge', 'folder_rename'],
-  ['knowledge', 'folder_move'],
-  ['knowledge', 'folder_delete'],
-  ['knowledge', 'file_open'],
-  ['knowledge', 'file_move'],
-  ['knowledge', 'file_delete'],
-  ['schedule', 'create'],
-  ['schedule', 'update'],
-  ['schedule', 'delete'],
-] as const;
+registerActionHandler(
+  'data',
+  'datasource_test',
+  async (payload: UiActionCardPayload): Promise<ActionResult> => {
+    const navigationStore = useNavigationStore();
+    navigationStore.setPendingIntent({ type: 'open_data_management', tab: 'data' });
+    navigationStore.navigateTo('data');
+    return {
+      success: true,
+      summary: 'Please test the datasource connection from the Data Management page.',
+    };
+  }
+);
 
-for (const [domain, action] of stubActions) {
-  registerActionHandler(
-    domain,
-    action,
-    async (payload: UiActionCardPayload): Promise<ActionResult> => ({
-      success: false,
-      summary: `Action "${payload.title}" is not yet fully implemented. Please use the ${payload.targetNav ?? domain} page directly.`,
-    })
-  );
-}
+// ── Datasource Delete Handler ───────────────────────────────
+
+registerActionHandler(
+  'data',
+  'datasource_delete',
+  async (payload: UiActionCardPayload): Promise<ActionResult> => {
+    try {
+      const { useDatafileStore } = await import('@/stores/datafileStore');
+      const datafileStore = useDatafileStore();
+      const datasourceId = payload.params.datasourceId as string;
+      const datasourceType = payload.params.type as string;
+      await datafileStore.deleteDatasource(datasourceId, datasourceType as 'sqlite' | 'database');
+      return { success: true, summary: 'Datasource deleted successfully.' };
+    } catch (err) {
+      return { success: false, error: err instanceof Error ? err.message : String(err) };
+    }
+  }
+);
+
+// ── Knowledge File Open Handler (navigation) ────────────────
+
+registerActionHandler('knowledge', 'file_open', navigationHandler('data', 'knowledge'));
