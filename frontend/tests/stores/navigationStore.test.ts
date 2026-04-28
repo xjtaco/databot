@@ -31,10 +31,11 @@ describe('navigationStore', () => {
     expect(store.pendingIntent).toBeNull();
   });
 
-  it('navigateTo clears pending intent', () => {
+  it('navigateTo preserves pending intent for consuming component', () => {
     const store = useNavigationStore();
     store.setPendingIntent({ type: 'open_schedule' });
     store.navigateTo('schedule');
-    expect(store.pendingIntent).toBeNull();
+    expect(store.pendingIntent).not.toBeNull();
+    expect(store.pendingIntent!.type).toBe('open_schedule');
   });
 });
