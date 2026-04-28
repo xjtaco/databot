@@ -47,6 +47,16 @@
       {{ card.error || card.resultSummary || t('common.error') }}
     </div>
 
+    <!-- Inline Form (editing state) -->
+    <component
+      :is="formComponent"
+      v-if="card.status === 'editing' && formComponent"
+      :payload="card.payload"
+      class="action-card__inline-form"
+      @submit="handleFormSubmit"
+      @cancel="handleFormCancel"
+    />
+
     <!-- Actions -->
     <div v-if="showActions" class="action-card__actions">
       <!-- Danger confirmation input -->
@@ -88,10 +98,32 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, defineAsyncComponent, type Component } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { executeAction } from './actionCards';
 import type { ChatActionCard, CardStatus } from '@/types/actionCard';
+
+// Lazy-loaded inline form components (async, no top-level await)
+const InlineDataCreateForm = () => import('./actionCards/forms/InlineDataCreateForm.vue');
+const InlineFileUploadForm = () => import('./actionCards/forms/InlineFileUploadForm.vue');
+const InlineKnowledgeFolderForm = () => import('./actionCards/forms/InlineKnowledgeFolderForm.vue');
+const InlineKnowledgeFileForm = () => import('./actionCards/forms/InlineKnowledgeFileForm.vue');
+const InlineScheduleForm = () => import('./actionCards/forms/InlineScheduleForm.vue');
+
+const formComponentMap: Record<string, () => Promise<{ default: Component }>> = {
+  'data:datasource_create': InlineDataCreateForm,
+  'data:file_upload': InlineFileUploadForm,
+  'knowledge:folder_create': InlineKnowledgeFolderForm,
+  'knowledge:folder_rename': InlineKnowledgeFolderForm,
+  'knowledge:folder_move': InlineKnowledgeFolderForm,
+  'knowledge:folder_delete': InlineKnowledgeFolderForm,
+  'knowledge:file_upload': InlineKnowledgeFileForm,
+  'knowledge:file_move': InlineKnowledgeFileForm,
+  'knowledge:file_delete': InlineKnowledgeFileForm,
+  'schedule:create': InlineScheduleForm,
+  'schedule:update': InlineScheduleForm,
+  'schedule:delete': InlineScheduleForm,
+};
 
 const props = defineProps<{ card: ChatActionCard }>();
 
@@ -122,14 +154,33 @@ const showActions = computed(() => {
   return props.card.status === 'proposed' || props.card.status === 'confirming';
 });
 
+const formComponent = computed<Component | null>(() => {
+  const key = `${props.card.payload.domain}:${props.card.payload.action}`;
+  const loader = formComponentMap[key];
+  return loader ? defineAsyncComponent(loader) : null;
+});
+
 async function handleConfirm(): Promise<void> {
   if (props.card.payload.riskLevel === 'danger' && props.card.status === 'proposed') {
     emit('statusChange', props.card.id, 'confirming');
     return;
   }
+
+  // If this card has an inline form, transition to editing
+  if (formComponent.value && props.card.status === 'proposed') {
+    emit('statusChange', props.card.id, 'editing');
+    return;
+  }
+
+  // Direct execution (workflow/template create, navigation, etc.)
   emit('statusChange', props.card.id, 'running');
   try {
-    const result = await executeAction(props.card.payload);
+    const result = await executeAction(props.card.payload, {
+      setStatus: (status) => emit('statusChange', props.card.id, status),
+      setResult: (summary) =>
+        emit('statusChange', props.card.id, 'succeeded', { resultSummary: summary }),
+      setError: (error) => emit('statusChange', props.card.id, 'failed', { error }),
+    });
     if (result.success) {
       emit('statusChange', props.card.id, 'succeeded', { resultSummary: result.summary });
     } else {
@@ -147,6 +198,17 @@ async function handleConfirm(): Promise<void> {
 
 function handleCancel(): void {
   emit('statusChange', props.card.id, 'cancelled');
+}
+
+function handleFormCancel(): void {
+  emit('statusChange', props.card.id, 'cancelled');
+}
+
+function handleFormSubmit(
+  status: 'succeeded' | 'failed',
+  opts?: { resultSummary?: string; error?: string }
+): void {
+  emit('statusChange', props.card.id, status, opts);
 }
 </script>
 
@@ -389,6 +451,12 @@ function handleCancel(): void {
 
   &__danger-input {
     flex: 1;
+  }
+
+  &__inline-form {
+    padding-top: $spacing-sm;
+    margin-top: $spacing-sm;
+    border-top: 1px solid var(--border-primary);
   }
 }
 

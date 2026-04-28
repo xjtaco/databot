@@ -1,12 +1,21 @@
 import type { UiActionCardPayload } from '@/types/actionCard';
 
+export interface ActionCallbacks {
+  setStatus: (status: 'running' | 'succeeded' | 'failed') => void;
+  setResult: (result: string) => void;
+  setError: (error: string) => void;
+}
+
 export interface ActionResult {
   success: boolean;
   summary?: string;
   error?: string;
 }
 
-export type ActionHandler = (payload: UiActionCardPayload) => Promise<ActionResult>;
+export type ActionHandler = (
+  payload: UiActionCardPayload,
+  callbacks: ActionCallbacks
+) => Promise<ActionResult | void>;
 
 const registry = new Map<string, ActionHandler>();
 
@@ -26,7 +35,10 @@ export function isActionRegistered(domain: string, action: string): boolean {
   return registry.has(actionKey(domain, action));
 }
 
-export async function executeAction(payload: UiActionCardPayload): Promise<ActionResult> {
+export async function executeAction(
+  payload: UiActionCardPayload,
+  callbacks: ActionCallbacks
+): Promise<ActionResult> {
   const handler = registry.get(actionKey(payload.domain, payload.action));
   if (!handler) {
     return {
@@ -35,7 +47,8 @@ export async function executeAction(payload: UiActionCardPayload): Promise<Actio
     };
   }
   try {
-    return await handler(payload);
+    const result = await handler(payload, callbacks);
+    return result ?? { success: true };
   } catch (err) {
     return {
       success: false,

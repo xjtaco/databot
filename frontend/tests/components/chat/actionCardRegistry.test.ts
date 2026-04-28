@@ -33,10 +33,15 @@ describe('actionCardRegistry', () => {
       executionMode: 'frontend',
       targetNav: 'data',
     };
-    const result = await executeAction(payload);
+    const callbacks = {
+      setStatus: vi.fn(),
+      setResult: vi.fn(),
+      setError: vi.fn(),
+    };
+    const result = await executeAction(payload, callbacks);
     expect(result.success).toBe(true);
     expect(result.summary).toBe('Opened');
-    expect(mockHandler).toHaveBeenCalledWith(payload);
+    expect(mockHandler).toHaveBeenCalledWith(payload, callbacks);
   });
 
   it('returns failure for unregistered action', async () => {
@@ -52,7 +57,12 @@ describe('actionCardRegistry', () => {
       confirmRequired: false,
       executionMode: 'frontend',
     };
-    const result = await executeAction(payload);
+    const callbacks = {
+      setStatus: vi.fn(),
+      setResult: vi.fn(),
+      setError: vi.fn(),
+    };
+    const result = await executeAction(payload, callbacks);
     expect(result.success).toBe(false);
     expect(result.summary).toContain('Unsupported');
   });
@@ -73,8 +83,38 @@ describe('actionCardRegistry', () => {
       confirmRequired: false,
       executionMode: 'frontend',
     };
-    const result = await executeAction(payload);
+    const callbacks = {
+      setStatus: vi.fn(),
+      setResult: vi.fn(),
+      setError: vi.fn(),
+    };
+    const result = await executeAction(payload, callbacks);
     expect(result.success).toBe(false);
     expect(result.error).toContain('API error');
+  });
+
+  it('returns default success when handler returns void', async () => {
+    const mockHandler: ActionHandler = vi.fn().mockResolvedValue(undefined);
+    registerActionHandler('data', 'void_action', mockHandler);
+
+    const payload: UiActionCardPayload = {
+      id: 'card-1',
+      cardId: 'data.void_action',
+      domain: 'data' as ActionDomain,
+      action: 'void_action',
+      title: 'Void Action',
+      summary: 'Returns void',
+      params: {},
+      riskLevel: 'low',
+      confirmRequired: false,
+      executionMode: 'frontend',
+    };
+    const callbacks = {
+      setStatus: vi.fn(),
+      setResult: vi.fn(),
+      setError: vi.fn(),
+    };
+    const result = await executeAction(payload, callbacks);
+    expect(result.success).toBe(true);
   });
 });
