@@ -11,6 +11,19 @@ import { getCardDefinition } from './uiActionCardCatalog';
 import type { UiActionCardPayload } from './uiActionCardTypes';
 import logger from '../../utils/logger';
 
+function extractDefaultQuery(params: Record<string, unknown>): string | undefined {
+  const queryParamNames = ['query', 'keyword', 'name', 'title'] as const;
+
+  for (const name of queryParamNames) {
+    const value = params[name];
+    if (typeof value === 'string' && value.trim().length > 0) {
+      return value.trim();
+    }
+  }
+
+  return undefined;
+}
+
 export class ShowUiActionCardTool extends Tool {
   name = ToolName.ShowUiActionCard;
 
@@ -114,7 +127,7 @@ a specific card to the user. Provide the cardId and any required parameters.`;
       targetDataTab: definition.targetDataTab,
       resourceType: definition.resourceType,
       resourceSections: definition.resourceSections,
-      defaultQuery: definition.defaultQuery,
+      defaultQuery: extractDefaultQuery(rawParams) ?? definition.defaultQuery,
       allowedActions: definition.allowedActions,
       copilotPrompt,
     };

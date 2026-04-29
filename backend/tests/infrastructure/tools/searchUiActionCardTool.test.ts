@@ -87,6 +87,40 @@ describe('SearchUiActionCardTool', () => {
     }
   });
 
+  it('returns resource-list metadata for list and delete cards', async () => {
+    const tool = ToolRegistry.get(ToolName.SearchUiActionCard);
+    const result = await tool.execute({
+      query: 'workflow.delete|data.open',
+      queryMode: 'regex',
+      maxResults: 10,
+    });
+
+    expect(result.success).toBe(true);
+    expect(Array.isArray(result.data)).toBe(true);
+
+    const cards = result.data as Array<{
+      cardId: string;
+      presentationMode?: string;
+      resourceType?: string;
+      resourceSections?: unknown[];
+      allowedActions?: unknown[];
+      confirmationMode?: string;
+    }>;
+    const workflowDelete = cards.find((card) => card.cardId === 'workflow.delete');
+    const dataOpen = cards.find((card) => card.cardId === 'data.open');
+
+    expect(workflowDelete).toMatchObject({
+      presentationMode: 'resource_list',
+      confirmationMode: 'modal',
+      resourceType: 'workflow',
+      allowedActions: [{ key: 'delete', riskLevel: 'danger', confirmationMode: 'modal' }],
+    });
+    expect(dataOpen).toMatchObject({
+      presentationMode: 'resource_list',
+      resourceSections: expect.any(Array),
+    });
+  });
+
   it('returns cards filtered by domain "knowledge" for query "folder"', async () => {
     const tool = ToolRegistry.get(ToolName.SearchUiActionCard);
     const result = await tool.execute({ query: 'folder', domain: 'knowledge' });

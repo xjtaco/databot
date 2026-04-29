@@ -58,15 +58,109 @@ describe('getCardDefinition', () => {
   });
 
   it('includes direct delete cards that require modal confirmation', () => {
-    const cardIds = ['workflow.delete', 'data.table_delete', 'template.delete'];
+    const cardIds = [
+      'workflow.delete',
+      'data.datasource_delete',
+      'data.table_delete',
+      'knowledge.folder_delete',
+      'knowledge.file_delete',
+      'schedule.delete',
+      'template.delete',
+    ];
 
     for (const cardId of cardIds) {
       const def = getCardDefinition(cardId);
       expect(def).toBeDefined();
-      expect(def!.presentationMode).toBe('action');
+      expect(def!.presentationMode).toBe('resource_list');
       expect(def!.confirmationMode).toBe('modal');
       expect(def!.riskLevel).toBe('danger');
       expect(def!.confirmRequired).toBe(true);
+      expect(def!.requiredParams).toEqual([]);
+      expect(def!.allowedActions).toEqual([
+        { key: 'delete', riskLevel: 'danger', confirmationMode: 'modal' },
+      ]);
     }
+  });
+
+  it('defines open cards as resource lists without navigation-only presentation', () => {
+    expect(getCardDefinition('workflow.open')).toMatchObject({
+      presentationMode: 'resource_list',
+      resourceType: 'workflow',
+      allowedActions: [
+        { key: 'edit' },
+        { key: 'execute' },
+        { key: 'delete', riskLevel: 'danger', confirmationMode: 'modal' },
+      ],
+    });
+
+    expect(getCardDefinition('data.open')).toMatchObject({
+      presentationMode: 'resource_list',
+      resourceSections: [
+        {
+          resourceType: 'datasource',
+          titleKey: 'chat.actionCards.resource.datasource.sectionTitle',
+          emptyKey: 'chat.actionCards.resource.datasource.empty',
+          allowedActions: [{ key: 'delete', riskLevel: 'danger', confirmationMode: 'modal' }],
+        },
+        {
+          resourceType: 'table',
+          titleKey: 'chat.actionCards.resource.table.sectionTitle',
+          emptyKey: 'chat.actionCards.resource.table.empty',
+          allowedActions: [
+            { key: 'view' },
+            { key: 'delete', riskLevel: 'danger', confirmationMode: 'modal' },
+          ],
+        },
+      ],
+    });
+
+    expect(getCardDefinition('knowledge.open')).toMatchObject({
+      presentationMode: 'resource_list',
+      resourceSections: [
+        {
+          resourceType: 'knowledge_folder',
+          allowedActions: [{ key: 'delete', riskLevel: 'danger', confirmationMode: 'modal' }],
+        },
+        {
+          resourceType: 'knowledge_file',
+          allowedActions: [
+            { key: 'view' },
+            { key: 'delete', riskLevel: 'danger', confirmationMode: 'modal' },
+          ],
+        },
+      ],
+    });
+
+    expect(getCardDefinition('schedule.open')).toMatchObject({
+      presentationMode: 'resource_list',
+      resourceType: 'schedule',
+      allowedActions: [
+        { key: 'edit' },
+        { key: 'enable' },
+        { key: 'disable' },
+        { key: 'delete', riskLevel: 'danger', confirmationMode: 'modal' },
+      ],
+    });
+  });
+
+  it('keeps schedule.create as an inline form with optional defaults', () => {
+    const def = getCardDefinition('schedule.create');
+    expect(def).toBeDefined();
+    expect(def!.presentationMode).toBe('inline_form');
+    expect(def!.requiredParams.map((param) => param.name)).not.toContain('workflowId');
+    expect(def!.requiredParams.map((param) => param.name)).not.toContain('cronExpr');
+    expect(def!.optionalParams.map((param) => param.name)).toEqual(
+      expect.arrayContaining([
+        'workflowName',
+        'workflowQuery',
+        'scheduleType',
+        'cronExpr',
+        'time',
+        'timezone',
+        'enabled',
+        'name',
+        'description',
+      ])
+    );
   });
 });

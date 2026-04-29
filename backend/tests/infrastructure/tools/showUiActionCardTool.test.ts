@@ -52,7 +52,24 @@ describe('ShowUiActionCardTool', () => {
     expect(cardPayload.action).toBe('open');
     expect(cardPayload.riskLevel).toBe('low');
     expect(cardPayload.executionMode).toBe('frontend');
-    expect(cardPayload.presentationMode).toBe('in_chat');
+    expect(cardPayload.presentationMode).toBe('resource_list');
+    expect(cardPayload.resourceSections).toEqual([
+      {
+        resourceType: 'datasource',
+        titleKey: 'chat.actionCards.resource.datasource.sectionTitle',
+        emptyKey: 'chat.actionCards.resource.datasource.empty',
+        allowedActions: [{ key: 'delete', riskLevel: 'danger', confirmationMode: 'modal' }],
+      },
+      {
+        resourceType: 'table',
+        titleKey: 'chat.actionCards.resource.table.sectionTitle',
+        emptyKey: 'chat.actionCards.resource.table.empty',
+        allowedActions: [
+          { key: 'view' },
+          { key: 'delete', riskLevel: 'danger', confirmationMode: 'modal' },
+        ],
+      },
+    ]);
     expect(cardPayload.title).toBe('Open Data Panel');
   });
 
@@ -160,11 +177,28 @@ describe('ShowUiActionCardTool', () => {
     expect(cardPayload.domain).toBe('workflow');
     expect(cardPayload.action).toBe('delete');
     expect(cardPayload.params.workflowId).toBe('workflow-1');
-    expect(cardPayload.presentationMode).toBe('action');
+    expect(cardPayload.presentationMode).toBe('resource_list');
     expect(cardPayload.confirmationMode).toBe('modal');
+    expect(cardPayload.resourceType).toBe('workflow');
+    expect(cardPayload.allowedActions).toEqual([
+      { key: 'delete', riskLevel: 'danger', confirmationMode: 'modal' },
+    ]);
     expect(cardPayload.riskLevel).toBe('danger');
     expect(cardPayload.confirmRequired).toBe(true);
     expect(cardPayload.titleKey).toBe('chat.actionCards.workflow.delete.title');
+  });
+
+  it('uses human-readable params as resource-list defaultQuery', async () => {
+    const tool = ToolRegistry.get(ToolName.ShowUiActionCard);
+    const result = await tool.execute({
+      cardId: 'workflow.delete',
+      params: { workflowId: 'workflow-1', keyword: 'monthly report' },
+    });
+
+    expect(result.success).toBe(true);
+
+    const cardPayload = result.metadata?.cardPayload as UiActionCardPayload;
+    expect(cardPayload.defaultQuery).toBe('monthly report');
   });
 
   it('preserves resource list metadata from catalog definitions', async () => {
@@ -213,12 +247,15 @@ describe('ShowUiActionCardTool', () => {
           : undefined,
     }));
 
-    const [{ ToolRegistry: MockedToolRegistry }, { ToolName: MockedToolName }, { ShowUiActionCardTool: MockedTool }] =
-      await Promise.all([
-        import('../../../src/infrastructure/tools/tools'),
-        import('../../../src/infrastructure/tools/types'),
-        import('../../../src/infrastructure/tools/showUiActionCardTool'),
-      ]);
+    const [
+      { ToolRegistry: MockedToolRegistry },
+      { ToolName: MockedToolName },
+      { ShowUiActionCardTool: MockedTool },
+    ] = await Promise.all([
+      import('../../../src/infrastructure/tools/tools'),
+      import('../../../src/infrastructure/tools/types'),
+      import('../../../src/infrastructure/tools/showUiActionCardTool'),
+    ]);
     const toolNames = MockedToolRegistry.list();
     toolNames.forEach((name: string) => {
       (MockedToolRegistry as unknown as { tools: Map<string, unknown> }).tools.delete(name);
