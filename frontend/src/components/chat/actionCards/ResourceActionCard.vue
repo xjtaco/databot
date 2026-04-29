@@ -46,7 +46,11 @@
       </div>
 
       <div v-else class="resource-action-card__rows">
-        <div v-for="row in section.rows" :key="row.id" class="resource-action-card__row">
+        <div
+          v-for="row in section.rows"
+          :key="rowStateKey(section, row)"
+          class="resource-action-card__row"
+        >
           <div class="resource-action-card__row-main">
             <div class="resource-action-card__row-title">{{ row.title }}</div>
             <div v-if="row.subtitle" class="resource-action-card__row-subtitle">
@@ -61,17 +65,17 @@
                 {{ t(item.label) }}: {{ item.value }}
               </span>
             </div>
-            <div v-if="rowResults[row.id]" class="resource-action-card__result">
-              {{ rowResults[row.id] }}
+            <div v-if="rowResults[rowStateKey(section, row)]" class="resource-action-card__result">
+              {{ rowResults[rowStateKey(section, row)] }}
             </div>
-            <div v-if="rowErrors[row.id]" class="resource-action-card__error">
-              {{ rowErrors[row.id] }}
+            <div v-if="rowErrors[rowStateKey(section, row)]" class="resource-action-card__error">
+              {{ rowErrors[rowStateKey(section, row)] }}
             </div>
             <InlineScheduleForm
-              v-if="inlineEdit?.rowId === row.id"
+              v-if="inlineEdit?.rowKey === rowStateKey(section, row)"
               class="resource-action-card__inline-form"
               :payload="inlineEdit.payload"
-              @submit="handleInlineScheduleSubmit(section.key)"
+              @submit="(status, opts) => handleInlineScheduleSubmit(section, row, status, opts)"
               @cancel="closeInlineEdit"
             />
           </div>
@@ -87,11 +91,11 @@
                 size="small"
                 circle
                 :type="action.riskLevel === 'danger' ? 'danger' : 'primary'"
-                :loading="runningActionKey === rowActionId(row.id, action.key)"
+                :loading="runningActionKey === rowActionId(rowStateKey(section, row), action.key)"
                 :disabled="runningActionKey !== null"
                 :title="t(action.labelKey)"
                 :data-action-key="action.key"
-                @click="handleRowAction(section.key, row, action)"
+                @click="handleRowAction(section, row, action)"
               >
                 <el-icon><component :is="iconComponent(action.icon)" /></el-icon>
               </el-button>
@@ -150,14 +154,21 @@ interface SectionState {
 }
 
 interface PendingConfirmation {
-  sectionKey: string;
+  section: SectionState;
   row: ResourceRow;
   action: ResourceRowAction;
 }
 
 interface InlineEditState {
-  rowId: string;
+  rowKey: string;
   payload: UiActionCardPayload;
+}
+
+type InlineScheduleSubmitStatus = 'succeeded' | 'failed';
+
+interface InlineScheduleSubmitOptions {
+  resultSummary?: string;
+  error?: string;
 }
 
 const props = defineProps<{
@@ -286,8 +297,12 @@ function sectionEmptyText(section: SectionState): string {
   return t(section.emptyKey);
 }
 
-function rowActionId(rowId: string, actionKey: ResourceActionKey): string {
-  return `${rowId}:${actionKey}`;
+function rowStateKey(section: SectionState, row: ResourceRow): string {
+  return `${section.key}:${row.id}`;
+}
+
+function rowActionId(rowKey: string, actionKey: ResourceActionKey): string {
+  return `${rowKey}:${actionKey}`;
 }
 
 function iconComponent(icon: ResourceRowAction['icon']): Component {
@@ -303,22 +318,22 @@ function iconComponent(icon: ResourceRowAction['icon']): Component {
 }
 
 async function handleRowAction(
-  sectionKey: string,
+  section: SectionState,
   row: ResourceRow,
   action: ResourceRowAction
 ): Promise<void> {
   if (action.confirmationMode === 'modal' || action.riskLevel === 'danger') {
-    pendingConfirmation.value = { sectionKey, row, action };
+    pendingConfirmation.value = { section, row, action };
     return;
   }
 
-  await executeRowAction(sectionKey, row, action);
+  await executeRowAction(section, row, action);
 }
 
 async function confirmPendingAction(): Promise<void> {
   if (!pendingConfirmation.value) return;
   const pending = pendingConfirmation.value;
-  await executeRowAction(pending.sectionKey, pending.row, pending.action);
+  await executeRowAction(pending.section, pending.row, pending.action);
   pendingConfirmation.value = null;
 }
 
@@ -333,20 +348,21 @@ function handleConfirmVisibleUpdate(visible: boolean): void {
 }
 
 async function executeRowAction(
-  sectionKey: string,
+  section: SectionState,
   row: ResourceRow,
   action: ResourceRowAction
 ): Promise<void> {
-  const actionId = rowActionId(row.id, action.key);
+  const key = rowStateKey(section, row);
+  const actionId = rowActionId(key, action.key);
   runningActionKey.value = actionId;
-  rowErrors[row.id] = '';
-  rowResults[row.id] = '';
+  rowErrors[key] = '';
+  rowResults[key] = '';
 
   try {
     const result = await getResourceAdapter(row.rawType).executeAction(row, action.key);
     if (result.inlineForm?.kind === 'schedule_edit') {
       inlineEdit.value = {
-        rowId: row.id,
+        rowKey: key,
         payload: {
           ...props.payload,
           cardId: 'schedule.update',
@@ -357,14 +373,14 @@ async function executeRowAction(
         },
       };
     } else {
-      rowResults[row.id] = formatResult(result);
+      rowResults[key] = formatResult(result);
     }
 
     if (result.refresh) {
-      await refreshSection(sectionKey);
+      await refreshSection(section.key);
     }
   } catch (err: unknown) {
-    rowErrors[row.id] = err instanceof Error ? err.message : String(err);
+    rowErrors[key] = err instanceof Error ? err.message : String(err);
   } finally {
     runningActionKey.value = null;
   }
@@ -385,9 +401,24 @@ function closeInlineEdit(): void {
   inlineEdit.value = null;
 }
 
-async function handleInlineScheduleSubmit(sectionKey: string): Promise<void> {
+async function handleInlineScheduleSubmit(
+  section: SectionState,
+  row: ResourceRow,
+  status: InlineScheduleSubmitStatus,
+  opts?: InlineScheduleSubmitOptions
+): Promise<void> {
+  const key = rowStateKey(section, row);
+  rowErrors[key] = '';
+  rowResults[key] = '';
+
+  if (status === 'failed') {
+    rowErrors[key] = opts?.error ?? opts?.resultSummary ?? t('common.error');
+    return;
+  }
+
+  rowResults[key] = opts?.resultSummary ?? '';
   inlineEdit.value = null;
-  await refreshSection(sectionKey);
+  await refreshSection(section.key);
 }
 </script>
 

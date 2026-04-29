@@ -55,6 +55,17 @@ vi.mock('@/components/chat/actionCards/forms/InlineScheduleForm.vue', () => ({
             },
             'submit'
           ),
+          h(
+            'button',
+            {
+              class: 'inline-schedule-fail',
+              onClick: () =>
+                emit('submit', 'failed', {
+                  error: 'Update failed',
+                }),
+            },
+            'fail'
+          ),
         ]);
     },
   }),
@@ -284,5 +295,74 @@ describe('ResourceActionCard.vue', () => {
 
     expect(wrapper.find('.inline-schedule-form-stub').exists()).toBe(false);
     expect(fetchRowsMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('keeps schedule edit open and does not refresh when update fails', async () => {
+    fetchRowsMock.mockResolvedValue([makeRow({ rawType: 'schedule' })]);
+    executeActionMock.mockResolvedValueOnce({
+      summaryKey: 'chat.actionCards.resource.summary.schedule.edit',
+      inlineForm: { kind: 'schedule_edit', scheduleId: 'workflow-1' },
+    } satisfies ResourceActionResult);
+    const wrapper = mountCard(makePayload({ domain: 'schedule', resourceType: 'schedule' }));
+    await flush();
+
+    await wrapper.find('[data-action-key="execute"]').trigger('click');
+    await flush();
+    await wrapper.find('.inline-schedule-fail').trigger('click');
+    await flush();
+
+    expect(wrapper.find('.inline-schedule-form-stub').exists()).toBe(true);
+    expect(fetchRowsMock).toHaveBeenCalledTimes(1);
+    expect(wrapper.text()).toContain('Update failed');
+  });
+
+  it('keeps row action results scoped when sections contain duplicate row ids', async () => {
+    const workflowRow = makeRow({
+      id: 'shared-1',
+      title: 'Workflow Shared',
+      rawType: 'workflow',
+    });
+    const scheduleRow = makeRow({
+      id: 'shared-1',
+      title: 'Schedule Shared',
+      rawType: 'schedule',
+    });
+    getResourceAdapterMock.mockImplementation((resourceType: string) => ({
+      fetchRows: vi
+        .fn()
+        .mockResolvedValue(resourceType === 'workflow' ? [workflowRow] : [scheduleRow]),
+      executeAction: executeActionMock,
+    }));
+    executeActionMock.mockResolvedValueOnce({
+      summaryKey: 'chat.actionCards.resource.summary.workflow.execute',
+      summaryParams: { name: 'Workflow Shared' },
+    } satisfies ResourceActionResult);
+
+    const wrapper = mountCard(
+      makePayload({
+        resourceSections: [
+          {
+            resourceType: 'workflow',
+            titleKey: 'chat.actionCards.resource.sections.workflow',
+            emptyKey: 'chat.actionCards.resource.empty.workflow',
+            allowedActions: [{ key: 'execute' }],
+          },
+          {
+            resourceType: 'schedule',
+            titleKey: 'chat.actionCards.resource.sections.schedule',
+            emptyKey: 'chat.actionCards.resource.empty.schedule',
+            allowedActions: [{ key: 'execute' }],
+          },
+        ],
+      })
+    );
+    await flush();
+
+    const rows = wrapper.findAll('.resource-action-card__row');
+    await rows[0].find('[data-action-key="execute"]').trigger('click');
+    await flush();
+
+    expect(rows[0].text()).toContain('chat.actionCards.resource.summary.workflow.execute');
+    expect(rows[1].text()).not.toContain('chat.actionCards.resource.summary.workflow.execute');
   });
 });
