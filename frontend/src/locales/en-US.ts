@@ -198,6 +198,22 @@ export default {
           knowledge_file: 'No knowledge files found.',
           template: 'No templates found.',
         },
+        datasource: {
+          sectionTitle: 'Data sources',
+          empty: 'No data sources found.',
+        },
+        table: {
+          sectionTitle: 'Tables',
+          empty: 'No tables found.',
+        },
+        knowledgeFolder: {
+          sectionTitle: 'Knowledge folders',
+          empty: 'No knowledge folders found.',
+        },
+        knowledgeFile: {
+          sectionTitle: 'Knowledge files',
+          empty: 'No knowledge files found.',
+        },
         meta: {
           nodeCount: 'Nodes',
           updatedAt: 'Updated',

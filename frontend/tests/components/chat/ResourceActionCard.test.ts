@@ -233,6 +233,64 @@ describe('ResourceActionCard.vue', () => {
     expect(hasMissingResourceWarning).toBe(false);
   });
 
+  it('supports backend catalog resource section aliases without missing i18n warnings', async () => {
+    fetchRowsMock.mockResolvedValue([]);
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+
+    const wrapper = mountCard(
+      makePayload({
+        resourceSections: [
+          {
+            resourceType: 'datasource',
+            titleKey: 'chat.actionCards.resource.datasource.sectionTitle',
+            emptyKey: 'chat.actionCards.resource.datasource.empty',
+            allowedActions: [{ key: 'delete', riskLevel: 'danger', confirmationMode: 'modal' }],
+          },
+          {
+            resourceType: 'table',
+            titleKey: 'chat.actionCards.resource.table.sectionTitle',
+            emptyKey: 'chat.actionCards.resource.table.empty',
+            allowedActions: [
+              { key: 'view' },
+              { key: 'delete', riskLevel: 'danger', confirmationMode: 'modal' },
+            ],
+          },
+          {
+            resourceType: 'knowledge_folder',
+            titleKey: 'chat.actionCards.resource.knowledgeFolder.sectionTitle',
+            emptyKey: 'chat.actionCards.resource.knowledgeFolder.empty',
+            allowedActions: [{ key: 'delete', riskLevel: 'danger', confirmationMode: 'modal' }],
+          },
+          {
+            resourceType: 'knowledge_file',
+            titleKey: 'chat.actionCards.resource.knowledgeFile.sectionTitle',
+            emptyKey: 'chat.actionCards.resource.knowledgeFile.empty',
+            allowedActions: [
+              { key: 'view' },
+              { key: 'delete', riskLevel: 'danger', confirmationMode: 'modal' },
+            ],
+          },
+        ],
+      })
+    );
+    await flush();
+
+    const hasMissingResourceWarning = warnSpy.mock.calls.some(([message]) =>
+      String(message).includes("Not found 'chat.actionCards.resource.")
+    );
+    warnSpy.mockRestore();
+
+    expect(wrapper.text()).toContain('Data sources');
+    expect(wrapper.text()).toContain('No data sources found.');
+    expect(wrapper.text()).toContain('Tables');
+    expect(wrapper.text()).toContain('No tables found.');
+    expect(wrapper.text()).toContain('Knowledge folders');
+    expect(wrapper.text()).toContain('No knowledge folders found.');
+    expect(wrapper.text()).toContain('Knowledge files');
+    expect(wrapper.text()).toContain('No knowledge files found.');
+    expect(hasMissingResourceWarning).toBe(false);
+  });
+
   it('loads rows immediately without a view click', async () => {
     const wrapper = mountCard(makePayload({ defaultQuery: 'daily' }));
     await flush();

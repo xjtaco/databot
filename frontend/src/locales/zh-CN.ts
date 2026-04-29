@@ -197,6 +197,22 @@ export default {
           knowledge_file: '暂无知识库文件。',
           template: '暂无模板。',
         },
+        datasource: {
+          sectionTitle: '数据源',
+          empty: '暂无数据源。',
+        },
+        table: {
+          sectionTitle: '数据表',
+          empty: '暂无数据表。',
+        },
+        knowledgeFolder: {
+          sectionTitle: '知识库目录',
+          empty: '暂无知识库目录。',
+        },
+        knowledgeFile: {
+          sectionTitle: '知识库文件',
+          empty: '暂无知识库文件。',
+        },
         meta: {
           nodeCount: '节点数',
           updatedAt: '更新时间',
