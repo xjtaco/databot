@@ -8,7 +8,9 @@ import type { NodeConfig, WorkflowListItem, WorkflowNodeType } from '@/types/wor
 import { useNavigationStore } from '@/stores/navigationStore';
 import { i18n } from '@/locales';
 
-// ── In-chat Handlers ───────────────────────────────────────
+// ── Legacy In-chat Handlers ────────────────────────────────
+// Current catalog list/delete cards use resource_list and ResourceActionCard.
+// Keep these handlers registered so persisted older in_chat cards still run.
 
 const MAX_PREVIEW_ITEMS = 5;
 const MAX_FILE_PREVIEW_LENGTH = 600;
@@ -459,7 +461,8 @@ registerActionHandler(
   }
 );
 
-// ── Datasource Delete Handler ───────────────────────────────
+// ── Legacy Direct Delete Handlers ───────────────────────────
+// Current delete cards are resource_list cards with row actions handled by ResourceActionCard.
 
 registerActionHandler(
   'data',

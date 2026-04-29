@@ -453,63 +453,56 @@ describe('ActionCard.vue', () => {
     ]);
   });
 
-  it('opens modal before executing direct modal actions', async () => {
+  it('delegates current workflow delete cards to ResourceActionCard row actions', async () => {
     const card = makeCard({
       payload: {
         ...makeCard().payload,
         cardId: 'workflow.delete',
         domain: 'workflow',
         action: 'delete',
-        presentationMode: 'action',
+        presentationMode: 'resource_list',
         confirmationMode: 'modal',
         riskLevel: 'danger',
         confirmRequired: true,
-        params: { workflowId: 'workflow-1' },
+        params: {},
+        resourceType: 'workflow',
+        allowedActions: [{ key: 'delete', riskLevel: 'danger', confirmationMode: 'modal' }],
       },
     });
     const wrapper = mountActionCard(card);
+    await nextTick();
+    await vi.dynamicImportSettled();
 
-    const actionButtons = wrapper.findAll('.action-card__actions button');
-    expect(actionButtons[1]).toBeDefined();
-    await actionButtons[1].trigger('click');
-
-    expect(wrapper.find('.confirm-dialog-stub').exists()).toBe(true);
-    expect(wrapper.text()).toContain('Confirm action');
+    expect(wrapper.find('.resource-action-card-stub').exists()).toBe(true);
+    expect(wrapper.find('.action-card__actions').exists()).toBe(false);
     expect(executeActionMock).not.toHaveBeenCalled();
-    expect(wrapper.emitted('statusChange')).toBeUndefined();
-
-    await wrapper.find('.confirm-dialog-confirm').trigger('click');
-
-    expect(executeActionMock).toHaveBeenCalledTimes(1);
-    expect(wrapper.emitted('statusChange')).toEqual([
-      ['card-1', 'running'],
-      ['card-1', 'succeeded', { resultSummary: 'Opened successfully' }],
-    ]);
+    expect(wrapper.props('card').payload.params).toEqual({});
   });
 
-  it('does not execute direct modal actions when modal is cancelled', async () => {
+  it('delegates current data table delete cards to ResourceActionCard row actions', async () => {
     const card = makeCard({
       payload: {
         ...makeCard().payload,
         cardId: 'data.table_delete',
         domain: 'data',
         action: 'table_delete',
-        presentationMode: 'action',
+        presentationMode: 'resource_list',
         confirmationMode: 'modal',
         riskLevel: 'danger',
         confirmRequired: true,
-        params: { tableId: 'table-1' },
+        params: {},
+        resourceType: 'table',
+        allowedActions: [{ key: 'delete', riskLevel: 'danger', confirmationMode: 'modal' }],
       },
     });
     const wrapper = mountActionCard(card);
+    await nextTick();
+    await vi.dynamicImportSettled();
 
-    const actionButtons = wrapper.findAll('.action-card__actions button');
-    expect(actionButtons[1]).toBeDefined();
-    await actionButtons[1].trigger('click');
-    await wrapper.find('.confirm-dialog-cancel').trigger('click');
-
+    expect(wrapper.find('.resource-action-card-stub').exists()).toBe(true);
+    expect(wrapper.find('.action-card__actions').exists()).toBe(false);
     expect(executeActionMock).not.toHaveBeenCalled();
-    expect(wrapper.emitted('statusChange')).toBeUndefined();
+    expect(wrapper.props('card').payload.params).toEqual({});
   });
 
   it('does not emit duplicate completion when handler reports result through callbacks', async () => {
@@ -816,28 +809,30 @@ describe('ActionCard.vue', () => {
     expect(wrapper.emitted('statusChange')?.[0]?.[1]).toBe('succeeded');
   });
 
-  it('deletes schedules using scheduleId payload parameter', async () => {
+  it('delegates current schedule delete cards to ResourceActionCard row actions', async () => {
     const card = makeCard({
-      status: 'editing',
       payload: {
         ...makeCard().payload,
         cardId: 'schedule.delete',
         domain: 'schedule',
         action: 'delete',
-        presentationMode: 'inline_form',
-        confirmationMode: 'none',
-        params: { scheduleId: 'schedule-1' },
+        presentationMode: 'resource_list',
+        confirmationMode: 'modal',
+        riskLevel: 'danger',
+        confirmRequired: true,
+        params: {},
+        resourceType: 'schedule',
+        allowedActions: [{ key: 'delete', riskLevel: 'danger', confirmationMode: 'modal' }],
       },
     });
     const wrapper = mountActionCard(card);
+    await nextTick();
     await vi.dynamicImportSettled();
 
-    const deleteButtons = wrapper.findAll('.inline-schedule-form__actions button');
-    expect(deleteButtons[0]).toBeDefined();
-    await deleteButtons[0].trigger('click');
-    await vi.dynamicImportSettled();
-
-    expect(scheduleApiMock).toHaveBeenCalledWith('schedule-1');
-    expect(wrapper.emitted('statusChange')?.[0]?.[1]).toBe('succeeded');
+    expect(wrapper.find('.resource-action-card-stub').exists()).toBe(true);
+    expect(wrapper.find('.inline-schedule-form').exists()).toBe(false);
+    expect(wrapper.find('.action-card__actions').exists()).toBe(false);
+    expect(scheduleApiMock).not.toHaveBeenCalled();
+    expect(wrapper.props('card').payload.params).toEqual({});
   });
 });

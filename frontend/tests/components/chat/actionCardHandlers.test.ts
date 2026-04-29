@@ -245,15 +245,15 @@ describe('action card handlers', () => {
     deleteRemoteDatasourceMock.mockResolvedValue(undefined);
   });
 
-  it('registers data.open handler', () => {
+  it('registers legacy data.open handler for persisted in-chat cards', () => {
     expect(getRegistry().has('data:open')).toBe(true);
   });
 
-  it('registers knowledge.open handler', () => {
+  it('registers legacy knowledge.open handler for persisted in-chat cards', () => {
     expect(getRegistry().has('knowledge:open')).toBe(true);
   });
 
-  it('registers schedule.open handler', () => {
+  it('registers legacy schedule.open handler for persisted in-chat cards', () => {
     expect(getRegistry().has('schedule:open')).toBe(true);
   });
 
@@ -269,11 +269,11 @@ describe('action card handlers', () => {
     expect(getRegistry().has('data:datasource_test')).toBe(true);
   });
 
-  it('registers datasource_delete handler', () => {
+  it('registers legacy datasource_delete handler for persisted direct-action cards', () => {
     expect(getRegistry().has('data:datasource_delete')).toBe(true);
   });
 
-  it('registers direct delete handlers', () => {
+  it('registers legacy direct delete handlers for persisted direct-action cards', () => {
     expect(getRegistry().has('workflow:delete')).toBe(true);
     expect(getRegistry().has('data:table_delete')).toBe(true);
     expect(getRegistry().has('template:delete')).toBe(true);
@@ -290,7 +290,7 @@ describe('action card handlers', () => {
     expect(getRegistry().has('workflow:template_report')).toBe(true);
   });
 
-  it('keeps non-editor list cards inside the chat and shows fetched results', async () => {
+  it('keeps legacy in-chat list cards inside the chat and shows fetched results', async () => {
     const cases: Array<{
       cardId: string;
       domain: UiActionCardPayload['domain'];
@@ -364,7 +364,7 @@ describe('action card handlers', () => {
     }
   });
 
-  it('keeps workflow.open inside chat when executed', async () => {
+  it('keeps legacy workflow.open inside chat when executed', async () => {
     const result = await executeAction(makePayload({ action: 'open' }), {
       setStatus: vi.fn(),
       setResult: vi.fn(),
@@ -441,7 +441,7 @@ describe('action card handlers', () => {
     expect(navigationStore.activeNav).toBe('chat');
   });
 
-  it('executes direct delete cards without leaving chat', async () => {
+  it('keeps legacy direct delete cards executable without leaving chat', async () => {
     const navigationStore = useNavigationStore();
     navigationStore.navigateTo('chat');
 
