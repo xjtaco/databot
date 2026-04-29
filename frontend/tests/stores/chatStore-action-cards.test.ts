@@ -245,11 +245,7 @@ describe('chatStore action card actions', () => {
     const payload = msg.actionCards![0].payload;
     expect(payload.presentationMode).toBe('resource_list');
     expect(payload.resourceType).toBe('workflow');
-    expect(payload.allowedActions?.map((item) => item.key)).toEqual([
-      'edit',
-      'execute',
-      'delete',
-    ]);
+    expect(payload.allowedActions?.map((item) => item.key)).toEqual(['edit', 'execute', 'delete']);
     expect(payload.defaultQuery).toBe('status:active');
     expect(payload.resourceSections?.[0]).toEqual({
       resourceType: 'workflow',

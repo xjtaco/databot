@@ -89,6 +89,7 @@ declare module 'vue' {
     MarkdownViewerDrawer: typeof import('./components/knowledge/MarkdownViewerDrawer.vue')['default']
     MessageToolCalls: typeof import('./components/chat/MessageToolCalls.vue')['default']
     PasswordPolicyConfig: typeof import('./components/settings/PasswordPolicyConfig.vue')['default']
+    ResourceActionCard: typeof import('./components/chat/actionCards/ResourceActionCard.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
     ScheduleCardList: typeof import('./components/schedule/ScheduleCardList.vue')['default']

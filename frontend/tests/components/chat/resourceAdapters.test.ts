@@ -290,6 +290,21 @@ describe('resource adapters', () => {
     expect(result.refresh).toBe(true);
   });
 
+  it('filters workflow rows by id when an id is used as the query', async () => {
+    listWorkflowsMock.mockResolvedValue([
+      workflow('workflow-target', 'Daily ETL', null),
+      workflow('workflow-other', 'Other ETL', null),
+    ]);
+
+    const rows = await getResourceAdapter('workflow').fetchRows({
+      query: 'workflow-target',
+      limit: 10,
+      allowedActions,
+    });
+
+    expect(rows.map((row) => row.id)).toEqual(['workflow-target']);
+  });
+
   it('workflow rows expose never-run status and edit/delete actions execute correctly', async () => {
     listWorkflowsMock.mockResolvedValue([workflow('workflow-1', 'Daily ETL', null)]);
     const [row] = await getResourceAdapter('workflow').fetchRows({

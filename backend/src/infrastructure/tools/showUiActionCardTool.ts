@@ -12,7 +12,20 @@ import type { UiActionCardPayload } from './uiActionCardTypes';
 import logger from '../../utils/logger';
 
 function extractDefaultQuery(params: Record<string, unknown>): string | undefined {
-  const queryParamNames = ['query', 'keyword', 'name', 'title'] as const;
+  const queryParamNames = [
+    'query',
+    'keyword',
+    'name',
+    'title',
+    'id',
+    'workflowId',
+    'datasourceId',
+    'tableId',
+    'scheduleId',
+    'templateId',
+    'folderId',
+    'fileId',
+  ] as const;
 
   for (const name of queryParamNames) {
     const value = params[name];

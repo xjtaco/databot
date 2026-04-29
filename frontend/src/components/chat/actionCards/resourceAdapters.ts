@@ -222,7 +222,9 @@ const workflowAdapter: ResourceAdapter = {
     const query = normalizeQuery(context.query);
     return limitRows(
       store.workflows
-        .filter((workflow) => matchesQuery(query, [workflow.name, workflow.description]))
+        .filter((workflow) =>
+          matchesQuery(query, [workflow.id, workflow.name, workflow.description])
+        )
         .map((workflow) => ({
           id: workflow.id,
           title: workflow.name,
@@ -276,7 +278,9 @@ const datasourceAdapter: ResourceAdapter = {
     const query = normalizeQuery(context.query);
     return limitRows(
       store.datasources
-        .filter((datasource) => matchesQuery(query, [datasource.name, datasource.type]))
+        .filter((datasource) =>
+          matchesQuery(query, [datasource.id, datasource.name, datasource.type])
+        )
         .map((datasource) => ({
           id: datasource.id,
           title: datasource.name,
@@ -315,7 +319,9 @@ const tableAdapter: ResourceAdapter = {
     const query = normalizeQuery(context.query);
     return limitRows(
       store.tables
-        .filter((table) => matchesQuery(query, [table.displayName, table.physicalName, table.type]))
+        .filter((table) =>
+          matchesQuery(query, [table.id, table.displayName, table.physicalName, table.type])
+        )
         .map((table) => ({
           id: table.id,
           title: table.displayName,
@@ -359,7 +365,9 @@ const scheduleAdapter: ResourceAdapter = {
     const query = normalizeQuery(context.query);
     return limitRows(
       store.schedules
-        .filter((schedule) => matchesQuery(query, [schedule.name, schedule.workflowName]))
+        .filter((schedule) =>
+          matchesQuery(query, [schedule.id, schedule.name, schedule.workflowName])
+        )
         .map((schedule) => ({
           id: schedule.id,
           title: schedule.name,
@@ -447,7 +455,9 @@ const knowledgeFolderAdapter: ResourceAdapter = {
     const query = normalizeQuery(context.query);
     return limitRows(
       flattenKnowledge(store.folderTree)
-        .folders.filter(({ folder, parentName }) => matchesQuery(query, [folder.name, parentName]))
+        .folders.filter(({ folder, parentName }) =>
+          matchesQuery(query, [folder.id, folder.name, parentName])
+        )
         .map(({ folder, parentName }) => ({
           id: folder.id,
           title: folder.name,
@@ -483,7 +493,9 @@ const knowledgeFileAdapter: ResourceAdapter = {
     const query = normalizeQuery(context.query);
     return limitRows(
       flattenKnowledge(store.folderTree)
-        .files.filter(({ file, folderName }) => matchesQuery(query, [file.name, folderName]))
+        .files.filter(({ file, folderName }) =>
+          matchesQuery(query, [file.id, file.name, folderName])
+        )
         .map(({ file, folderName }) => ({
           id: file.id,
           title: file.name,
@@ -529,7 +541,7 @@ const templateAdapter: ResourceAdapter = {
     return limitRows(
       store.customTemplates
         .filter((template) =>
-          matchesQuery(query, [template.name, template.description, template.type])
+          matchesQuery(query, [template.id, template.name, template.description, template.type])
         )
         .map((template) => ({
           id: template.id,

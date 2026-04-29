@@ -24,13 +24,7 @@ export type ResourceActionCardType =
   | 'knowledge_folder'
   | 'knowledge_file'
   | 'template';
-export type ResourceActionKey =
-  | 'view'
-  | 'edit'
-  | 'execute'
-  | 'delete'
-  | 'enable'
-  | 'disable';
+export type ResourceActionKey = 'view' | 'edit' | 'execute' | 'delete' | 'enable' | 'disable';
 
 export interface ResourceActionSpec {
   key: ResourceActionKey;

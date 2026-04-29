@@ -3,7 +3,7 @@
     <!-- Create / Update: render ScheduleForm -->
     <template v-if="payload.action === 'create' || payload.action === 'update'">
       <div
-        v-if="payload.action === 'update' && !editingSchedule"
+        v-if="payload.action === 'update' && !scheduleFormEditing"
         class="inline-schedule-form__loading"
       >
         <el-icon class="is-loading"><Loading /></el-icon>
@@ -113,9 +113,13 @@ const initialValues = computed<ScheduleFormInitialValues | undefined>(() => {
   if (isScheduleType(scheduleType)) initial.scheduleType = scheduleType;
 
   const cronExpr = getStringParam(params, 'cronExpr') ?? getStringParam(params, 'cronExpression');
-  if (cronExpr !== undefined) initial.cronExpr = cronExpr;
-
   const time = getStringParam(params, 'time');
+  if (cronExpr !== undefined) {
+    initial.cronExpr = cronExpr;
+    if (initial.scheduleType !== 'cron' && time === undefined) {
+      initial.scheduleType = 'cron';
+    }
+  }
   if (time !== undefined) initial.time = time;
 
   const timezone = getStringParam(params, 'timezone');
@@ -141,9 +145,11 @@ onMounted(async () => {
 });
 
 const editingSchedule = computed(() => scheduleStore.editingSchedule);
-const scheduleFormEditing = computed(() =>
-  props.payload.action === 'create' ? null : editingSchedule.value
-);
+const scheduleFormEditing = computed(() => {
+  if (props.payload.action === 'create') return null;
+  const schedule = editingSchedule.value;
+  return schedule?.id === scheduleId.value ? schedule : null;
+});
 
 async function handleSubmit(): Promise<void> {
   if (submitting.value) return;

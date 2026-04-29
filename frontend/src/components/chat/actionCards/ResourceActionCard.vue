@@ -212,7 +212,20 @@ function initialQuery(payload: UiActionCardPayload): string {
   )?.defaultQuery;
   if (firstSectionQuery) return firstSectionQuery;
 
-  for (const key of ['query', 'name', 'keyword', 'title']) {
+  for (const key of [
+    'query',
+    'name',
+    'keyword',
+    'title',
+    'id',
+    'workflowId',
+    'datasourceId',
+    'tableId',
+    'scheduleId',
+    'templateId',
+    'folderId',
+    'fileId',
+  ]) {
     const value = payload.params[key];
     if (typeof value === 'string' && value.trim()) {
       return value;

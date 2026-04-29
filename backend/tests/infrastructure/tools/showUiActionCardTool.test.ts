@@ -201,6 +201,19 @@ describe('ShowUiActionCardTool', () => {
     expect(cardPayload.defaultQuery).toBe('monthly report');
   });
 
+  it('uses id params as resource-list defaultQuery when no readable filter is available', async () => {
+    const tool = ToolRegistry.get(ToolName.ShowUiActionCard);
+    const result = await tool.execute({
+      cardId: 'workflow.delete',
+      params: { workflowId: 'workflow-1' },
+    });
+
+    expect(result.success).toBe(true);
+
+    const cardPayload = result.metadata?.cardPayload as UiActionCardPayload;
+    expect(cardPayload.defaultQuery).toBe('workflow-1');
+  });
+
   it('preserves resource list metadata from catalog definitions', async () => {
     vi.resetModules();
     vi.doMock('../../../src/infrastructure/tools/uiActionCardCatalog', () => ({

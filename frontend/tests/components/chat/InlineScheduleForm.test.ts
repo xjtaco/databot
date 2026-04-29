@@ -5,6 +5,7 @@ import { setActivePinia, createPinia } from 'pinia';
 import { createI18n } from 'vue-i18n';
 import InlineScheduleForm from '@/components/chat/actionCards/forms/InlineScheduleForm.vue';
 import { useScheduleStore } from '@/stores/scheduleStore';
+import { getSchedule } from '@/api/schedule';
 import zhCN from '@/locales/zh-CN';
 import enUS from '@/locales/en-US';
 import type { UiActionCardPayload } from '@/types/actionCard';
@@ -203,8 +204,31 @@ describe('InlineScheduleForm', () => {
     });
 
     expect(scheduleFormState.lastInitial).toEqual({
+      scheduleType: 'cron',
       cronExpr: '0 8 * * *',
       name: 'Daily Sales',
+    });
+  });
+
+  it('uses cron mode when cron expression is provided without a friendly time', async () => {
+    mount(InlineScheduleForm, {
+      props: {
+        payload: makePayload({
+          scheduleType: 'daily',
+          cronExpr: '30 9 * * *',
+          name: 'Cron From Text',
+        }),
+      },
+      global: {
+        plugins: [i18n],
+        stubs: globalStubs,
+      },
+    });
+
+    expect(scheduleFormState.lastInitial).toEqual({
+      scheduleType: 'cron',
+      cronExpr: '30 9 * * *',
+      name: 'Cron From Text',
     });
   });
 
@@ -230,5 +254,37 @@ describe('InlineScheduleForm', () => {
       workflowName: 'Sales',
       name: 'Create From Card',
     });
+  });
+
+  it('waits for the matching schedule before rendering update form', async () => {
+    const scheduleStore = useScheduleStore();
+    scheduleStore.editingSchedule = makeScheduleDetail({ id: 'sched-old', name: 'Old Schedule' });
+    let resolveSchedule: (value: ScheduleDetail) => void = () => undefined;
+    vi.mocked(getSchedule).mockReturnValueOnce(
+      new Promise<ScheduleDetail>((resolve) => {
+        resolveSchedule = resolve;
+      })
+    );
+
+    mount(InlineScheduleForm, {
+      props: {
+        payload: {
+          ...makePayload({ scheduleId: 'sched-new' }),
+          action: 'update',
+        },
+      },
+      global: {
+        plugins: [i18n],
+        stubs: globalStubs,
+      },
+    });
+
+    expect(scheduleFormState.lastEditing).toBeUndefined();
+
+    resolveSchedule(makeScheduleDetail({ id: 'sched-new', name: 'New Schedule' }));
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(scheduleFormState.lastEditing?.id).toBe('sched-new');
   });
 });
