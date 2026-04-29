@@ -6,7 +6,8 @@ export type PresentationMode =
   | 'navigate'
   | 'deferred_navigation'
   | 'in_chat'
-  | 'action';
+  | 'action'
+  | 'resource_list';
 export type ConfirmationMode = 'none' | 'modal';
 export type CardStatus =
   | 'proposed'
@@ -16,6 +17,35 @@ export type CardStatus =
   | 'succeeded'
   | 'failed'
   | 'cancelled';
+export type ResourceActionCardType =
+  | 'workflow'
+  | 'datasource'
+  | 'table'
+  | 'schedule'
+  | 'knowledge_folder'
+  | 'knowledge_file'
+  | 'template';
+export type ResourceActionKey =
+  | 'view'
+  | 'edit'
+  | 'execute'
+  | 'delete'
+  | 'enable'
+  | 'disable';
+
+export interface ResourceActionSpec {
+  key: ResourceActionKey;
+  riskLevel?: RiskLevel;
+  confirmationMode?: ConfirmationMode;
+}
+
+export interface ResourceSectionSpec {
+  resourceType: ResourceActionCardType;
+  titleKey: string;
+  emptyKey: string;
+  allowedActions: ResourceActionSpec[];
+  defaultQuery?: string;
+}
 
 export interface UiActionCardPayload {
   id: string;
@@ -34,6 +64,10 @@ export interface UiActionCardPayload {
   summaryKey?: string;
   targetNav?: 'data' | 'workflow' | 'schedule';
   targetDataTab?: 'data' | 'knowledge';
+  resourceType?: ResourceActionCardType;
+  resourceSections?: ResourceSectionSpec[];
+  defaultQuery?: string;
+  allowedActions?: ResourceActionSpec[];
   copilotPrompt?: string;
 }
 

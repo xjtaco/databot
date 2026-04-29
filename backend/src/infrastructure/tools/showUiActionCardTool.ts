@@ -112,6 +112,10 @@ a specific card to the user. Provide the cardId and any required parameters.`;
       executionMode: 'frontend',
       targetNav: definition.targetNav,
       targetDataTab: definition.targetDataTab,
+      resourceType: definition.resourceType,
+      resourceSections: definition.resourceSections,
+      defaultQuery: definition.defaultQuery,
+      allowedActions: definition.allowedActions,
       copilotPrompt,
     };
 

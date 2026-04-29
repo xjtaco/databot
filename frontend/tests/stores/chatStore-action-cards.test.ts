@@ -203,4 +203,60 @@ describe('chatStore action card actions', () => {
     const msg = store.messages[store.messages.length - 1];
     expect(msg.actionCards![0].status).toBe('succeeded');
   });
+
+  it('loadHistoricalMessages preserves resource list metadata', () => {
+    const store = useChatStore();
+    store.loadHistoricalMessages([
+      { role: 'assistant', content: 'Here is the card:', createdAt: '2026-01-01T00:00:00Z' },
+      {
+        role: 'tool',
+        content: '{"toolName":"show_ui_action_card"}',
+        createdAt: '2026-01-01T00:00:01Z',
+        metadata: {
+          type: 'action_card',
+          payload: makePayload({
+            cardId: 'workflow.open',
+            domain: 'workflow',
+            action: 'open',
+            presentationMode: 'resource_list',
+            resourceType: 'workflow',
+            allowedActions: [
+              { key: 'edit', riskLevel: 'low', confirmationMode: 'none' },
+              { key: 'execute', riskLevel: 'medium', confirmationMode: 'modal' },
+              { key: 'delete', riskLevel: 'danger', confirmationMode: 'modal' },
+            ],
+            defaultQuery: 'status:active',
+            resourceSections: [
+              {
+                resourceType: 'workflow',
+                titleKey: 'chat.actionCards.workflow.open.sections.workflows.title',
+                emptyKey: 'chat.actionCards.workflow.open.sections.workflows.empty',
+                allowedActions: [{ key: 'view', riskLevel: 'low' }],
+                defaultQuery: 'owner:me',
+              },
+            ],
+          }),
+          status: 'proposed',
+        },
+      },
+    ]);
+
+    const msg = store.messages[store.messages.length - 1];
+    const payload = msg.actionCards![0].payload;
+    expect(payload.presentationMode).toBe('resource_list');
+    expect(payload.resourceType).toBe('workflow');
+    expect(payload.allowedActions?.map((item) => item.key)).toEqual([
+      'edit',
+      'execute',
+      'delete',
+    ]);
+    expect(payload.defaultQuery).toBe('status:active');
+    expect(payload.resourceSections?.[0]).toEqual({
+      resourceType: 'workflow',
+      titleKey: 'chat.actionCards.workflow.open.sections.workflows.title',
+      emptyKey: 'chat.actionCards.workflow.open.sections.workflows.empty',
+      allowedActions: [{ key: 'view', riskLevel: 'low' }],
+      defaultQuery: 'owner:me',
+    });
+  });
 });

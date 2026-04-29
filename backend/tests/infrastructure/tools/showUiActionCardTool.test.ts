@@ -166,4 +166,66 @@ describe('ShowUiActionCardTool', () => {
     expect(cardPayload.confirmRequired).toBe(true);
     expect(cardPayload.titleKey).toBe('chat.actionCards.workflow.delete.title');
   });
+
+  it('preserves resource list metadata from catalog definitions', async () => {
+    vi.resetModules();
+    vi.doMock('../../../src/infrastructure/tools/uiActionCardCatalog', () => ({
+      getCardDefinition: (cardId: string) =>
+        cardId === 'workflow.open'
+          ? {
+              cardId: 'workflow.open',
+              domain: 'workflow',
+              action: 'open',
+              title: 'Open Workflow Panel',
+              description: 'Navigate to the workflow panel to browse and manage workflows.',
+              presentationMode: 'resource_list',
+              confirmationMode: 'none',
+              titleKey: 'chat.actionCards.workflow.open.title',
+              summaryKey: 'chat.actionCards.workflow.open.summary',
+              usage: 'When the user wants to view or manage workflows.',
+              requiredParams: [],
+              optionalParams: [],
+              riskLevel: 'low',
+              confirmRequired: false,
+              targetNav: 'workflow',
+              relatedDomains: ['data', 'schedule', 'template'],
+              dependencies: [],
+              resourceType: 'workflow',
+              allowedActions: [
+                { key: 'edit', riskLevel: 'low', confirmationMode: 'none' },
+                { key: 'execute', riskLevel: 'medium', confirmationMode: 'modal' },
+                { key: 'delete', riskLevel: 'danger', confirmationMode: 'modal' },
+              ],
+              defaultQuery: 'status:active',
+            }
+          : undefined,
+    }));
+
+    const [{ ToolRegistry: MockedToolRegistry }, { ToolName: MockedToolName }, { ShowUiActionCardTool: MockedTool }] =
+      await Promise.all([
+        import('../../../src/infrastructure/tools/tools'),
+        import('../../../src/infrastructure/tools/types'),
+        import('../../../src/infrastructure/tools/showUiActionCardTool'),
+      ]);
+    const toolNames = MockedToolRegistry.list();
+    toolNames.forEach((name: string) => {
+      (MockedToolRegistry as unknown as { tools: Map<string, unknown> }).tools.delete(name);
+    });
+    MockedToolRegistry.register(new MockedTool());
+
+    const tool = MockedToolRegistry.get(MockedToolName.ShowUiActionCard);
+    const result = await tool.execute({ cardId: 'workflow.open' });
+
+    expect(result.success).toBe(true);
+
+    const cardPayload = result.metadata?.cardPayload as UiActionCardPayload;
+    expect(cardPayload.presentationMode).toBe('resource_list');
+    expect(cardPayload.resourceType).toBe('workflow');
+    expect(cardPayload.allowedActions?.map((item) => item.key)).toEqual([
+      'edit',
+      'execute',
+      'delete',
+    ]);
+    expect(cardPayload.defaultQuery).toBe('status:active');
+  });
 });

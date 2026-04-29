@@ -6,7 +6,8 @@ export type ActionCardPresentationMode =
   | 'navigate'
   | 'deferred_navigation'
   | 'in_chat'
-  | 'action';
+  | 'action'
+  | 'resource_list';
 export type ActionCardConfirmationMode = 'none' | 'modal';
 export type CardStatus =
   | 'proposed'
@@ -15,6 +16,35 @@ export type CardStatus =
   | 'succeeded'
   | 'failed'
   | 'cancelled';
+export type ResourceActionCardType =
+  | 'workflow'
+  | 'datasource'
+  | 'table'
+  | 'schedule'
+  | 'knowledge_folder'
+  | 'knowledge_file'
+  | 'template';
+export type ResourceActionKey =
+  | 'view'
+  | 'edit'
+  | 'execute'
+  | 'delete'
+  | 'enable'
+  | 'disable';
+
+export interface ResourceActionSpec {
+  key: ResourceActionKey;
+  riskLevel?: RiskLevel;
+  confirmationMode?: ActionCardConfirmationMode;
+}
+
+export interface ResourceSectionSpec {
+  resourceType: ResourceActionCardType;
+  titleKey: string;
+  emptyKey: string;
+  allowedActions: ResourceActionSpec[];
+  defaultQuery?: string;
+}
 
 export interface UiActionCardParamDefinition {
   name: string;
@@ -40,6 +70,10 @@ export interface UiActionCardDefinition {
   confirmRequired: boolean;
   targetNav?: 'data' | 'workflow' | 'schedule';
   targetDataTab?: 'data' | 'knowledge';
+  resourceType?: ResourceActionCardType;
+  resourceSections?: ResourceSectionSpec[];
+  defaultQuery?: string;
+  allowedActions?: ResourceActionSpec[];
   relatedDomains: ActionDomain[];
   dependencies: string[];
 }
@@ -61,6 +95,10 @@ export interface UiActionCardPayload {
   executionMode: ExecutionMode;
   targetNav?: 'data' | 'workflow' | 'schedule';
   targetDataTab?: 'data' | 'knowledge';
+  resourceType?: ResourceActionCardType;
+  resourceSections?: ResourceSectionSpec[];
+  defaultQuery?: string;
+  allowedActions?: ResourceActionSpec[];
   copilotPrompt?: string;
 }
 
