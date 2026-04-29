@@ -221,11 +221,16 @@ async function handleWorkflowChange(workflowId: string): Promise<void> {
 }
 
 async function loadWorkflowParams(workflowId: string): Promise<void> {
-  workflowParams.value = [];
-  form.params = {};
+  const requestedWorkflowId = workflowId;
+  if (form.workflowId === requestedWorkflowId) {
+    workflowParams.value = [];
+    form.params = {};
+  }
   if (!workflowId) return;
   try {
-    const detail = await getWorkflow(workflowId);
+    const detail = await getWorkflow(requestedWorkflowId);
+    if (form.workflowId !== requestedWorkflowId) return;
+
     workflowParams.value = extractParams(detail.nodes);
     for (const p of workflowParams.value) {
       form.params[p] = '';

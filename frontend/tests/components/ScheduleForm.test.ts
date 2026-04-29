@@ -4,10 +4,11 @@ import { setActivePinia, createPinia } from 'pinia';
 import { createI18n } from 'vue-i18n';
 import ScheduleForm from '@/components/schedule/ScheduleForm.vue';
 import { useWorkflowStore } from '@/stores/workflowStore';
+import { getWorkflow } from '@/api/workflow';
 import zhCN from '@/locales/zh-CN';
 import enUS from '@/locales/en-US';
 import type { ScheduleDetail } from '@/types/schedule';
-import type { WorkflowListItem } from '@/types/workflow';
+import type { WorkflowDetail, WorkflowListItem } from '@/types/workflow';
 
 vi.mock('@/api/workflow');
 vi.mock('@/api/schedule');
@@ -92,6 +93,35 @@ function makeWorkflow(overrides: Partial<WorkflowListItem> = {}): WorkflowListIt
     updatedAt: '2026-03-29T00:00:00Z',
     creatorName: null,
     ...overrides,
+  };
+}
+
+function makeWorkflowDetail(id: string, paramName: string): WorkflowDetail {
+  return {
+    id,
+    name: id,
+    description: null,
+    createdAt: '2026-03-29T00:00:00Z',
+    updatedAt: '2026-03-29T00:00:00Z',
+    edges: [],
+    nodes: [
+      {
+        id: `${id}-node`,
+        workflowId: id,
+        name: 'SQL',
+        description: null,
+        type: 'sql',
+        config: {
+          nodeType: 'sql',
+          datasourceId: 'ds-1',
+          params: {},
+          sql: `select {{params.${paramName}}}`,
+          outputVariable: 'result',
+        },
+        positionX: 0,
+        positionY: 0,
+      },
+    ],
   };
 }
 
@@ -351,6 +381,49 @@ describe('ScheduleForm', () => {
       expect(result?.name).toBe('Manual Sales');
       expect(result?.workflowId).toBe('wf-1');
       expect(result?.enabled).toBe(true);
+    });
+
+    it('does not let stale initial workflow params overwrite manual workflow params', async () => {
+      let resolveInitial: (value: WorkflowDetail) => void = () => undefined;
+      let resolveManual: (value: WorkflowDetail) => void = () => undefined;
+
+      vi.mocked(getWorkflow).mockImplementation((workflowId: string) => {
+        if (workflowId === 'wf-initial') {
+          return new Promise<WorkflowDetail>((resolve) => {
+            resolveInitial = resolve;
+          });
+        }
+        return new Promise<WorkflowDetail>((resolve) => {
+          resolveManual = resolve;
+        });
+      });
+
+      const workflowStore = useWorkflowStore();
+      workflowStore.workflows = [
+        makeWorkflow({ id: 'wf-initial', name: 'Initial Sales Report' }),
+        makeWorkflow({ id: 'wf-manual', name: 'Manual Sales Report' }),
+      ];
+
+      const wrapper = createWrapper({
+        editing: null,
+        initial: {
+          name: 'Race Safe Schedule',
+          workflowName: 'Initial',
+        },
+      });
+      await wrapper.vm.$nextTick();
+
+      await wrapper.find('select.el-select').setValue('wf-manual');
+      resolveManual(makeWorkflowDetail('wf-manual', 'manualParam'));
+      await wrapper.vm.$nextTick();
+      await Promise.resolve();
+
+      resolveInitial(makeWorkflowDetail('wf-initial', 'staleParam'));
+      await wrapper.vm.$nextTick();
+      await Promise.resolve();
+
+      const paramKeys = wrapper.findAll('.schedule-form__param-key').map((node) => node.text());
+      expect(paramKeys).toEqual(['manualParam']);
     });
   });
 

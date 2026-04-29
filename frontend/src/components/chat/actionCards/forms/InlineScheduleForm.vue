@@ -11,7 +11,11 @@
       </div>
 
       <template v-else>
-        <ScheduleForm ref="scheduleFormRef" :editing="scheduleFormEditing" :initial="initialValues" />
+        <ScheduleForm
+          ref="scheduleFormRef"
+          :editing="scheduleFormEditing"
+          :initial="initialValues"
+        />
 
         <div class="inline-schedule-form__actions">
           <el-button type="primary" size="small" :loading="submitting" @click="handleSubmit">
