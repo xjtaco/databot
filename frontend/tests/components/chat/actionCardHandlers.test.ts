@@ -257,6 +257,10 @@ describe('action card handlers', () => {
     expect(getRegistry().has('schedule:open')).toBe(true);
   });
 
+  it('registers legacy workflow.open handler for persisted in-chat cards', () => {
+    expect(getRegistry().has('workflow:open')).toBe(true);
+  });
+
   it('registers workflow.copilot_create handler', () => {
     expect(getRegistry().has('workflow:copilot_create')).toBe(true);
   });
@@ -283,8 +287,7 @@ describe('action card handlers', () => {
     expect(getRegistry().has('knowledge:file_open')).toBe(true);
   });
 
-  it('registers backend-discoverable workflow handlers', () => {
-    expect(getRegistry().has('workflow:open')).toBe(true);
+  it('registers backend-discoverable workflow creation handlers', () => {
     expect(getRegistry().has('workflow:template_node')).toBe(true);
     expect(getRegistry().has('workflow:template_etl')).toBe(true);
     expect(getRegistry().has('workflow:template_report')).toBe(true);
@@ -503,7 +506,7 @@ describe('action card handlers', () => {
     }
   });
 
-  it('resolves datasource type before deleting a datasource when type is omitted', async () => {
+  it('keeps legacy datasource_delete id payload executable by resolving omitted type', async () => {
     const navigationStore = useNavigationStore();
     navigationStore.navigateTo('chat');
 
