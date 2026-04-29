@@ -472,6 +472,48 @@ describe('ScheduleForm', () => {
       expect(result?.params).toEqual({ startDate: '2026-01-01' });
     });
 
+    it('does not let stale edit workflow params overwrite manual workflow params', async () => {
+      let resolveEdit: (value: WorkflowDetail) => void = () => undefined;
+      let resolveManual: (value: WorkflowDetail) => void = () => undefined;
+
+      vi.mocked(getWorkflow).mockImplementation((workflowId: string) => {
+        if (workflowId === 'wf-edit') {
+          return new Promise<WorkflowDetail>((resolve) => {
+            resolveEdit = resolve;
+          });
+        }
+        return new Promise<WorkflowDetail>((resolve) => {
+          resolveManual = resolve;
+        });
+      });
+
+      const workflowStore = useWorkflowStore();
+      workflowStore.workflows = [
+        makeWorkflow({ id: 'wf-edit', name: 'Edit Sales Report' }),
+        makeWorkflow({ id: 'wf-manual', name: 'Manual Sales Report' }),
+      ];
+
+      const wrapper = createWrapper({
+        editing: makeScheduleDetail({
+          workflowId: 'wf-edit',
+          workflowName: 'Edit Sales Report',
+        }),
+      });
+      await wrapper.vm.$nextTick();
+
+      await wrapper.find('select.el-select').setValue('wf-manual');
+      resolveManual(makeWorkflowDetail('wf-manual', 'manualParam'));
+      await wrapper.vm.$nextTick();
+      await Promise.resolve();
+
+      resolveEdit(makeWorkflowDetail('wf-edit', 'staleEditParam'));
+      await wrapper.vm.$nextTick();
+      await Promise.resolve();
+
+      const paramKeys = wrapper.findAll('.schedule-form__param-key').map((node) => node.text());
+      expect(paramKeys).toEqual(['manualParam']);
+    });
+
     it('should return null when name is empty', async () => {
       const editing = makeScheduleDetail({
         name: '',

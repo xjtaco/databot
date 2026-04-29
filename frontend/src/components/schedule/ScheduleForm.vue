@@ -220,11 +220,20 @@ async function handleWorkflowChange(workflowId: string): Promise<void> {
   await loadWorkflowParams(workflowId);
 }
 
-async function loadWorkflowParams(workflowId: string): Promise<void> {
+interface LoadWorkflowParamsOptions {
+  preserveExistingParams?: boolean;
+}
+
+async function loadWorkflowParams(
+  workflowId: string,
+  options: LoadWorkflowParamsOptions = {}
+): Promise<void> {
   const requestedWorkflowId = workflowId;
   if (form.workflowId === requestedWorkflowId) {
     workflowParams.value = [];
-    form.params = {};
+    if (!options.preserveExistingParams) {
+      form.params = {};
+    }
   }
   if (!workflowId) return;
   try {
@@ -233,7 +242,9 @@ async function loadWorkflowParams(workflowId: string): Promise<void> {
 
     workflowParams.value = extractParams(detail.nodes);
     for (const p of workflowParams.value) {
-      form.params[p] = '';
+      if (!options.preserveExistingParams || !(p in form.params)) {
+        form.params[p] = '';
+      }
     }
   } catch {
     // Silently ignore — user can still fill in manually
@@ -351,19 +362,7 @@ watch(
 
       // Load workflow params
       if (schedule.workflowId) {
-        workflowParams.value = [];
-        try {
-          const detail = await getWorkflow(schedule.workflowId);
-          workflowParams.value = extractParams(detail.nodes);
-          // Preserve existing param values, fill missing ones
-          for (const p of workflowParams.value) {
-            if (!(p in form.params)) {
-              form.params[p] = '';
-            }
-          }
-        } catch {
-          // Silently ignore
-        }
+        await loadWorkflowParams(schedule.workflowId, { preserveExistingParams: true });
       }
     } else {
       // Reset form
