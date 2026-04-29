@@ -196,6 +196,18 @@ describe('ShowUiActionCardTool', () => {
                 { key: 'execute', riskLevel: 'medium', confirmationMode: 'modal' },
                 { key: 'delete', riskLevel: 'danger', confirmationMode: 'modal' },
               ],
+              resourceSections: [
+                {
+                  resourceType: 'workflow',
+                  titleKey: 'chat.actionCards.workflow.open.sections.workflows.title',
+                  emptyKey: 'chat.actionCards.workflow.open.sections.workflows.empty',
+                  allowedActions: [
+                    { key: 'view', riskLevel: 'low', confirmationMode: 'none' },
+                    { key: 'delete', riskLevel: 'danger', confirmationMode: 'modal' },
+                  ],
+                  defaultQuery: 'owner:me',
+                },
+              ],
               defaultQuery: 'status:active',
             }
           : undefined,
@@ -221,11 +233,23 @@ describe('ShowUiActionCardTool', () => {
     const cardPayload = result.metadata?.cardPayload as UiActionCardPayload;
     expect(cardPayload.presentationMode).toBe('resource_list');
     expect(cardPayload.resourceType).toBe('workflow');
-    expect(cardPayload.allowedActions?.map((item) => item.key)).toEqual([
-      'edit',
-      'execute',
-      'delete',
+    expect(cardPayload.allowedActions).toEqual([
+      { key: 'edit', riskLevel: 'low', confirmationMode: 'none' },
+      { key: 'execute', riskLevel: 'medium', confirmationMode: 'modal' },
+      { key: 'delete', riskLevel: 'danger', confirmationMode: 'modal' },
     ]);
     expect(cardPayload.defaultQuery).toBe('status:active');
+    expect(cardPayload.resourceSections).toEqual([
+      {
+        resourceType: 'workflow',
+        titleKey: 'chat.actionCards.workflow.open.sections.workflows.title',
+        emptyKey: 'chat.actionCards.workflow.open.sections.workflows.empty',
+        allowedActions: [
+          { key: 'view', riskLevel: 'low', confirmationMode: 'none' },
+          { key: 'delete', riskLevel: 'danger', confirmationMode: 'modal' },
+        ],
+        defaultQuery: 'owner:me',
+      },
+    ]);
   });
 });
