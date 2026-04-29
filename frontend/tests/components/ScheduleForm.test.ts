@@ -7,6 +7,7 @@ import { useWorkflowStore } from '@/stores/workflowStore';
 import zhCN from '@/locales/zh-CN';
 import enUS from '@/locales/en-US';
 import type { ScheduleDetail } from '@/types/schedule';
+import type { WorkflowListItem } from '@/types/workflow';
 
 vi.mock('@/api/workflow');
 vi.mock('@/api/schedule');
@@ -79,13 +80,28 @@ function makeScheduleDetail(overrides: Partial<ScheduleDetail> = {}): ScheduleDe
   };
 }
 
+function makeWorkflow(overrides: Partial<WorkflowListItem> = {}): WorkflowListItem {
+  return {
+    id: 'wf-1',
+    name: 'Sales Report',
+    description: null,
+    nodeCount: 1,
+    lastRunAt: null,
+    lastRunStatus: null,
+    createdAt: '2026-03-29T00:00:00Z',
+    updatedAt: '2026-03-29T00:00:00Z',
+    creatorName: null,
+    ...overrides,
+  };
+}
+
 describe('ScheduleForm', () => {
   beforeEach(() => {
     setActivePinia(createPinia());
     vi.clearAllMocks();
   });
 
-  function createWrapper(props: { editing?: ScheduleDetail | null } = {}) {
+  function createWrapper(props: InstanceType<typeof ScheduleForm>['$props'] = {}) {
     return mount(ScheduleForm, {
       props,
       global: {
@@ -201,6 +217,140 @@ describe('ScheduleForm', () => {
       expect(result?.scheduleType).toBe('weekly');
       // parseCronToFriendly pads to "09:00", so buildCronExpr produces "00 09 * * 1,3,5"
       expect(result?.cronExpr).toBe('00 09 * * 1,3,5');
+    });
+  });
+
+  describe('initial defaults', () => {
+    it('preselects workflow by workflowName after workflows load', async () => {
+      const wrapper = createWrapper({
+        editing: null,
+        initial: {
+          name: 'Morning Sales',
+          workflowName: 'Sales',
+        },
+      });
+
+      const workflowStore = useWorkflowStore();
+      workflowStore.workflows = [
+        makeWorkflow({ id: 'wf-finance', name: 'Finance Rollup' }),
+        makeWorkflow({ id: 'wf-sales', name: 'Daily Sales Report' }),
+      ];
+      await wrapper.vm.$nextTick();
+
+      const vm = wrapper.vm as InstanceType<typeof ScheduleForm>;
+      const result = vm.getSubmitInput();
+
+      expect(result).not.toBeNull();
+      expect(result?.workflowId).toBe('wf-sales');
+    });
+
+    it('preselects workflow by workflowQuery name includes match', async () => {
+      const wrapper = createWrapper({
+        editing: null,
+        initial: {
+          name: 'Ops Digest',
+          workflowQuery: 'ops',
+        },
+      });
+
+      const workflowStore = useWorkflowStore();
+      workflowStore.workflows = [
+        makeWorkflow({ id: 'wf-sales', name: 'Daily Sales Report' }),
+        makeWorkflow({ id: 'wf-ops', name: 'Nightly Ops Digest' }),
+      ];
+      await wrapper.vm.$nextTick();
+
+      const vm = wrapper.vm as InstanceType<typeof ScheduleForm>;
+      const result = vm.getSubmitInput();
+
+      expect(result).not.toBeNull();
+      expect(result?.workflowId).toBe('wf-ops');
+    });
+
+    it('prefills cron schedule type and expression', async () => {
+      const workflowStore = useWorkflowStore();
+      workflowStore.workflows = [makeWorkflow()];
+
+      const wrapper = createWrapper({
+        editing: null,
+        initial: {
+          name: 'Cron Sales',
+          workflowName: 'Sales',
+          scheduleType: 'cron',
+          cronExpr: '*/15 * * * *',
+        },
+      });
+      await wrapper.vm.$nextTick();
+
+      const vm = wrapper.vm as InstanceType<typeof ScheduleForm>;
+      const result = vm.getSubmitInput();
+
+      expect(result).not.toBeNull();
+      expect(result?.scheduleType).toBe('cron');
+      expect(result?.cronExpr).toBe('*/15 * * * *');
+    });
+
+    it('prefills daily time and timezone', async () => {
+      const workflowStore = useWorkflowStore();
+      workflowStore.workflows = [makeWorkflow()];
+
+      const wrapper = createWrapper({
+        editing: null,
+        initial: {
+          name: 'Tokyo Sales',
+          workflowName: 'Sales',
+          scheduleType: 'daily',
+          time: '09:45',
+          timezone: 'Asia/Tokyo',
+        },
+      });
+      await wrapper.vm.$nextTick();
+
+      const vm = wrapper.vm as InstanceType<typeof ScheduleForm>;
+      const result = vm.getSubmitInput();
+
+      expect(result).not.toBeNull();
+      expect(result?.scheduleType).toBe('daily');
+      expect(result?.cronExpr).toBe('45 09 * * *');
+      expect(result?.timezone).toBe('Asia/Tokyo');
+    });
+
+    it('returns enabled false from initial create submit input', async () => {
+      const workflowStore = useWorkflowStore();
+      workflowStore.workflows = [makeWorkflow()];
+
+      const wrapper = createWrapper({
+        editing: null,
+        initial: {
+          name: 'Disabled Sales',
+          workflowName: 'Sales',
+          enabled: false,
+        },
+      });
+      await wrapper.vm.$nextTick();
+
+      const vm = wrapper.vm as InstanceType<typeof ScheduleForm>;
+      const result = vm.getSubmitInput();
+
+      expect(result).not.toBeNull();
+      expect(result?.enabled).toBe(false);
+    });
+
+    it('create still works when no defaults are provided', async () => {
+      const workflowStore = useWorkflowStore();
+      workflowStore.workflows = [makeWorkflow()];
+
+      const wrapper = createWrapper({ editing: null });
+      await wrapper.find('input.el-input').setValue('Manual Sales');
+      await wrapper.find('select.el-select').setValue('wf-1');
+
+      const vm = wrapper.vm as InstanceType<typeof ScheduleForm>;
+      const result = vm.getSubmitInput();
+
+      expect(result).not.toBeNull();
+      expect(result?.name).toBe('Manual Sales');
+      expect(result?.workflowId).toBe('wf-1');
+      expect(result?.enabled).toBe(true);
     });
   });
 
@@ -361,6 +511,19 @@ describe('ScheduleForm', () => {
 
       expect(result).not.toBeNull();
       expect(result?.enabled).toBe(true);
+    });
+
+    it('should preserve enabled false from editing schedule', async () => {
+      const wrapper = createWrapper({
+        editing: makeScheduleDetail({ enabled: false }),
+      });
+      await wrapper.vm.$nextTick();
+
+      const vm = wrapper.vm as InstanceType<typeof ScheduleForm>;
+      const result = vm.getSubmitInput();
+
+      expect(result).not.toBeNull();
+      expect(result?.enabled).toBe(false);
     });
   });
 

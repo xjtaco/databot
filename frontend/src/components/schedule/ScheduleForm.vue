@@ -123,8 +123,21 @@ import type { ScheduleType, ScheduleDetail, CreateScheduleInput } from '@/types/
 import type { WorkflowNodeInfo } from '@/types/workflow';
 import CronPreview from './CronPreview.vue';
 
+export interface ScheduleFormInitialValues {
+  name?: string;
+  description?: string;
+  workflowName?: string;
+  workflowQuery?: string;
+  scheduleType?: ScheduleType;
+  cronExpr?: string;
+  time?: string;
+  timezone?: string;
+  enabled?: boolean;
+}
+
 const props = defineProps<{
   editing?: ScheduleDetail | null;
+  initial?: ScheduleFormInitialValues;
 }>();
 
 const { t } = useI18n();
@@ -169,12 +182,16 @@ const form = reactive({
   cronExpr: '',
   timezone: 'Asia/Shanghai',
   params: {} as Record<string, string>,
+  enabled: true,
 });
 
 const friendlyTime = ref('08:00');
 const selectedWeekdays = ref<number[]>([1]);
 const selectedMonthDay = ref(1);
 const workflowParams = ref<string[]>([]);
+const initialApplied = ref(false);
+const initialWorkflowApplied = ref(false);
+const workflowSelectionTouched = ref(false);
 
 // ── Computed cron from friendly fields ──────────────────
 function buildCronExpr(): string {
@@ -199,6 +216,11 @@ function buildCronExpr(): string {
 
 // ── Workflow Change → Extract Params ────────────────────
 async function handleWorkflowChange(workflowId: string): Promise<void> {
+  workflowSelectionTouched.value = true;
+  await loadWorkflowParams(workflowId);
+}
+
+async function loadWorkflowParams(workflowId: string): Promise<void> {
   workflowParams.value = [];
   form.params = {};
   if (!workflowId) return;
@@ -211,6 +233,26 @@ async function handleWorkflowChange(workflowId: string): Promise<void> {
   } catch {
     // Silently ignore — user can still fill in manually
   }
+}
+
+async function selectInitialWorkflow(): Promise<void> {
+  if (props.editing || initialWorkflowApplied.value || workflowSelectionTouched.value) return;
+
+  const query = props.initial?.workflowName ?? props.initial?.workflowQuery;
+  if (!query) {
+    initialWorkflowApplied.value = true;
+    return;
+  }
+
+  const normalizedQuery = query.toLowerCase();
+  const workflow = workflowStore.workflows.find((wf) =>
+    wf.name.toLowerCase().includes(normalizedQuery)
+  );
+  if (!workflow) return;
+
+  form.workflowId = workflow.id;
+  initialWorkflowApplied.value = true;
+  await loadWorkflowParams(workflow.id);
 }
 
 function extractParams(nodes: WorkflowNodeInfo[]): string[] {
@@ -296,10 +338,15 @@ watch(
       form.cronExpr = schedule.cronExpr;
       form.timezone = schedule.timezone;
       form.params = { ...schedule.params };
+      form.enabled = schedule.enabled;
+      initialApplied.value = false;
+      initialWorkflowApplied.value = false;
+      workflowSelectionTouched.value = false;
       parseCronToFriendly(schedule.cronExpr, schedule.scheduleType);
 
       // Load workflow params
       if (schedule.workflowId) {
+        workflowParams.value = [];
         try {
           const detail = await getWorkflow(schedule.workflowId);
           workflowParams.value = extractParams(detail.nodes);
@@ -315,20 +362,36 @@ watch(
       }
     } else {
       // Reset form
-      form.name = '';
-      form.description = '';
+      if (initialApplied.value) return;
+
+      const initial = props.initial;
+      form.name = initial?.name ?? '';
+      form.description = initial?.description ?? '';
       form.workflowId = '';
-      form.scheduleType = 'daily';
-      form.cronExpr = '';
-      form.timezone = 'Asia/Shanghai';
+      form.scheduleType = initial?.scheduleType ?? 'daily';
+      form.cronExpr = initial?.cronExpr ?? '';
+      form.timezone = initial?.timezone ?? 'Asia/Shanghai';
       form.params = {};
-      friendlyTime.value = '08:00';
+      form.enabled = initial?.enabled ?? true;
+      friendlyTime.value = initial?.time ?? '08:00';
       selectedWeekdays.value = [1];
       selectedMonthDay.value = 1;
       workflowParams.value = [];
+      initialApplied.value = true;
+      initialWorkflowApplied.value = false;
+      workflowSelectionTouched.value = false;
+      await selectInitialWorkflow();
     }
   },
   { immediate: true }
+);
+
+watch(
+  () => workflowStore.workflows,
+  () => {
+    void selectInitialWorkflow();
+  },
+  { deep: true }
 );
 
 // ── Expose method to get submit input ───────────────────
@@ -354,7 +417,7 @@ function getSubmitInput(): CreateScheduleInput | null {
     cronExpr,
     timezone: form.timezone,
     params: Object.keys(params).length > 0 ? params : undefined,
-    enabled: true,
+    enabled: form.enabled,
   };
 }
 

@@ -11,7 +11,7 @@
       </div>
 
       <template v-else>
-        <ScheduleForm ref="scheduleFormRef" :editing="editingSchedule" />
+        <ScheduleForm ref="scheduleFormRef" :editing="editingSchedule" :initial="initialValues" />
 
         <div class="inline-schedule-form__actions">
           <el-button type="primary" size="small" :loading="submitting" @click="handleSubmit">
@@ -53,6 +53,8 @@ import { Loading } from '@element-plus/icons-vue';
 import { useScheduleStore, useWorkflowStore } from '@/stores';
 import ScheduleForm from '@/components/schedule/ScheduleForm.vue';
 import type { UiActionCardPayload } from '@/types/actionCard';
+import type { ScheduleFormInitialValues } from '@/components/schedule/ScheduleForm.vue';
+import type { ScheduleType } from '@/types/schedule';
 
 const props = defineProps<{
   payload: UiActionCardPayload;
@@ -70,6 +72,56 @@ const workflowStore = useWorkflowStore();
 
 const scheduleFormRef = ref<InstanceType<typeof ScheduleForm> | null>(null);
 const submitting = ref(false);
+
+function getStringParam(params: Record<string, unknown>, key: string): string | undefined {
+  const value = params[key];
+  return typeof value === 'string' ? value : undefined;
+}
+
+function getBooleanParam(params: Record<string, unknown>, key: string): boolean | undefined {
+  const value = params[key];
+  return typeof value === 'boolean' ? value : undefined;
+}
+
+function isScheduleType(value: unknown): value is ScheduleType {
+  return value === 'daily' || value === 'weekly' || value === 'monthly' || value === 'cron';
+}
+
+const initialValues = computed<ScheduleFormInitialValues | undefined>(() => {
+  if (props.payload.action !== 'create') return undefined;
+
+  const { params } = props.payload;
+  const initial: ScheduleFormInitialValues = {};
+
+  const name = getStringParam(params, 'name');
+  if (name !== undefined) initial.name = name;
+
+  const description = getStringParam(params, 'description');
+  if (description !== undefined) initial.description = description;
+
+  const workflowName = getStringParam(params, 'workflowName');
+  if (workflowName !== undefined) initial.workflowName = workflowName;
+
+  const workflowQuery = getStringParam(params, 'workflowQuery');
+  if (workflowQuery !== undefined) initial.workflowQuery = workflowQuery;
+
+  const scheduleType = params.scheduleType;
+  if (isScheduleType(scheduleType)) initial.scheduleType = scheduleType;
+
+  const cronExpr = getStringParam(params, 'cronExpr') ?? getStringParam(params, 'cronExpression');
+  if (cronExpr !== undefined) initial.cronExpr = cronExpr;
+
+  const time = getStringParam(params, 'time');
+  if (time !== undefined) initial.time = time;
+
+  const timezone = getStringParam(params, 'timezone');
+  if (timezone !== undefined) initial.timezone = timezone;
+
+  const enabled = getBooleanParam(params, 'enabled');
+  if (enabled !== undefined) initial.enabled = enabled;
+
+  return Object.keys(initial).length > 0 ? initial : undefined;
+});
 
 const scheduleId = computed(() => {
   const id = props.payload.params.scheduleId ?? props.payload.params.id;
