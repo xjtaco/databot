@@ -145,4 +145,25 @@ describe('ShowUiActionCardTool', () => {
       'Launch the workflow copilot to design and create a new workflow.'
     );
   });
+
+  it('builds direct delete card payloads with modal confirmation', async () => {
+    const tool = ToolRegistry.get(ToolName.ShowUiActionCard);
+    const result = await tool.execute({
+      cardId: 'workflow.delete',
+      params: { workflowId: 'workflow-1' },
+    });
+
+    expect(result.success).toBe(true);
+
+    const cardPayload = result.metadata?.cardPayload as UiActionCardPayload;
+    expect(cardPayload.cardId).toBe('workflow.delete');
+    expect(cardPayload.domain).toBe('workflow');
+    expect(cardPayload.action).toBe('delete');
+    expect(cardPayload.params.workflowId).toBe('workflow-1');
+    expect(cardPayload.presentationMode).toBe('action');
+    expect(cardPayload.confirmationMode).toBe('modal');
+    expect(cardPayload.riskLevel).toBe('danger');
+    expect(cardPayload.confirmRequired).toBe(true);
+    expect(cardPayload.titleKey).toBe('chat.actionCards.workflow.delete.title');
+  });
 });

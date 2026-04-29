@@ -31,10 +31,16 @@ const cardPresentationMetadata = {
     summaryKey: 'chat.actionCards.data.datasourceTest.summary',
   },
   'data.datasource_delete': {
-    presentationMode: 'inline_form',
+    presentationMode: 'action',
     confirmationMode: 'modal',
     titleKey: 'chat.actionCards.data.datasourceDelete.title',
     summaryKey: 'chat.actionCards.data.datasourceDelete.summary',
+  },
+  'data.table_delete': {
+    presentationMode: 'action',
+    confirmationMode: 'modal',
+    titleKey: 'chat.actionCards.data.tableDelete.title',
+    summaryKey: 'chat.actionCards.data.tableDelete.summary',
   },
   'data.file_upload': {
     presentationMode: 'inline_form',
@@ -156,11 +162,23 @@ const cardPresentationMetadata = {
     titleKey: 'chat.actionCards.workflow.templateReport.title',
     summaryKey: 'chat.actionCards.workflow.templateReport.summary',
   },
+  'workflow.delete': {
+    presentationMode: 'action',
+    confirmationMode: 'modal',
+    titleKey: 'chat.actionCards.workflow.delete.title',
+    summaryKey: 'chat.actionCards.workflow.delete.summary',
+  },
   'template.copilot_create': {
     presentationMode: 'deferred_navigation',
     confirmationMode: 'modal',
     titleKey: 'chat.actionCards.template.copilotCreate.title',
     summaryKey: 'chat.actionCards.template.copilotCreate.summary',
+  },
+  'template.delete': {
+    presentationMode: 'action',
+    confirmationMode: 'modal',
+    titleKey: 'chat.actionCards.template.delete.title',
+    summaryKey: 'chat.actionCards.template.delete.summary',
   },
 } satisfies Record<string, ActionCardPresentationMetadata>;
 
@@ -283,6 +301,11 @@ const baseCatalog: readonly UiActionCardCatalogEntry[] = [
         type: 'string',
         description: 'ID of the datasource to delete.',
       },
+      {
+        name: 'type',
+        type: 'string',
+        description: 'Datasource type, e.g. sqlite, mysql, postgresql, clickhouse.',
+      },
     ],
     optionalParams: [],
     riskLevel: 'danger',
@@ -290,6 +313,28 @@ const baseCatalog: readonly UiActionCardCatalogEntry[] = [
     targetNav: 'data',
     targetDataTab: 'data',
     relatedDomains: ['knowledge'],
+    dependencies: [],
+  },
+  {
+    cardId: 'data.table_delete',
+    domain: 'data',
+    action: 'table_delete',
+    title: 'Delete Table',
+    description: 'Permanently delete a table from the data catalog.',
+    usage: 'When the user wants to remove an uploaded or imported table.',
+    requiredParams: [
+      {
+        name: 'tableId',
+        type: 'string',
+        description: 'ID of the table to delete.',
+      },
+    ],
+    optionalParams: [],
+    riskLevel: 'danger',
+    confirmRequired: true,
+    targetNav: 'data',
+    targetDataTab: 'data',
+    relatedDomains: ['workflow'],
     dependencies: [],
   },
   {
@@ -813,6 +858,27 @@ const baseCatalog: readonly UiActionCardCatalogEntry[] = [
     relatedDomains: ['data', 'schedule'],
     dependencies: [],
   },
+  {
+    cardId: 'workflow.delete',
+    domain: 'workflow',
+    action: 'delete',
+    title: 'Delete Workflow',
+    description: 'Permanently delete a workflow and its nodes, edges, schedules, and run history.',
+    usage: 'When the user wants to remove an existing workflow.',
+    requiredParams: [
+      {
+        name: 'workflowId',
+        type: 'string',
+        description: 'ID of the workflow to delete.',
+      },
+    ],
+    optionalParams: [],
+    riskLevel: 'danger',
+    confirmRequired: true,
+    targetNav: 'workflow',
+    relatedDomains: ['schedule', 'template'],
+    dependencies: [],
+  },
 
   // ── template ─────────────────────────────────────────────────────────────
   {
@@ -847,6 +913,27 @@ const baseCatalog: readonly UiActionCardCatalogEntry[] = [
     targetNav: 'workflow',
     relatedDomains: ['workflow'],
     dependencies: ['workflow.copilot_create'],
+  },
+  {
+    cardId: 'template.delete',
+    domain: 'template',
+    action: 'delete',
+    title: 'Delete Template',
+    description: 'Permanently delete a reusable node template.',
+    usage: 'When the user wants to remove a custom node template.',
+    requiredParams: [
+      {
+        name: 'templateId',
+        type: 'string',
+        description: 'ID of the template to delete.',
+      },
+    ],
+    optionalParams: [],
+    riskLevel: 'danger',
+    confirmRequired: true,
+    targetNav: 'workflow',
+    relatedDomains: ['workflow'],
+    dependencies: [],
   },
 ] as const;
 

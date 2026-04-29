@@ -468,10 +468,92 @@ registerActionHandler(
     try {
       const { useDatafileStore } = await import('@/stores/datafileStore');
       const datafileStore = useDatafileStore();
-      const datasourceId = payload.params.datasourceId as string;
-      const datasourceType = payload.params.type as string;
+      const datasourceId = getParamString(payload, 'datasourceId');
+      let datasourceType = getParamString(payload, 'type');
+      if (datasourceId && !datasourceType) {
+        await datafileStore.fetchDatasources();
+        datasourceType = datafileStore.datasources.find(
+          (datasource) => datasource.id === datasourceId
+        )?.type;
+      }
+      if (!datasourceId || !datasourceType) {
+        return {
+          success: false,
+          summary: t('chat.actionCards.results.missingDeleteTarget'),
+          error: t('chat.actionCards.results.missingDeleteTarget'),
+        };
+      }
       await datafileStore.deleteDatasource(datasourceId, datasourceType as DatabaseDatasourceType);
       return { success: true, summary: t('chat.actionCards.results.datasourceDeleted') };
+    } catch (err) {
+      return { success: false, error: err instanceof Error ? err.message : String(err) };
+    }
+  }
+);
+
+registerActionHandler(
+  'data',
+  'table_delete',
+  async (payload: UiActionCardPayload, _callbacks: ActionCallbacks): Promise<ActionResult> => {
+    try {
+      const { useDatafileStore } = await import('@/stores/datafileStore');
+      const datafileStore = useDatafileStore();
+      const tableId = getParamString(payload, 'tableId');
+      if (!tableId) {
+        return {
+          success: false,
+          summary: t('chat.actionCards.results.missingDeleteTarget'),
+          error: t('chat.actionCards.results.missingDeleteTarget'),
+        };
+      }
+      await datafileStore.deleteTable(tableId);
+      return { success: true, summary: t('chat.actionCards.results.tableDeleted') };
+    } catch (err) {
+      return { success: false, error: err instanceof Error ? err.message : String(err) };
+    }
+  }
+);
+
+registerActionHandler(
+  'workflow',
+  'delete',
+  async (payload: UiActionCardPayload, _callbacks: ActionCallbacks): Promise<ActionResult> => {
+    try {
+      const { useWorkflowStore } = await import('@/stores/workflowStore');
+      const workflowStore = useWorkflowStore();
+      const workflowId = getParamString(payload, 'workflowId');
+      if (!workflowId) {
+        return {
+          success: false,
+          summary: t('chat.actionCards.results.missingDeleteTarget'),
+          error: t('chat.actionCards.results.missingDeleteTarget'),
+        };
+      }
+      await workflowStore.removeWorkflow(workflowId);
+      return { success: true, summary: t('chat.actionCards.results.workflowDeleted') };
+    } catch (err) {
+      return { success: false, error: err instanceof Error ? err.message : String(err) };
+    }
+  }
+);
+
+registerActionHandler(
+  'template',
+  'delete',
+  async (payload: UiActionCardPayload, _callbacks: ActionCallbacks): Promise<ActionResult> => {
+    try {
+      const { useWorkflowStore } = await import('@/stores/workflowStore');
+      const workflowStore = useWorkflowStore();
+      const templateId = getParamString(payload, 'templateId');
+      if (!templateId) {
+        return {
+          success: false,
+          summary: t('chat.actionCards.results.missingDeleteTarget'),
+          error: t('chat.actionCards.results.missingDeleteTarget'),
+        };
+      }
+      await workflowStore.removeTemplate(templateId);
+      return { success: true, summary: t('chat.actionCards.results.templateDeleted') };
     } catch (err) {
       return { success: false, error: err instanceof Error ? err.message : String(err) };
     }

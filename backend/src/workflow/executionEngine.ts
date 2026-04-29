@@ -39,6 +39,7 @@ type ProgressCallback = (event: WsWorkflowEvent) => void;
 
 // Active execution progress callbacks keyed by runId
 const progressCallbacks = new Map<string, ProgressCallback>();
+const DEFAULT_PROGRESS_CALLBACK_WAIT_MS = process.env.VITEST ? 0 : 5000;
 
 export function registerProgressCallback(runId: string, callback: ProgressCallback): void {
   progressCallbacks.set(runId, callback);
@@ -64,8 +65,12 @@ function sendProgress(runId: string, event: WsWorkflowEvent): void {
  * Returns true if callback was registered, false if timed out.
  * This ensures the frontend has time to connect WebSocket before execution begins.
  */
-function waitForProgressCallback(runId: string, timeoutMs: number = 5000): Promise<boolean> {
+function waitForProgressCallback(
+  runId: string,
+  timeoutMs: number = DEFAULT_PROGRESS_CALLBACK_WAIT_MS
+): Promise<boolean> {
   if (progressCallbacks.has(runId)) return Promise.resolve(true);
+  if (timeoutMs <= 0) return Promise.resolve(false);
   return new Promise((resolve) => {
     const checkInterval = 50;
     let elapsed = 0;

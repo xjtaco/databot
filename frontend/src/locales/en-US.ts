@@ -157,6 +157,10 @@ export default {
           'You can continue asking about knowledge file content in this chat.',
         datasourceTestNavigate: 'Open data management to test the data source connection.',
         datasourceDeleted: 'Data source deleted',
+        tableDeleted: 'Table deleted',
+        workflowDeleted: 'Workflow deleted',
+        templateDeleted: 'Node template deleted',
+        missingDeleteTarget: 'Missing delete target.',
       },
       data: {
         open: {
@@ -174,6 +178,10 @@ export default {
         datasourceDelete: {
           title: 'Delete data source',
           summary: 'Confirm and delete the selected data source.',
+        },
+        tableDelete: {
+          title: 'Delete table',
+          summary: 'Confirm and delete the selected table.',
         },
         fileUpload: {
           title: 'Upload data file',
@@ -261,11 +269,19 @@ export default {
           title: 'Create report workflow template',
           summary: 'Open the workflow editor and create a report template.',
         },
+        delete: {
+          title: 'Delete workflow',
+          summary: 'Confirm and delete the selected workflow.',
+        },
       },
       template: {
         copilotCreate: {
           title: 'Create workflow from template',
           summary: 'Open Workflow Copilot and create a workflow from a template.',
+        },
+        delete: {
+          title: 'Delete node template',
+          summary: 'Confirm and delete the selected node template.',
         },
       },
     },

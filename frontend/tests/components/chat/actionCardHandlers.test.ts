@@ -8,21 +8,33 @@ import type { UiActionCardPayload } from '@/types/actionCard';
 const {
   createTemplateMock,
   createWorkflowMock,
+  listTemplatesMock,
   listWorkflowsMock,
   listDatasourcesMock,
   listTablesMock,
   listFolderTreeMock,
   getFileContentMock,
   listSchedulesMock,
+  deleteWorkflowMock,
+  deleteTemplateMock,
+  deleteTableMock,
+  deleteDatasourceMock,
+  deleteRemoteDatasourceMock,
 } = vi.hoisted(() => ({
   createTemplateMock: vi.fn(),
   createWorkflowMock: vi.fn(),
+  listTemplatesMock: vi.fn(),
   listWorkflowsMock: vi.fn(),
   listDatasourcesMock: vi.fn(),
   listTablesMock: vi.fn(),
   listFolderTreeMock: vi.fn(),
   getFileContentMock: vi.fn(),
   listSchedulesMock: vi.fn(),
+  deleteWorkflowMock: vi.fn(),
+  deleteTemplateMock: vi.fn(),
+  deleteTableMock: vi.fn(),
+  deleteDatasourceMock: vi.fn(),
+  deleteRemoteDatasourceMock: vi.fn(),
 }));
 
 vi.mock('@/api/workflow', async (importOriginal) => {
@@ -31,6 +43,9 @@ vi.mock('@/api/workflow', async (importOriginal) => {
     ...actual,
     createTemplate: createTemplateMock,
     createWorkflow: createWorkflowMock,
+    deleteWorkflow: deleteWorkflowMock,
+    deleteTemplate: deleteTemplateMock,
+    listTemplates: listTemplatesMock,
     listWorkflows: listWorkflowsMock,
   };
 });
@@ -39,8 +54,18 @@ vi.mock('@/api/datafile', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/api/datafile')>();
   return {
     ...actual,
+    deleteDatasource: deleteDatasourceMock,
+    deleteTable: deleteTableMock,
     listDatasources: listDatasourcesMock,
     listTables: listTablesMock,
+  };
+});
+
+vi.mock('@/api/datasource', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/api/datasource')>();
+  return {
+    ...actual,
+    deleteDatasource: deleteRemoteDatasourceMock,
   };
 });
 
@@ -212,6 +237,12 @@ describe('action card handlers', () => {
       updatedAt: '2026-01-01T00:00:00Z',
       creatorName: null,
     });
+    deleteWorkflowMock.mockResolvedValue(undefined);
+    deleteTemplateMock.mockResolvedValue(undefined);
+    listTemplatesMock.mockResolvedValue([]);
+    deleteTableMock.mockResolvedValue(undefined);
+    deleteDatasourceMock.mockResolvedValue(undefined);
+    deleteRemoteDatasourceMock.mockResolvedValue(undefined);
   });
 
   it('registers data.open handler', () => {
@@ -240,6 +271,12 @@ describe('action card handlers', () => {
 
   it('registers datasource_delete handler', () => {
     expect(getRegistry().has('data:datasource_delete')).toBe(true);
+  });
+
+  it('registers direct delete handlers', () => {
+    expect(getRegistry().has('workflow:delete')).toBe(true);
+    expect(getRegistry().has('data:table_delete')).toBe(true);
+    expect(getRegistry().has('template:delete')).toBe(true);
   });
 
   it('registers knowledge.file_open handler', () => {
@@ -401,6 +438,95 @@ describe('action card handlers', () => {
     expect(setResult).toHaveBeenCalledWith(
       'You can continue testing data source connections in this chat.'
     );
+    expect(navigationStore.activeNav).toBe('chat');
+  });
+
+  it('executes direct delete cards without leaving chat', async () => {
+    const navigationStore = useNavigationStore();
+    navigationStore.navigateTo('chat');
+
+    const cases: Array<{
+      payload: Partial<UiActionCardPayload>;
+      expectedSummary: string;
+      assertCall: () => void;
+    }> = [
+      {
+        payload: {
+          cardId: 'workflow.delete',
+          domain: 'workflow',
+          action: 'delete',
+          params: { workflowId: 'workflow-1' },
+          riskLevel: 'danger',
+          confirmRequired: true,
+        },
+        expectedSummary: 'Workflow deleted',
+        assertCall: () => expect(deleteWorkflowMock).toHaveBeenCalledWith('workflow-1'),
+      },
+      {
+        payload: {
+          cardId: 'data.table_delete',
+          domain: 'data',
+          action: 'table_delete',
+          params: { tableId: 'table-1' },
+          riskLevel: 'danger',
+          confirmRequired: true,
+        },
+        expectedSummary: 'Table deleted',
+        assertCall: () => expect(deleteTableMock).toHaveBeenCalledWith('table-1'),
+      },
+      {
+        payload: {
+          cardId: 'template.delete',
+          domain: 'template',
+          action: 'delete',
+          params: { templateId: 'template-1' },
+          riskLevel: 'danger',
+          confirmRequired: true,
+        },
+        expectedSummary: 'Node template deleted',
+        assertCall: () => expect(deleteTemplateMock).toHaveBeenCalledWith('template-1'),
+      },
+    ];
+
+    for (const item of cases) {
+      const result = await executeAction(makePayload(item.payload), {
+        setStatus: vi.fn(),
+        setResult: vi.fn(),
+        setError: vi.fn(),
+      });
+
+      expect(result.success).toBe(true);
+      expect(result.summary).toBe(item.expectedSummary);
+      item.assertCall();
+      expect(navigationStore.activeNav).toBe('chat');
+      expect(navigationStore.pendingIntent).toBeNull();
+    }
+  });
+
+  it('resolves datasource type before deleting a datasource when type is omitted', async () => {
+    const navigationStore = useNavigationStore();
+    navigationStore.navigateTo('chat');
+
+    const result = await executeAction(
+      makePayload({
+        cardId: 'data.datasource_delete',
+        domain: 'data',
+        action: 'datasource_delete',
+        params: { datasourceId: 'ds-1' },
+        riskLevel: 'danger',
+        confirmRequired: true,
+      }),
+      {
+        setStatus: vi.fn(),
+        setResult: vi.fn(),
+        setError: vi.fn(),
+      }
+    );
+
+    expect(result.success).toBe(true);
+    expect(result.summary).toBe('Data source deleted');
+    expect(listDatasourcesMock).toHaveBeenCalled();
+    expect(deleteRemoteDatasourceMock).toHaveBeenCalledWith('ds-1');
     expect(navigationStore.activeNav).toBe('chat');
   });
 

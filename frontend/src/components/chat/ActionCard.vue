@@ -175,12 +175,6 @@ const summaryText = computed(() =>
   props.card.payload.summaryKey ? t(props.card.payload.summaryKey) : props.card.payload.summary
 );
 
-const isDeferredModalAction = computed(
-  () =>
-    props.card.payload.presentationMode === 'deferred_navigation' &&
-    props.card.payload.confirmationMode === 'modal'
-);
-
 const riskLabel = computed(() => {
   const level = props.card.payload.riskLevel;
   const capitalized = level.charAt(0).toUpperCase() + level.slice(1);
@@ -219,20 +213,24 @@ const formComponent = computed<Component | null>(() => {
   return loader ? defineAsyncComponent(loader) : null;
 });
 
-async function handleConfirm(): Promise<void> {
-  if (props.card.payload.riskLevel === 'danger' && props.card.status === 'proposed') {
-    emit('statusChange', props.card.id, 'confirming');
-    return;
-  }
+const isDirectModalAction = computed(
+  () => props.card.payload.confirmationMode === 'modal' && !formComponent.value
+);
 
+async function handleConfirm(): Promise<void> {
   // If this card has an inline form, transition to editing
   if (formComponent.value && props.card.status === 'proposed') {
     emit('statusChange', props.card.id, 'editing');
     return;
   }
 
-  if (isDeferredModalAction.value && props.card.status === 'proposed') {
+  if (isDirectModalAction.value && props.card.status === 'proposed') {
     showDeferredConfirmDialog.value = true;
+    return;
+  }
+
+  if (props.card.payload.riskLevel === 'danger' && props.card.status === 'proposed') {
+    emit('statusChange', props.card.id, 'confirming');
     return;
   }
 

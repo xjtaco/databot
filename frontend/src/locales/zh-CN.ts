@@ -156,6 +156,10 @@ export default {
         knowledgeFileOpenInChat: '可以继续在当前对话中查询知识库文件内容。',
         datasourceTestNavigate: '请打开数据管理测试数据源连接。',
         datasourceDeleted: '数据源已删除',
+        tableDeleted: '数据表已删除',
+        workflowDeleted: '工作流已删除',
+        templateDeleted: '节点模板已删除',
+        missingDeleteTarget: '缺少删除目标。',
       },
       data: {
         open: {
@@ -173,6 +177,10 @@ export default {
         datasourceDelete: {
           title: '删除数据源',
           summary: '确认后删除指定数据源。',
+        },
+        tableDelete: {
+          title: '删除数据表',
+          summary: '确认后删除指定数据表。',
         },
         fileUpload: {
           title: '上传数据文件',
@@ -260,11 +268,19 @@ export default {
           title: '创建报告工作流模板',
           summary: '跳转到工作流编辑器并创建报告模板。',
         },
+        delete: {
+          title: '删除工作流',
+          summary: '确认后删除指定工作流。',
+        },
       },
       template: {
         copilotCreate: {
           title: '通过模板创建工作流',
           summary: '跳转到工作流 Copilot 并基于模板创建工作流。',
+        },
+        delete: {
+          title: '删除节点模板',
+          summary: '确认后删除指定节点模板。',
         },
       },
     },

@@ -415,6 +415,65 @@ describe('ActionCard.vue', () => {
     ]);
   });
 
+  it('opens modal before executing direct modal actions', async () => {
+    const card = makeCard({
+      payload: {
+        ...makeCard().payload,
+        cardId: 'workflow.delete',
+        domain: 'workflow',
+        action: 'delete',
+        presentationMode: 'action',
+        confirmationMode: 'modal',
+        riskLevel: 'danger',
+        confirmRequired: true,
+        params: { workflowId: 'workflow-1' },
+      },
+    });
+    const wrapper = mountActionCard(card);
+
+    const actionButtons = wrapper.findAll('.action-card__actions button');
+    expect(actionButtons[1]).toBeDefined();
+    await actionButtons[1].trigger('click');
+
+    expect(wrapper.find('.confirm-dialog-stub').exists()).toBe(true);
+    expect(wrapper.text()).toContain('Confirm action');
+    expect(executeActionMock).not.toHaveBeenCalled();
+    expect(wrapper.emitted('statusChange')).toBeUndefined();
+
+    await wrapper.find('.confirm-dialog-confirm').trigger('click');
+
+    expect(executeActionMock).toHaveBeenCalledTimes(1);
+    expect(wrapper.emitted('statusChange')).toEqual([
+      ['card-1', 'running'],
+      ['card-1', 'succeeded', { resultSummary: 'Opened successfully' }],
+    ]);
+  });
+
+  it('does not execute direct modal actions when modal is cancelled', async () => {
+    const card = makeCard({
+      payload: {
+        ...makeCard().payload,
+        cardId: 'data.table_delete',
+        domain: 'data',
+        action: 'table_delete',
+        presentationMode: 'action',
+        confirmationMode: 'modal',
+        riskLevel: 'danger',
+        confirmRequired: true,
+        params: { tableId: 'table-1' },
+      },
+    });
+    const wrapper = mountActionCard(card);
+
+    const actionButtons = wrapper.findAll('.action-card__actions button');
+    expect(actionButtons[1]).toBeDefined();
+    await actionButtons[1].trigger('click');
+    await wrapper.find('.confirm-dialog-cancel').trigger('click');
+
+    expect(executeActionMock).not.toHaveBeenCalled();
+    expect(wrapper.emitted('statusChange')).toBeUndefined();
+  });
+
   it('does not emit duplicate completion when handler reports result through callbacks', async () => {
     executeActionMock.mockImplementation(async (_payload, callbacks) => {
       callbacks.setResult('Workflow created: Monthly Revenue');

@@ -5,7 +5,8 @@ export type ActionCardPresentationMode =
   | 'inline_form'
   | 'navigate'
   | 'deferred_navigation'
-  | 'in_chat';
+  | 'in_chat'
+  | 'action';
 export type ActionCardConfirmationMode = 'none' | 'modal';
 export type CardStatus =
   | 'proposed'

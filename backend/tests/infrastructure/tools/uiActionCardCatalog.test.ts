@@ -56,4 +56,17 @@ describe('getCardDefinition', () => {
       expect(results.every((r) => r.domain === domain)).toBe(true);
     }
   });
+
+  it('includes direct delete cards that require modal confirmation', () => {
+    const cardIds = ['workflow.delete', 'data.table_delete', 'template.delete'];
+
+    for (const cardId of cardIds) {
+      const def = getCardDefinition(cardId);
+      expect(def).toBeDefined();
+      expect(def!.presentationMode).toBe('action');
+      expect(def!.confirmationMode).toBe('modal');
+      expect(def!.riskLevel).toBe('danger');
+      expect(def!.confirmRequired).toBe(true);
+    }
+  });
 });
