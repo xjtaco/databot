@@ -4,6 +4,7 @@ import { mount } from '@vue/test-utils';
 import { setActivePinia, createPinia } from 'pinia';
 import { createI18n } from 'vue-i18n';
 import InlineScheduleForm from '@/components/chat/actionCards/forms/InlineScheduleForm.vue';
+import { useScheduleStore } from '@/stores/scheduleStore';
 import zhCN from '@/locales/zh-CN';
 import enUS from '@/locales/en-US';
 import type { UiActionCardPayload } from '@/types/actionCard';
@@ -12,6 +13,7 @@ import type { CreateScheduleInput, ScheduleDetail } from '@/types/schedule';
 
 const scheduleFormState = vi.hoisted(() => ({
   lastInitial: undefined as ScheduleFormInitialValues | undefined,
+  lastEditing: undefined as ScheduleDetail | null | undefined,
   submitInput: {
     name: 'Cron Sales',
     workflowId: 'wf-1',
@@ -36,6 +38,7 @@ vi.mock('@/components/schedule/ScheduleForm.vue', () => ({
     },
     setup(props, { expose }) {
       scheduleFormState.lastInitial = props.initial as ScheduleFormInitialValues | undefined;
+      scheduleFormState.lastEditing = props.editing as ScheduleDetail | null | undefined;
       expose({
         getSubmitInput: () => scheduleFormState.submitInput,
       });
@@ -117,11 +120,34 @@ function makePayload(params: Record<string, unknown> = {}): UiActionCardPayload 
   };
 }
 
+function makeScheduleDetail(overrides: Partial<ScheduleDetail> = {}): ScheduleDetail {
+  return {
+    id: 'sched-stale',
+    name: 'Stale Edit Schedule',
+    description: '',
+    workflowId: 'wf-stale',
+    workflowName: 'Stale Workflow',
+    scheduleType: 'daily',
+    cronExpr: '0 8 * * *',
+    timezone: 'Asia/Shanghai',
+    enabled: true,
+    lastRunId: null,
+    lastRunStatus: null,
+    lastRunAt: null,
+    createdAt: '2026-03-29T00:00:00Z',
+    updatedAt: '2026-03-29T00:00:00Z',
+    creatorName: null,
+    params: {},
+    ...overrides,
+  };
+}
+
 describe('InlineScheduleForm', () => {
   beforeEach(() => {
     setActivePinia(createPinia());
     vi.clearAllMocks();
     scheduleFormState.lastInitial = undefined;
+    scheduleFormState.lastEditing = undefined;
   });
 
   it('passes typed schedule defaults from action card params', async () => {
@@ -179,6 +205,30 @@ describe('InlineScheduleForm', () => {
     expect(scheduleFormState.lastInitial).toEqual({
       cronExpr: '0 8 * * *',
       name: 'Daily Sales',
+    });
+  });
+
+  it('forces create mode when the schedule store has stale editing state', async () => {
+    const scheduleStore = useScheduleStore();
+    scheduleStore.editingSchedule = makeScheduleDetail();
+
+    mount(InlineScheduleForm, {
+      props: {
+        payload: makePayload({
+          workflowName: 'Sales',
+          name: 'Create From Card',
+        }),
+      },
+      global: {
+        plugins: [i18n],
+        stubs: globalStubs,
+      },
+    });
+
+    expect(scheduleFormState.lastEditing).toBeNull();
+    expect(scheduleFormState.lastInitial).toEqual({
+      workflowName: 'Sales',
+      name: 'Create From Card',
     });
   });
 });

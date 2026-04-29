@@ -11,7 +11,7 @@
       </div>
 
       <template v-else>
-        <ScheduleForm ref="scheduleFormRef" :editing="editingSchedule" :initial="initialValues" />
+        <ScheduleForm ref="scheduleFormRef" :editing="scheduleFormEditing" :initial="initialValues" />
 
         <div class="inline-schedule-form__actions">
           <el-button type="primary" size="small" :loading="submitting" @click="handleSubmit">
@@ -137,6 +137,9 @@ onMounted(async () => {
 });
 
 const editingSchedule = computed(() => scheduleStore.editingSchedule);
+const scheduleFormEditing = computed(() =>
+  props.payload.action === 'create' ? null : editingSchedule.value
+);
 
 async function handleSubmit(): Promise<void> {
   if (submitting.value) return;
