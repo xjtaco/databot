@@ -455,6 +455,23 @@ async function confirmIfNeeded(): Promise<boolean> {
     color: var(--text-tertiary);
   }
 
+  &__folder-create {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) max-content;
+    gap: $spacing-sm;
+    align-items: center;
+
+    .el-alert {
+      grid-column: 1 / -1;
+    }
+
+    .el-button {
+      min-width: 72px;
+      margin-left: 0;
+      white-space: nowrap;
+    }
+  }
+
   &__dropzone {
     display: flex;
     flex-direction: column;
@@ -555,6 +572,10 @@ async function confirmIfNeeded(): Promise<boolean> {
 
       .el-button {
         width: 100%;
+      }
+
+      .el-button + .el-button {
+        margin-left: 0;
       }
     }
   }

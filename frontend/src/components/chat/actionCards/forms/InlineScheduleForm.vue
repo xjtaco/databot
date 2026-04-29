@@ -164,6 +164,10 @@ async function confirmIfNeeded(): Promise<boolean> {
     gap: $spacing-sm;
     justify-content: flex-end;
     margin-top: $spacing-md;
+
+    .el-button + .el-button {
+      margin-left: 0;
+    }
   }
 }
 </style>

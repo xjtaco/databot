@@ -583,6 +583,10 @@ function handleFormSubmit(
     gap: $spacing-sm;
     align-items: center;
     margin-top: $spacing-md;
+
+    .el-button + .el-button {
+      margin-left: 0;
+    }
   }
 
   &__danger-input {

@@ -422,6 +422,10 @@ async function confirmIfNeeded(): Promise<boolean> {
   &__right {
     display: flex;
     gap: $spacing-sm;
+
+    .el-button + .el-button {
+      margin-left: 0;
+    }
   }
 }
 

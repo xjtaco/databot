@@ -253,6 +253,10 @@ async function confirmIfNeeded(): Promise<boolean> {
     gap: 8px;
     justify-content: flex-end;
     margin-top: 12px;
+
+    .el-button + .el-button {
+      margin-left: 0;
+    }
   }
 }
 </style>
