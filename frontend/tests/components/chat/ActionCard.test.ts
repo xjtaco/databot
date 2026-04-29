@@ -236,6 +236,17 @@ describe('ActionCard.vue', () => {
             `,
             props: ['visible', 'title', 'message', 'confirmText', 'cancelText'],
           },
+          ResourceActionCard: {
+            template: `
+              <div class="resource-action-card-stub">
+                <button class="resource-status-fail" @click="$emit('statusChange', 'failed', { error: 'Load failed' })">
+                  resource
+                </button>
+              </div>
+            `,
+            props: ['payload'],
+            emits: ['statusChange'],
+          },
         },
       },
     });
@@ -323,6 +334,33 @@ describe('ActionCard.vue', () => {
     expect(wrapper.emitted('statusChange')).toEqual([
       ['card-1', 'running'],
       ['card-1', 'succeeded', { resultSummary: 'Opened successfully' }],
+    ]);
+  });
+
+  it('delegates resource list payloads to ResourceActionCard without auto-running or showing params', async () => {
+    const card = makeCard({
+      payload: {
+        ...makeCard().payload,
+        presentationMode: 'resource_list',
+        resourceType: 'workflow',
+        defaultQuery: 'daily',
+        params: { query: 'daily' },
+      },
+    });
+
+    const wrapper = mountActionCard(card);
+    await nextTick();
+    await vi.dynamicImportSettled();
+
+    expect(wrapper.find('.resource-action-card-stub').exists()).toBe(true);
+    expect(wrapper.find('.action-card__params').exists()).toBe(false);
+    expect(wrapper.find('.action-card__actions').exists()).toBe(false);
+    expect(executeActionMock).not.toHaveBeenCalled();
+
+    await wrapper.find('.resource-status-fail').trigger('click');
+
+    expect(wrapper.emitted('statusChange')).toEqual([
+      ['card-1', 'failed', { error: 'Load failed' }],
     ]);
   });
 

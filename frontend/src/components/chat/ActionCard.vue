@@ -47,10 +47,16 @@
       {{ card.error || card.resultSummary || t('common.error') }}
     </div>
 
+    <ResourceActionCard
+      v-if="card.payload.presentationMode === 'resource_list'"
+      :payload="card.payload"
+      @status-change="handleResourceStatusChange"
+    />
+
     <!-- Inline Form (editing state) -->
     <component
       :is="formComponent"
-      v-if="card.status === 'editing' && formComponent"
+      v-else-if="card.status === 'editing' && formComponent"
       :payload="card.payload"
       :request-confirmation="requestInlineFormConfirmation"
       class="action-card__inline-form"
@@ -127,6 +133,7 @@ import { ref, computed, defineAsyncComponent, onMounted, type Component } from '
 import { useI18n } from 'vue-i18n';
 import ConfirmDialog from '@/components/common/ConfirmDialog.vue';
 import { executeAction } from './actionCards';
+import ResourceActionCard from './actionCards/ResourceActionCard.vue';
 import type { ChatActionCard, CardStatus } from '@/types/actionCard';
 import { getActionCardKey } from '@/utils/actionCardSupport';
 
@@ -193,6 +200,9 @@ const actionButtonLabel = computed(() =>
 );
 
 const displayParams = computed(() => {
+  if (props.card.payload.presentationMode === 'resource_list') {
+    return null;
+  }
   const params = { ...props.card.payload.params };
   delete params.copilotPrompt;
   return Object.keys(params).length > 0 ? params : null;
@@ -201,6 +211,9 @@ const displayParams = computed(() => {
 const hasParams = computed(() => displayParams.value !== null);
 
 const showActions = computed(() => {
+  if (props.card.payload.presentationMode === 'resource_list') {
+    return false;
+  }
   if (props.card.payload.presentationMode === 'in_chat') {
     return false;
   }
@@ -345,6 +358,13 @@ function handleFormCancel(): void {
 
 function handleFormSubmit(
   status: 'succeeded' | 'failed',
+  opts?: { resultSummary?: string; error?: string }
+): void {
+  emit('statusChange', props.card.id, status, opts);
+}
+
+function handleResourceStatusChange(
+  status: CardStatus,
   opts?: { resultSummary?: string; error?: string }
 ): void {
   emit('statusChange', props.card.id, status, opts);
