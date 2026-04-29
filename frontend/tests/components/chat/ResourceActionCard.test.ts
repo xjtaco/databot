@@ -183,6 +183,20 @@ async function flush(): Promise<void> {
   await nextTick();
 }
 
+function deferred<T>(): {
+  promise: Promise<T>;
+  resolve: (value: T) => void;
+  reject: (reason: Error) => void;
+} {
+  let resolvePromise: (value: T) => void = () => undefined;
+  let rejectPromise: (reason: Error) => void = () => undefined;
+  const promise = new Promise<T>((resolve, reject) => {
+    resolvePromise = resolve;
+    rejectPromise = reject;
+  });
+  return { promise, resolve: resolvePromise, reject: rejectPromise };
+}
+
 describe('ResourceActionCard.vue', () => {
   beforeEach(() => {
     vi.resetAllMocks();
@@ -232,6 +246,31 @@ describe('ResourceActionCard.vue', () => {
       allowedActions: expect.any(Array) as unknown[],
     });
     expect(wrapper.text()).toContain('Revenue Flow');
+  });
+
+  it('keeps newer search rows when the initial load resolves later', async () => {
+    const initialLoad = deferred<ResourceRow[]>();
+    const searchLoad = deferred<ResourceRow[]>();
+    fetchRowsMock.mockImplementation(({ query }: { query: string }) =>
+      query === 'search' ? searchLoad.promise : initialLoad.promise
+    );
+
+    const wrapper = mountCard();
+    await flush();
+
+    await wrapper.find('input.el-input-stub').setValue('search');
+    await wrapper.find('.resource-action-card__search-button').trigger('click');
+    await flush();
+
+    searchLoad.resolve([makeRow({ id: 'workflow-search', title: 'Search Result' })]);
+    await flush();
+    expect(wrapper.text()).toContain('Search Result');
+
+    initialLoad.resolve([makeRow({ id: 'workflow-initial', title: 'Initial Result' })]);
+    await flush();
+
+    expect(wrapper.text()).toContain('Search Result');
+    expect(wrapper.text()).not.toContain('Initial Result');
   });
 
   it('confirms delete actions and refreshes rows after success', async () => {

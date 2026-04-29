@@ -188,6 +188,8 @@ const pendingConfirmation = ref<PendingConfirmation | null>(null);
 const inlineEdit = ref<InlineEditState | null>(null);
 const rowResults = reactive<Record<string, string>>({});
 const rowErrors = reactive<Record<string, string>>({});
+const latestSectionRequestIds = new Map<string, number>();
+let nextRequestId = 0;
 
 const sectionStates = reactive<SectionState[]>(buildSectionStates(props.payload));
 
@@ -271,22 +273,38 @@ async function loadSections(): Promise<void> {
 }
 
 async function loadSection(section: SectionState): Promise<void> {
+  const requestId = beginSectionRequest(section);
+  const requestQuery = query.value;
   section.loading = true;
   section.error = null;
   try {
     const adapter = getResourceAdapter(section.resourceType);
     const rows = await adapter.fetchRows({
-      query: query.value,
+      query: requestQuery,
       limit: ROW_LIMIT,
       allowedActions: section.allowedActions,
     });
+    if (!isLatestSectionRequest(section, requestId)) return;
     section.rows = rows.slice(0, ROW_LIMIT);
   } catch (err: unknown) {
+    if (!isLatestSectionRequest(section, requestId)) return;
     const message = err instanceof Error ? err.message : String(err);
     section.error = message;
   } finally {
-    section.loading = false;
+    if (isLatestSectionRequest(section, requestId)) {
+      section.loading = false;
+    }
   }
+}
+
+function beginSectionRequest(section: SectionState): number {
+  nextRequestId += 1;
+  latestSectionRequestIds.set(section.key, nextRequestId);
+  return nextRequestId;
+}
+
+function isLatestSectionRequest(section: SectionState, requestId: number): boolean {
+  return latestSectionRequestIds.get(section.key) === requestId;
 }
 
 function sectionTitle(section: SectionState): string {
