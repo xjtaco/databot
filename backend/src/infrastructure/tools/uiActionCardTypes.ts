@@ -1,7 +1,11 @@
 export type ActionDomain = 'data' | 'knowledge' | 'schedule' | 'workflow' | 'template';
 export type RiskLevel = 'low' | 'medium' | 'high' | 'danger';
 export type ExecutionMode = 'frontend';
-export type ActionCardPresentationMode = 'inline_form' | 'navigate' | 'deferred_navigation';
+export type ActionCardPresentationMode =
+  | 'inline_form'
+  | 'navigate'
+  | 'deferred_navigation'
+  | 'in_chat';
 export type ActionCardConfirmationMode = 'none' | 'modal';
 export type CardStatus =
   | 'proposed'

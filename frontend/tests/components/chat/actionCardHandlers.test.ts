@@ -5,9 +5,24 @@ import { useNavigationStore } from '@/stores/navigationStore';
 import { i18n } from '@/locales';
 import type { UiActionCardPayload } from '@/types/actionCard';
 
-const { createTemplateMock, createWorkflowMock } = vi.hoisted(() => ({
+const {
+  createTemplateMock,
+  createWorkflowMock,
+  listWorkflowsMock,
+  listDatasourcesMock,
+  listTablesMock,
+  listFolderTreeMock,
+  getFileContentMock,
+  listSchedulesMock,
+} = vi.hoisted(() => ({
   createTemplateMock: vi.fn(),
   createWorkflowMock: vi.fn(),
+  listWorkflowsMock: vi.fn(),
+  listDatasourcesMock: vi.fn(),
+  listTablesMock: vi.fn(),
+  listFolderTreeMock: vi.fn(),
+  getFileContentMock: vi.fn(),
+  listSchedulesMock: vi.fn(),
 }));
 
 vi.mock('@/api/workflow', async (importOriginal) => {
@@ -15,14 +30,36 @@ vi.mock('@/api/workflow', async (importOriginal) => {
   return {
     ...actual,
     createTemplate: createTemplateMock,
+    createWorkflow: createWorkflowMock,
+    listWorkflows: listWorkflowsMock,
   };
 });
 
-vi.mock('@/stores/workflowStore', () => ({
-  useWorkflowStore: () => ({
-    createWorkflow: createWorkflowMock,
-  }),
-}));
+vi.mock('@/api/datafile', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/api/datafile')>();
+  return {
+    ...actual,
+    listDatasources: listDatasourcesMock,
+    listTables: listTablesMock,
+  };
+});
+
+vi.mock('@/api/knowledge', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/api/knowledge')>();
+  return {
+    ...actual,
+    listFolderTree: listFolderTreeMock,
+    getFileContent: getFileContentMock,
+  };
+});
+
+vi.mock('@/api/schedule', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/api/schedule')>();
+  return {
+    ...actual,
+    listSchedules: listSchedulesMock,
+  };
+});
 
 function makePayload(overrides: Partial<UiActionCardPayload>): UiActionCardPayload {
   return {
@@ -51,7 +88,115 @@ describe('action card handlers', () => {
     setActivePinia(createPinia());
     vi.clearAllMocks();
     i18n.global.locale.value = 'en-US';
-    createWorkflowMock.mockResolvedValue('workflow-1');
+    createWorkflowMock.mockResolvedValue({
+      id: 'workflow-1',
+      name: 'New Workflow',
+      description: null,
+      nodes: [],
+      edges: [],
+      createdAt: '2026-01-01T00:00:00Z',
+      updatedAt: '2026-01-01T00:00:00Z',
+    });
+    listWorkflowsMock.mockResolvedValue([
+      {
+        id: 'workflow-1',
+        name: 'Daily ETL',
+        description: null,
+        nodeCount: 3,
+        lastRunAt: '2026-01-01T00:00:00Z',
+        lastRunStatus: 'completed',
+        createdAt: '2026-01-01T00:00:00Z',
+        updatedAt: '2026-01-02T00:00:00Z',
+        creatorName: 'Alice',
+      },
+      {
+        id: 'workflow-2',
+        name: 'Monthly Report',
+        description: 'Revenue report',
+        nodeCount: 2,
+        lastRunAt: null,
+        lastRunStatus: null,
+        createdAt: '2026-01-03T00:00:00Z',
+        updatedAt: '2026-01-04T00:00:00Z',
+        creatorName: null,
+      },
+    ]);
+    listDatasourcesMock.mockResolvedValue({
+      datasources: [
+        {
+          id: 'ds-1',
+          name: 'Sales DB',
+          type: 'mysql',
+          createdAt: '2026-01-01T00:00:00Z',
+          updatedAt: '2026-01-01T00:00:00Z',
+          tables: [],
+        },
+      ],
+    });
+    listTablesMock.mockResolvedValue({
+      tables: [
+        {
+          id: 'table-1',
+          displayName: 'orders',
+          physicalName: 'orders',
+          type: 'mysql',
+          createdAt: '2026-01-01T00:00:00Z',
+          updatedAt: '2026-01-01T00:00:00Z',
+        },
+      ],
+    });
+    listFolderTreeMock.mockResolvedValue({
+      folders: [
+        {
+          id: 'folder-1',
+          name: 'Research',
+          parentId: null,
+          sortOrder: 0,
+          createdAt: '2026-01-01T00:00:00Z',
+          updatedAt: '2026-01-01T00:00:00Z',
+          children: [],
+          files: [
+            {
+              id: 'file-1',
+              name: 'brief.md',
+              folderId: 'folder-1',
+              fileSize: 120,
+              createdAt: '2026-01-01T00:00:00Z',
+              updatedAt: '2026-01-01T00:00:00Z',
+            },
+          ],
+        },
+      ],
+    });
+    getFileContentMock.mockResolvedValue({
+      file: {
+        id: 'file-1',
+        name: 'brief.md',
+        folderId: 'folder-1',
+        fileSize: 120,
+        createdAt: '2026-01-01T00:00:00Z',
+        updatedAt: '2026-01-01T00:00:00Z',
+      },
+      content: '# Brief\nKey research notes',
+    });
+    listSchedulesMock.mockResolvedValue([
+      {
+        id: 'schedule-1',
+        name: 'Daily refresh',
+        description: '',
+        workflowId: 'workflow-1',
+        workflowName: 'Daily ETL',
+        scheduleType: 'daily',
+        cronExpr: '0 8 * * *',
+        timezone: 'Asia/Shanghai',
+        enabled: true,
+        lastRunId: null,
+        lastRunStatus: null,
+        lastRunAt: null,
+        createdAt: '2026-01-01T00:00:00Z',
+        creatorName: null,
+      },
+    ]);
     createTemplateMock.mockResolvedValue({
       id: 'template-1',
       name: 'Reusable Node',
@@ -108,7 +253,81 @@ describe('action card handlers', () => {
     expect(getRegistry().has('workflow:template_report')).toBe(true);
   });
 
-  it('executes workflow.open by navigating to workflow panel', async () => {
+  it('keeps non-editor list cards inside the chat and shows fetched results', async () => {
+    const cases: Array<{
+      cardId: string;
+      domain: UiActionCardPayload['domain'];
+      action: string;
+      params?: Record<string, unknown>;
+      expectedSnippets: string[];
+    }> = [
+      {
+        cardId: 'workflow.open',
+        domain: 'workflow',
+        action: 'open',
+        expectedSnippets: ['Workflows (2)', 'Daily ETL', '3 nodes', 'Monthly Report'],
+      },
+      {
+        cardId: 'data.open',
+        domain: 'data',
+        action: 'open',
+        expectedSnippets: ['Data sources (1)', 'Sales DB', 'Tables (1)', 'orders'],
+      },
+      {
+        cardId: 'knowledge.open',
+        domain: 'knowledge',
+        action: 'open',
+        expectedSnippets: ['Knowledge folders (1)', 'Research', 'Knowledge files (1)', 'brief.md'],
+      },
+      {
+        cardId: 'schedule.open',
+        domain: 'schedule',
+        action: 'open',
+        expectedSnippets: ['Scheduled tasks (1)', 'Daily refresh', 'Daily ETL', 'enabled'],
+      },
+      {
+        cardId: 'data.datasource_test',
+        domain: 'data',
+        action: 'datasource_test',
+        expectedSnippets: ['You can continue testing data source connections in this chat.'],
+      },
+      {
+        cardId: 'knowledge.file_open',
+        domain: 'knowledge',
+        action: 'file_open',
+        params: { fileId: 'file-1' },
+        expectedSnippets: ['brief.md', '# Brief', 'Key research notes'],
+      },
+    ];
+
+    for (const item of cases) {
+      const navigationStore = useNavigationStore();
+      navigationStore.navigateTo('chat');
+
+      const result = await executeAction(
+        makePayload({
+          cardId: item.cardId,
+          domain: item.domain,
+          action: item.action,
+          params: item.params ?? {},
+        }),
+        {
+          setStatus: vi.fn(),
+          setResult: vi.fn(),
+          setError: vi.fn(),
+        }
+      );
+
+      expect(result.success).toBe(true);
+      for (const snippet of item.expectedSnippets) {
+        expect(result.summary).toContain(snippet);
+      }
+      expect(navigationStore.activeNav).toBe('chat');
+      expect(navigationStore.pendingIntent).toBeNull();
+    }
+  });
+
+  it('keeps workflow.open inside chat when executed', async () => {
     const result = await executeAction(makePayload({ action: 'open' }), {
       setStatus: vi.fn(),
       setResult: vi.fn(),
@@ -117,7 +336,7 @@ describe('action card handlers', () => {
 
     const navigationStore = useNavigationStore();
     expect(result.success).toBe(true);
-    expect(navigationStore.activeNav).toBe('workflow');
+    expect(navigationStore.activeNav).toBe('chat');
   });
 
   it('returns localized workflow creation summaries', async () => {
@@ -161,11 +380,9 @@ describe('action card handlers', () => {
     expect(navigationStore.activeNav).toBe('workflow');
   });
 
-  it('marks data source test navigation complete before leaving chat', async () => {
+  it('marks data source test complete without leaving chat', async () => {
     const navigationStore = useNavigationStore();
-    const setResult = vi.fn(() => {
-      expect(navigationStore.activeNav).toBe('chat');
-    });
+    const setResult = vi.fn();
 
     const result = await executeAction(
       makePayload({
@@ -182,9 +399,9 @@ describe('action card handlers', () => {
 
     expect(result.success).toBe(true);
     expect(setResult).toHaveBeenCalledWith(
-      'Open data management to test the data source connection.'
+      'You can continue testing data source connections in this chat.'
     );
-    expect(navigationStore.activeNav).toBe('data');
+    expect(navigationStore.activeNav).toBe('chat');
   });
 
   it('executes workflow.template_node by creating a template and opening it', async () => {

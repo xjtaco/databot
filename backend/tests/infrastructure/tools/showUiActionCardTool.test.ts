@@ -52,6 +52,7 @@ describe('ShowUiActionCardTool', () => {
     expect(cardPayload.action).toBe('open');
     expect(cardPayload.riskLevel).toBe('low');
     expect(cardPayload.executionMode).toBe('frontend');
+    expect(cardPayload.presentationMode).toBe('in_chat');
     expect(cardPayload.title).toBe('Open Data Panel');
   });
 

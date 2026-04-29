@@ -13,7 +13,7 @@ type UiActionCardCatalogEntry = Omit<UiActionCardDefinition, keyof ActionCardPre
 
 const cardPresentationMetadata = {
   'data.open': {
-    presentationMode: 'navigate',
+    presentationMode: 'in_chat',
     confirmationMode: 'none',
     titleKey: 'chat.actionCards.data.open.title',
     summaryKey: 'chat.actionCards.data.open.summary',
@@ -25,7 +25,7 @@ const cardPresentationMetadata = {
     summaryKey: 'chat.actionCards.data.datasourceCreate.summary',
   },
   'data.datasource_test': {
-    presentationMode: 'inline_form',
+    presentationMode: 'in_chat',
     confirmationMode: 'none',
     titleKey: 'chat.actionCards.data.datasourceTest.title',
     summaryKey: 'chat.actionCards.data.datasourceTest.summary',
@@ -43,7 +43,7 @@ const cardPresentationMetadata = {
     summaryKey: 'chat.actionCards.data.fileUpload.summary',
   },
   'knowledge.open': {
-    presentationMode: 'navigate',
+    presentationMode: 'in_chat',
     confirmationMode: 'none',
     titleKey: 'chat.actionCards.knowledge.open.title',
     summaryKey: 'chat.actionCards.knowledge.open.summary',
@@ -73,7 +73,7 @@ const cardPresentationMetadata = {
     summaryKey: 'chat.actionCards.knowledge.folderDelete.summary',
   },
   'knowledge.file_open': {
-    presentationMode: 'navigate',
+    presentationMode: 'in_chat',
     confirmationMode: 'none',
     titleKey: 'chat.actionCards.knowledge.fileOpen.title',
     summaryKey: 'chat.actionCards.knowledge.fileOpen.summary',
@@ -103,7 +103,7 @@ const cardPresentationMetadata = {
     summaryKey: 'chat.actionCards.knowledge.fileDelete.summary',
   },
   'schedule.open': {
-    presentationMode: 'navigate',
+    presentationMode: 'in_chat',
     confirmationMode: 'none',
     titleKey: 'chat.actionCards.schedule.open.title',
     summaryKey: 'chat.actionCards.schedule.open.summary',
@@ -127,7 +127,7 @@ const cardPresentationMetadata = {
     summaryKey: 'chat.actionCards.schedule.delete.summary',
   },
   'workflow.open': {
-    presentationMode: 'navigate',
+    presentationMode: 'in_chat',
     confirmationMode: 'none',
     titleKey: 'chat.actionCards.workflow.open.title',
     summaryKey: 'chat.actionCards.workflow.open.summary',

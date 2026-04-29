@@ -306,6 +306,26 @@ describe('ActionCard.vue', () => {
     expect(wrapper.text()).toContain('Navigate to data management page.');
   });
 
+  it('automatically executes in-chat cards without showing an action button', async () => {
+    const card = makeCard({
+      payload: {
+        ...makeCard().payload,
+        presentationMode: 'in_chat',
+      },
+    });
+
+    const wrapper = mountActionCard(card);
+    await nextTick();
+    await vi.dynamicImportSettled();
+
+    expect(wrapper.find('.action-card__actions').exists()).toBe(false);
+    expect(executeActionMock).toHaveBeenCalledTimes(1);
+    expect(wrapper.emitted('statusChange')).toEqual([
+      ['card-1', 'running'],
+      ['card-1', 'succeeded', { resultSummary: 'Opened successfully' }],
+    ]);
+  });
+
   it('shows confirm button for medium risk cards', () => {
     const card = makeCard({
       payload: { ...makeCard().payload, riskLevel: 'medium', confirmRequired: true },

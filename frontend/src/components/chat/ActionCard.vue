@@ -123,7 +123,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, defineAsyncComponent, type Component } from 'vue';
+import { ref, computed, defineAsyncComponent, onMounted, type Component } from 'vue';
 import { useI18n } from 'vue-i18n';
 import ConfirmDialog from '@/components/common/ConfirmDialog.vue';
 import { executeAction } from './actionCards';
@@ -163,6 +163,7 @@ const { t } = useI18n();
 const dangerConfirmText = ref('');
 const showDeferredConfirmDialog = ref(false);
 const showInlineConfirmDialog = ref(false);
+const autoExecuted = ref(false);
 let inlineConfirmationResolver: ((confirmed: boolean) => void) | null = null;
 let inlineConfirmationPromise: Promise<boolean> | null = null;
 
@@ -189,10 +190,12 @@ const riskLabel = computed(() => {
 const statusLabel = computed(() => t(`chat.actionCards.common.${props.card.status}`));
 
 const actionButtonLabel = computed(() =>
-  props.card.payload.presentationMode === 'navigate' ||
-  props.card.payload.presentationMode === 'deferred_navigation'
-    ? t('chat.actionCards.common.open')
-    : t('chat.actionCards.common.confirm')
+  props.card.payload.presentationMode === 'in_chat'
+    ? t('chat.actionCards.common.view')
+    : props.card.payload.presentationMode === 'navigate' ||
+        props.card.payload.presentationMode === 'deferred_navigation'
+      ? t('chat.actionCards.common.open')
+      : t('chat.actionCards.common.confirm')
 );
 
 const displayParams = computed(() => {
@@ -204,6 +207,9 @@ const displayParams = computed(() => {
 const hasParams = computed(() => displayParams.value !== null);
 
 const showActions = computed(() => {
+  if (props.card.payload.presentationMode === 'in_chat') {
+    return false;
+  }
   return props.card.status === 'proposed' || props.card.status === 'confirming';
 });
 
@@ -232,6 +238,17 @@ async function handleConfirm(): Promise<void> {
 
   await runAction();
 }
+
+onMounted(() => {
+  if (
+    props.card.payload.presentationMode === 'in_chat' &&
+    props.card.status === 'proposed' &&
+    !autoExecuted.value
+  ) {
+    autoExecuted.value = true;
+    void runAction();
+  }
+});
 
 async function runAction(): Promise<void> {
   // Direct execution (workflow/template create, navigation, etc.)
@@ -562,7 +579,9 @@ function handleFormSubmit(
     padding: $spacing-sm $spacing-md;
     margin-top: $spacing-sm;
     font-size: $font-size-xs;
+    line-height: $line-height-relaxed;
     color: $success;
+    white-space: pre-line;
     background-color: $success-tint;
     border: 1px solid rgb(34 197 94 / 15%);
     border-radius: $radius-md;

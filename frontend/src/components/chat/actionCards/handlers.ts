@@ -1,35 +1,208 @@
-import type { ActionCallbacks, ActionResult, ActionHandler } from './actionCardRegistry';
+import type { ActionCallbacks, ActionResult } from './actionCardRegistry';
 import { registerActionHandler } from './actionCardRegistry';
 import type { UiActionCardPayload } from '@/types/actionCard';
 import type { DatabaseDatasourceType } from '@/types/datafile';
-import type { NodeConfig, WorkflowNodeType } from '@/types/workflow';
+import type { KnowledgeFile, KnowledgeFolder } from '@/types/knowledge';
+import type { ScheduleListItem } from '@/types/schedule';
+import type { NodeConfig, WorkflowListItem, WorkflowNodeType } from '@/types/workflow';
 import { useNavigationStore } from '@/stores/navigationStore';
 import { i18n } from '@/locales';
 
-// ── Navigation Handlers ────────────────────────────────────
+// ── In-chat Handlers ───────────────────────────────────────
 
-function navigationHandler(
-  targetNav: 'data' | 'workflow' | 'schedule',
-  targetTab?: 'data' | 'knowledge'
-): ActionHandler {
-  return async (
-    _payload: UiActionCardPayload,
-    callbacks: ActionCallbacks
-  ): Promise<ActionResult> => {
-    const navigationStore = useNavigationStore();
-    if (targetTab) {
-      navigationStore.setPendingIntent({ type: 'open_data_management', tab: targetTab });
-    }
-    callbacks.setStatus('succeeded');
-    navigationStore.navigateTo(targetNav);
-    return { success: true };
-  };
+const MAX_PREVIEW_ITEMS = 5;
+const MAX_FILE_PREVIEW_LENGTH = 600;
+
+function renderLimitedList(
+  title: string,
+  items: string[],
+  emptyText: string,
+  moreTextKey: string
+): string {
+  if (items.length === 0) {
+    return `${title}\n${emptyText}`;
+  }
+
+  const visibleItems = items.slice(0, MAX_PREVIEW_ITEMS);
+  const lines = visibleItems.map((item, index) => `${index + 1}. ${item}`);
+  const hiddenCount = items.length - visibleItems.length;
+  if (hiddenCount > 0) {
+    lines.push(t(moreTextKey, { count: String(hiddenCount) }));
+  }
+  return `${title}\n${lines.join('\n')}`;
 }
 
-registerActionHandler('data', 'open', navigationHandler('data', 'data'));
-registerActionHandler('knowledge', 'open', navigationHandler('data', 'knowledge'));
-registerActionHandler('schedule', 'open', navigationHandler('schedule'));
-registerActionHandler('workflow', 'open', navigationHandler('workflow'));
+function completeInChat(callbacks: ActionCallbacks, summary: string): ActionResult {
+  callbacks.setResult(summary);
+  return { success: true, summary };
+}
+
+async function workflowListHandler(
+  _payload: UiActionCardPayload,
+  callbacks: ActionCallbacks
+): Promise<ActionResult> {
+  const { useWorkflowStore } = await import('@/stores/workflowStore');
+  const workflowStore = useWorkflowStore();
+  await workflowStore.fetchWorkflows();
+
+  const rows = workflowStore.workflows.map((workflow: WorkflowListItem) =>
+    t('chat.actionCards.results.workflowListItem', {
+      name: workflow.name,
+      nodes: String(workflow.nodeCount),
+      status: workflow.lastRunStatus ?? t('chat.actionCards.results.neverRun'),
+    })
+  );
+  const summary = renderLimitedList(
+    t('chat.actionCards.results.workflowListTitle', {
+      count: String(workflowStore.workflows.length),
+    }),
+    rows,
+    t('chat.actionCards.results.workflowListEmpty'),
+    'chat.actionCards.results.listMore'
+  );
+  return completeInChat(callbacks, summary);
+}
+
+async function dataListHandler(
+  _payload: UiActionCardPayload,
+  callbacks: ActionCallbacks
+): Promise<ActionResult> {
+  const { useDatafileStore } = await import('@/stores/datafileStore');
+  const datafileStore = useDatafileStore();
+  await Promise.all([datafileStore.fetchDatasources(), datafileStore.fetchTables()]);
+
+  const datasourceRows = datafileStore.datasources.map((datasource) =>
+    t('chat.actionCards.results.datasourceListItem', {
+      name: datasource.name,
+      type: datasource.type,
+      tables: String(datasource.tables.length),
+    })
+  );
+  const tableRows = datafileStore.tables.map((table) =>
+    t('chat.actionCards.results.tableListItem', {
+      name: table.displayName,
+      type: table.type,
+    })
+  );
+  const summary = [
+    renderLimitedList(
+      t('chat.actionCards.results.datasourceListTitle', {
+        count: String(datafileStore.datasources.length),
+      }),
+      datasourceRows,
+      t('chat.actionCards.results.datasourceListEmpty'),
+      'chat.actionCards.results.listMore'
+    ),
+    renderLimitedList(
+      t('chat.actionCards.results.tableListTitle', { count: String(datafileStore.tables.length) }),
+      tableRows,
+      t('chat.actionCards.results.tableListEmpty'),
+      'chat.actionCards.results.listMore'
+    ),
+  ].join('\n\n');
+  return completeInChat(callbacks, summary);
+}
+
+function collectKnowledgeFiles(folders: KnowledgeFolder[]): KnowledgeFile[] {
+  const files: KnowledgeFile[] = [];
+  const visit = (folder: KnowledgeFolder): void => {
+    files.push(...folder.files);
+    folder.children.forEach(visit);
+  };
+  folders.forEach(visit);
+  return files;
+}
+
+async function knowledgeListHandler(
+  _payload: UiActionCardPayload,
+  callbacks: ActionCallbacks
+): Promise<ActionResult> {
+  const { useKnowledgeStore } = await import('@/stores/knowledgeStore');
+  const knowledgeStore = useKnowledgeStore();
+  await knowledgeStore.fetchFolderTree();
+
+  const folders = knowledgeStore.folderTree;
+  const files = collectKnowledgeFiles(folders);
+  const folderRows = folders.map((folder: KnowledgeFolder) =>
+    t('chat.actionCards.results.knowledgeFolderListItem', {
+      name: folder.name,
+      files: String(folder.files.length),
+    })
+  );
+  const fileRows = files.map((file) =>
+    t('chat.actionCards.results.knowledgeFileListItem', { name: file.name })
+  );
+  const summary = [
+    renderLimitedList(
+      t('chat.actionCards.results.knowledgeFolderListTitle', { count: String(folders.length) }),
+      folderRows,
+      t('chat.actionCards.results.knowledgeFolderListEmpty'),
+      'chat.actionCards.results.listMore'
+    ),
+    renderLimitedList(
+      t('chat.actionCards.results.knowledgeFileListTitle', { count: String(files.length) }),
+      fileRows,
+      t('chat.actionCards.results.knowledgeFileListEmpty'),
+      'chat.actionCards.results.listMore'
+    ),
+  ].join('\n\n');
+  return completeInChat(callbacks, summary);
+}
+
+async function scheduleListHandler(
+  _payload: UiActionCardPayload,
+  callbacks: ActionCallbacks
+): Promise<ActionResult> {
+  const { useScheduleStore } = await import('@/stores/scheduleStore');
+  const scheduleStore = useScheduleStore();
+  await scheduleStore.fetchSchedules();
+
+  const rows = scheduleStore.schedules.map((schedule: ScheduleListItem) =>
+    t('chat.actionCards.results.scheduleListItem', {
+      name: schedule.name,
+      workflow: schedule.workflowName,
+      status: schedule.enabled
+        ? t('chat.actionCards.results.enabled')
+        : t('chat.actionCards.results.disabled'),
+    })
+  );
+  const summary = renderLimitedList(
+    t('chat.actionCards.results.scheduleListTitle', {
+      count: String(scheduleStore.schedules.length),
+    }),
+    rows,
+    t('chat.actionCards.results.scheduleListEmpty'),
+    'chat.actionCards.results.listMore'
+  );
+  return completeInChat(callbacks, summary);
+}
+
+async function knowledgeFileOpenHandler(
+  payload: UiActionCardPayload,
+  callbacks: ActionCallbacks
+): Promise<ActionResult> {
+  const fileId = getParamString(payload, 'fileId');
+  if (!fileId) {
+    return completeInChat(callbacks, t('chat.actionCards.results.knowledgeFileOpenInChat'));
+  }
+
+  const { getFileContent } = await import('@/api/knowledge');
+  const result = await getFileContent(fileId);
+  const content =
+    result.content.length > MAX_FILE_PREVIEW_LENGTH
+      ? `${result.content.slice(0, MAX_FILE_PREVIEW_LENGTH)}...`
+      : result.content;
+  const summary = t('chat.actionCards.results.knowledgeFilePreview', {
+    name: result.file.name,
+    content,
+  });
+  return completeInChat(callbacks, summary);
+}
+
+registerActionHandler('data', 'open', dataListHandler);
+registerActionHandler('knowledge', 'open', knowledgeListHandler);
+registerActionHandler('schedule', 'open', scheduleListHandler);
+registerActionHandler('workflow', 'open', workflowListHandler);
 
 // ── Workflow Handlers ──────────────────────────────────────
 
@@ -274,17 +447,14 @@ registerActionHandler(
   }
 );
 
-// ── Datasource Test Handler (navigation) ───────────────────
+// ── Datasource Test Handler ────────────────────────────────
 
 registerActionHandler(
   'data',
   'datasource_test',
   async (_payload: UiActionCardPayload, callbacks: ActionCallbacks): Promise<ActionResult> => {
-    const navigationStore = useNavigationStore();
-    const summary = t('chat.actionCards.results.datasourceTestNavigate');
+    const summary = t('chat.actionCards.results.datasourceTestInChat');
     callbacks.setResult(summary);
-    navigationStore.setPendingIntent({ type: 'open_data_management', tab: 'data' });
-    navigationStore.navigateTo('data');
     return { success: true, summary };
   }
 );
@@ -308,6 +478,6 @@ registerActionHandler(
   }
 );
 
-// ── Knowledge File Open Handler (navigation) ────────────────
+// ── Knowledge File Open Handler ─────────────────────────────
 
-registerActionHandler('knowledge', 'file_open', navigationHandler('data', 'knowledge'));
+registerActionHandler('knowledge', 'file_open', knowledgeFileOpenHandler);
