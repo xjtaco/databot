@@ -215,6 +215,24 @@ describe('ResourceActionCard.vue', () => {
     } satisfies ResourceActionResult);
   });
 
+  it('renders translated resource labels without missing i18n warnings', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+
+    const wrapper = mountCard();
+    await flush();
+
+    const hasMissingResourceWarning = warnSpy.mock.calls.some(([message]) =>
+      String(message).includes("Not found 'chat.actionCards.resource.")
+    );
+    warnSpy.mockRestore();
+
+    expect(wrapper.find('input.el-input-stub').attributes('placeholder')).toBe('Search resources');
+    expect(wrapper.text()).toContain('Workflows');
+    expect(wrapper.text()).toContain('Nodes: 4');
+    expect(wrapper.text()).toContain('Never run');
+    expect(hasMissingResourceWarning).toBe(false);
+  });
+
   it('loads rows immediately without a view click', async () => {
     const wrapper = mountCard(makePayload({ defaultQuery: 'daily' }));
     await flush();
@@ -311,7 +329,7 @@ describe('ResourceActionCard.vue', () => {
       expect.objectContaining({ id: 'workflow-1' }),
       'execute'
     );
-    expect(wrapper.text()).toContain('chat.actionCards.resource.summary.workflow.execute');
+    expect(wrapper.text()).toContain('Executed workflow Daily Report.');
   });
 
   it('embeds schedule edit form and refreshes after successful update', async () => {
@@ -401,7 +419,7 @@ describe('ResourceActionCard.vue', () => {
     await rows[0].find('[data-action-key="execute"]').trigger('click');
     await flush();
 
-    expect(rows[0].text()).toContain('chat.actionCards.resource.summary.workflow.execute');
-    expect(rows[1].text()).not.toContain('chat.actionCards.resource.summary.workflow.execute');
+    expect(rows[0].text()).toContain('Executed workflow Workflow Shared.');
+    expect(rows[1].text()).not.toContain('Executed workflow Workflow Shared.');
   });
 });

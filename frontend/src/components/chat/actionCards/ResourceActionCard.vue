@@ -195,11 +195,10 @@ const sectionStates = reactive<SectionState[]>(buildSectionStates(props.payload)
 
 const confirmationMessage = computed(() => {
   if (!pendingConfirmation.value) return '';
-  return [
-    t('chat.actionCards.resource.confirmMessage'),
-    pendingConfirmation.value.row.title,
-    t(pendingConfirmation.value.action.labelKey),
-  ].join(' ');
+  return t('chat.actionCards.resource.confirmMessage', {
+    action: t(pendingConfirmation.value.action.labelKey),
+    name: pendingConfirmation.value.row.title,
+  });
 });
 
 onMounted(() => {
@@ -546,10 +545,19 @@ async function handleInlineScheduleSubmit(
 
   &__row-actions {
     display: flex;
+    flex-wrap: wrap;
     gap: $spacing-xs;
+    justify-content: flex-end;
 
     .el-button + .el-button {
       margin-left: 0;
+    }
+
+    :deep(.el-button) {
+      flex: 0 0 28px;
+      width: 28px;
+      height: 28px;
+      padding: 0;
     }
   }
 
@@ -583,10 +591,14 @@ async function handleInlineScheduleSubmit(
     }
 
     &__row-side {
-      flex-direction: row;
+      flex-flow: row wrap;
       align-items: center;
       justify-content: space-between;
       width: 100%;
+    }
+
+    &__row-actions {
+      max-width: 100%;
     }
   }
 }
