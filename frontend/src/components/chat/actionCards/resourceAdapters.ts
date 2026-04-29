@@ -12,7 +12,12 @@ import type {
   ResourceActionSpec,
   RiskLevel,
 } from '@/types/actionCard';
-import type { DatabaseDatasourceType, DatasourceWithTables, TableMetadata } from '@/types/datafile';
+import type {
+  DatabaseDatasourceType,
+  DatasourceWithTables,
+  TableMetadata,
+  TableSourceType,
+} from '@/types/datafile';
 import type { KnowledgeFile, KnowledgeFolder } from '@/types/knowledge';
 import type { ScheduleListItem } from '@/types/schedule';
 import type { CustomNodeTemplateInfo, WorkflowListItem } from '@/types/workflow';
@@ -95,6 +100,26 @@ const DEFAULT_ALLOWED_ACTIONS: Record<ResourceActionCardType, ResourceActionSpec
   template: [{ key: 'edit' }, { key: 'delete', riskLevel: 'danger', confirmationMode: 'modal' }],
 };
 
+const DATABASE_DATASOURCE_TYPES: readonly DatabaseDatasourceType[] = [
+  'sqlite',
+  'mysql',
+  'sqlserver',
+  'mariadb',
+  'oracle',
+  'db2',
+  'saphana',
+  'kingbase',
+  'clickhouse',
+  'spark',
+  'hive2',
+  'starrocks',
+  'trino',
+  'prestodb',
+  'tidb',
+  'dameng',
+  'postgresql',
+];
+
 const ACTION_ICONS: Record<ResourceActionKey, ResourceRowAction['icon']> = {
   view: 'View',
   edit: 'Edit',
@@ -115,19 +140,29 @@ export function getResourceAdapter(resourceType: ResourceActionCardType): Resour
 }
 
 function buildActions(
+  resourceType: ResourceActionCardType,
   allowedActions: ResourceActionSpec[],
   visibleKeys?: ResourceActionKey[]
 ): ResourceRowAction[] {
-  const keys = visibleKeys ?? allowedActions.map((action) => action.key);
-  return allowedActions
-    .filter((action) => keys.includes(action.key))
-    .map((action) => ({
-      key: action.key,
-      labelKey: `${RESOURCE_KEY_PREFIX}.actions.${action.key}`,
-      icon: ACTION_ICONS[action.key],
-      riskLevel: action.riskLevel,
-      confirmationMode: action.confirmationMode,
-    }));
+  const allowedByKey = new Map(allowedActions.map((action) => [action.key, action]));
+  const visibleKeySet = new Set(
+    visibleKeys ?? DEFAULT_ALLOWED_ACTIONS[resourceType].map((action) => action.key)
+  );
+  return DEFAULT_ALLOWED_ACTIONS[resourceType]
+    .filter(
+      (supportedAction) =>
+        allowedByKey.has(supportedAction.key) && visibleKeySet.has(supportedAction.key)
+    )
+    .map((supportedAction) => {
+      const allowedAction = allowedByKey.get(supportedAction.key);
+      return {
+        key: supportedAction.key,
+        labelKey: `${RESOURCE_KEY_PREFIX}.actions.${supportedAction.key}`,
+        icon: ACTION_ICONS[supportedAction.key],
+        riskLevel: allowedAction?.riskLevel ?? supportedAction.riskLevel,
+        confirmationMode: allowedAction?.confirmationMode ?? supportedAction.confirmationMode,
+      };
+    });
 }
 
 function normalizeQuery(query: string): string {
@@ -161,11 +196,13 @@ function contentPreview(content: string): string {
   return content.slice(0, KNOWLEDGE_CONTENT_PREVIEW_LIMIT);
 }
 
-function ensureDatabaseDatasourceType(type: string): DatabaseDatasourceType {
-  if (type === 'csv' || type === 'excel') {
-    throw new Error(`Unsupported datasource type: ${type}`);
-  }
-  return type as DatabaseDatasourceType;
+function isDatabaseDatasourceType(type: TableSourceType): type is DatabaseDatasourceType {
+  return DATABASE_DATASOURCE_TYPES.some((databaseType) => databaseType === type);
+}
+
+function ensureDatabaseDatasourceType(type: DatasourceWithTables['type']): DatabaseDatasourceType {
+  if (isDatabaseDatasourceType(type)) return type;
+  throw new Error(`Unsupported datasource type: ${type}`);
 }
 
 function assertRowData<TKind extends ResourceRowData['kind']>(
@@ -197,7 +234,7 @@ const workflowAdapter: ResourceAdapter = {
           statusLabel: workflow.lastRunStatus
             ? `${RESOURCE_KEY_PREFIX}.status.workflow.${workflow.lastRunStatus}`
             : `${RESOURCE_KEY_PREFIX}.status.workflow.neverRun`,
-          actions: buildActions(context.allowedActions),
+          actions: buildActions('workflow', context.allowedActions),
           rawType: 'workflow',
           data: { kind: 'workflow', workflow },
         })),
@@ -247,7 +284,7 @@ const datasourceAdapter: ResourceAdapter = {
             meta('type', datasource.type),
             meta('tableCount', datasource.tables.length),
           ]),
-          actions: buildActions(context.allowedActions),
+          actions: buildActions('datasource', context.allowedActions),
           rawType: 'datasource',
           data: { kind: 'datasource', datasource },
         })),
@@ -284,7 +321,7 @@ const tableAdapter: ResourceAdapter = {
           title: table.displayName,
           subtitle: table.physicalName,
           meta: compactMeta([meta('type', table.type)]),
-          actions: buildActions(context.allowedActions),
+          actions: buildActions('table', context.allowedActions),
           rawType: 'table',
           data: { kind: 'table', table },
         })),
@@ -334,13 +371,13 @@ const scheduleAdapter: ResourceAdapter = {
           statusLabel: `${RESOURCE_KEY_PREFIX}.status.schedule.${
             schedule.enabled ? 'enabled' : 'disabled'
           }`,
-          actions: buildActions(context.allowedActions, [
+          actions: buildActions('schedule', context.allowedActions, [
             'edit',
             schedule.enabled ? 'disable' : 'enable',
             'delete',
           ]),
           rawType: 'schedule',
-          data: { kind: 'schedule', schedule },
+          data: { kind: 'schedule', schedule: { ...schedule } },
         })),
       context.limit
     );
@@ -365,7 +402,7 @@ const scheduleAdapter: ResourceAdapter = {
     if (actionKey === 'enable' || actionKey === 'disable') {
       const shouldEnable = actionKey === 'enable';
       if (scheduleItem.enabled !== shouldEnable) {
-        await useScheduleStore().toggleEnabled(row.id);
+        await useScheduleStore().updateSchedule(row.id, { enabled: shouldEnable });
       }
       return {
         summaryKey: summary(actionKey, 'schedule'),
@@ -418,7 +455,7 @@ const knowledgeFolderAdapter: ResourceAdapter = {
             meta('fileCount', folder.files.length),
             meta('parentName', parentName),
           ]),
-          actions: buildActions(context.allowedActions),
+          actions: buildActions('knowledge_folder', context.allowedActions),
           rawType: 'knowledge_folder',
           data: { kind: 'knowledge_folder', folder, parentName },
         })),
@@ -456,7 +493,7 @@ const knowledgeFileAdapter: ResourceAdapter = {
             meta('size', file.fileSize),
             meta('updatedAt', file.updatedAt),
           ]),
-          actions: buildActions(context.allowedActions),
+          actions: buildActions('knowledge_file', context.allowedActions),
           rawType: 'knowledge_file',
           data: { kind: 'knowledge_file', file, folderName },
         })),
@@ -503,7 +540,7 @@ const templateAdapter: ResourceAdapter = {
             meta('updatedAt', template.updatedAt),
             meta('creatorName', template.creatorName),
           ]),
-          actions: buildActions(context.allowedActions),
+          actions: buildActions('template', context.allowedActions),
           rawType: 'template',
           data: { kind: 'template', template },
         })),

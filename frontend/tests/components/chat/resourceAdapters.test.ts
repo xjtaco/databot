@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createPinia, setActivePinia } from 'pinia';
 import { getResourceAdapter } from '@/components/chat/actionCards/resourceAdapters';
 import { useNavigationStore } from '@/stores/navigationStore';
+import { useScheduleStore } from '@/stores/scheduleStore';
 import type { ResourceActionSpec } from '@/types/actionCard';
 import type { WorkflowListItem, CustomNodeTemplateInfo } from '@/types/workflow';
 import type { DatasourceWithTables, TableMetadata } from '@/types/datafile';
@@ -337,6 +338,8 @@ describe('resource adapters', () => {
     expect(tableResult.refresh).toBe(true);
     expect(datasourceRow.title).toBe('Warehouse');
     expect(tableRow.title).toBe('Orders');
+    expect(datasourceRow.actions.map((action) => action.key)).toEqual(['delete']);
+    expect(tableRow.actions.map((action) => action.key)).toEqual(['view', 'delete']);
   });
 
   it('table view fetches table details and navigates to data management', async () => {
@@ -378,6 +381,30 @@ describe('resource adapters', () => {
     expect(deleteResult.refresh).toBe(true);
     expect(disableResult.refresh).toBe(true);
     expect(enableResult.refresh).toBe(true);
+    expect(enabledRow.actions.map((action) => action.key)).toEqual(['edit', 'disable', 'delete']);
+    expect(disabledRow.actions.map((action) => action.key)).toEqual(['edit', 'enable', 'delete']);
+  });
+
+  it('schedule enable executes explicit target state when store state diverges from row snapshot', async () => {
+    const rows = await getResourceAdapter('schedule').fetchRows({
+      query: '',
+      limit: 10,
+      allowedActions,
+    });
+    const disabledRow = rows.find((row) => row.id === 'schedule-2');
+    expect(disabledRow).toBeDefined();
+    if (!disabledRow) return;
+
+    const scheduleStore = useScheduleStore();
+    const liveSchedule = scheduleStore.schedules.find((item) => item.id === 'schedule-2');
+    if (liveSchedule) {
+      liveSchedule.enabled = true;
+    }
+
+    const result = await getResourceAdapter('schedule').executeAction(disabledRow, 'enable');
+
+    expect(updateScheduleMock).toHaveBeenCalledWith('schedule-2', { enabled: true });
+    expect(result.refresh).toBe(true);
   });
 
   it('schedule edit returns an inline form request', async () => {
