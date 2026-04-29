@@ -71,6 +71,7 @@ export interface ResourceAdapter {
 }
 
 const RESOURCE_KEY_PREFIX = 'chat.actionCards.resource';
+const KNOWLEDGE_CONTENT_PREVIEW_LIMIT = 2_000;
 
 const DEFAULT_ALLOWED_ACTIONS: Record<ResourceActionCardType, ResourceActionSpec[]> = {
   workflow: [
@@ -155,6 +156,11 @@ function summary(actionKey: ResourceActionKey, resourceType: ResourceActionCardT
   return `${RESOURCE_KEY_PREFIX}.summary.${resourceType}.${actionKey}`;
 }
 
+function contentPreview(content: string): string {
+  if (content.length <= KNOWLEDGE_CONTENT_PREVIEW_LIMIT) return content;
+  return content.slice(0, KNOWLEDGE_CONTENT_PREVIEW_LIMIT);
+}
+
 function ensureDatabaseDatasourceType(type: string): DatabaseDatasourceType {
   if (type === 'csv' || type === 'excel') {
     throw new Error(`Unsupported datasource type: ${type}`);
@@ -190,7 +196,7 @@ const workflowAdapter: ResourceAdapter = {
           ]),
           statusLabel: workflow.lastRunStatus
             ? `${RESOURCE_KEY_PREFIX}.status.workflow.${workflow.lastRunStatus}`
-            : undefined,
+            : `${RESOURCE_KEY_PREFIX}.status.workflow.neverRun`,
           actions: buildActions(context.allowedActions),
           rawType: 'workflow',
           data: { kind: 'workflow', workflow },
@@ -198,7 +204,7 @@ const workflowAdapter: ResourceAdapter = {
       context.limit
     );
   },
-  async executeAction(row, actionKey) {
+  async executeAction(row, actionKey): Promise<ResourceActionResult> {
     const { workflow } = assertRowData(row, 'workflow');
     if (actionKey === 'execute') {
       await workflowApi.startWorkflow(row.id);
@@ -248,7 +254,7 @@ const datasourceAdapter: ResourceAdapter = {
       context.limit
     );
   },
-  async executeAction(row, actionKey) {
+  async executeAction(row, actionKey): Promise<ResourceActionResult> {
     const { datasource } = assertRowData(row, 'datasource');
     if (actionKey === 'delete') {
       await useDatafileStore().deleteDatasource(
@@ -285,7 +291,7 @@ const tableAdapter: ResourceAdapter = {
       context.limit
     );
   },
-  async executeAction(row, actionKey) {
+  async executeAction(row, actionKey): Promise<ResourceActionResult> {
     const { table } = assertRowData(row, 'table');
     if (actionKey === 'view') {
       await useDatafileStore().fetchTable(row.id);
@@ -457,13 +463,13 @@ const knowledgeFileAdapter: ResourceAdapter = {
       context.limit
     );
   },
-  async executeAction(row, actionKey) {
+  async executeAction(row, actionKey): Promise<ResourceActionResult> {
     const { file } = assertRowData(row, 'knowledge_file');
     if (actionKey === 'view') {
-      await getFileContent(row.id);
+      const result = await getFileContent(row.id);
       return {
-        summaryKey: summary(actionKey, 'knowledge_file'),
-        summaryParams: { name: file.name },
+        summaryKey: `${RESOURCE_KEY_PREFIX}.summary.knowledge_file.viewContent`,
+        summaryParams: { name: file.name, content: contentPreview(result.content) },
       };
     }
     if (actionKey === 'delete') {
@@ -492,7 +498,11 @@ const templateAdapter: ResourceAdapter = {
           id: template.id,
           title: template.name,
           subtitle: template.description ?? undefined,
-          meta: compactMeta([meta('type', template.type)]),
+          meta: compactMeta([
+            meta('type', template.type),
+            meta('updatedAt', template.updatedAt),
+            meta('creatorName', template.creatorName),
+          ]),
           actions: buildActions(context.allowedActions),
           rawType: 'template',
           data: { kind: 'template', template },
