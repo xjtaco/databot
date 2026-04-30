@@ -78,7 +78,10 @@ export const useChatStore = defineStore('chat', () => {
   }
 
   function completeCurrentMessage() {
-    if (!currentMessageId.value) return;
+    if (!currentMessageId.value) {
+      isLoading.value = false;
+      return;
+    }
 
     const message = messages.value.find((m) => m.id === currentMessageId.value);
     if (message) {
@@ -89,7 +92,9 @@ export const useChatStore = defineStore('chat', () => {
   }
 
   function completeCurrentMessageWithToolCalls(toolCallIds: string[]) {
-    if (!currentMessageId.value) return;
+    if (!currentMessageId.value) {
+      return;
+    }
 
     const message = messages.value.find((m) => m.id === currentMessageId.value);
     if (message) {

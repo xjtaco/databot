@@ -193,6 +193,31 @@ describe('useChat', () => {
   });
 
   describe('handleStop', () => {
+    it('should clear loading when stopping after turn_complete has cleared current message', () => {
+      const chatStore = useChatStore();
+      const toolCallStore = useToolCallStore();
+
+      const { stopGeneration } = useChat({ websocket: mockWebSocket });
+
+      chatStore.startAssistantMessage();
+      toolCallStore.setAgentRunning(true);
+
+      simulateMessage({
+        type: 'turn_complete',
+        timestamp: Date.now(),
+        data: { toolCallIds: [] },
+      });
+
+      expect(chatStore.currentMessageId).toBeNull();
+      expect(chatStore.isLoading).toBe(true);
+
+      stopGeneration();
+
+      expect(mockWebSocket.send).toHaveBeenCalledWith('stop');
+      expect(chatStore.isLoading).toBe(false);
+      expect(toolCallStore.isAgentRunning).toBe(false);
+    });
+
     it('should set isLoading to false and reset pending tool calls', () => {
       const chatStore = useChatStore();
       const toolCallStore = useToolCallStore();

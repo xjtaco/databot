@@ -191,6 +191,8 @@ export function useChat(options: UseChatOptions): UseChatReturn {
     if (chatStore.isLoading) {
       websocket.send('stop');
       chatStore.completeCurrentMessage();
+      toolCallStore.setAgentRunning(false);
+      pendingToolCallIds = [];
     }
   }
 
