@@ -10,6 +10,15 @@ import {
 } from '../../../src/infrastructure/tools/uiActionCardCatalog';
 import type { ActionDomain } from '../../../src/infrastructure/tools/uiActionCardTypes';
 
+function requireCardDefinition(cardId: string) {
+  const def = getCardDefinition(cardId);
+  if (!def) {
+    throw new Error(`Expected card definition for ${cardId}`);
+  }
+
+  return def;
+}
+
 describe('searchCatalog', () => {
   it('returns cards matching a query string', () => {
     const results = searchCatalog('create datasource');
@@ -36,11 +45,10 @@ describe('searchCatalog', () => {
 
 describe('getCardDefinition', () => {
   it('returns the definition for a valid cardId', () => {
-    const def = getCardDefinition('data.datasource_create');
-    expect(def).toBeDefined();
-    expect(def!.cardId).toBe('data.datasource_create');
-    expect(def!.domain).toBe('data');
-    expect(def!.action).toBe('datasource_create');
+    const def = requireCardDefinition('data.datasource_create');
+    expect(def.cardId).toBe('data.datasource_create');
+    expect(def.domain).toBe('data');
+    expect(def.action).toBe('datasource_create');
   });
 
   it('returns undefined for an unknown cardId', () => {
@@ -69,21 +77,20 @@ describe('getCardDefinition', () => {
     ];
 
     for (const cardId of cardIds) {
-      const def = getCardDefinition(cardId);
-      expect(def).toBeDefined();
-      expect(def!.presentationMode).toBe('resource_list');
-      expect(def!.confirmationMode).toBe('modal');
-      expect(def!.riskLevel).toBe('danger');
-      expect(def!.confirmRequired).toBe(true);
-      expect(def!.requiredParams).toEqual([]);
-      expect(def!.allowedActions).toEqual([
+      const def = requireCardDefinition(cardId);
+      expect(def.presentationMode).toBe('resource_list');
+      expect(def.confirmationMode).toBe('modal');
+      expect(def.riskLevel).toBe('danger');
+      expect(def.confirmRequired).toBe(true);
+      expect(def.requiredParams).toEqual([]);
+      expect(def.allowedActions).toEqual([
         { key: 'delete', riskLevel: 'danger', confirmationMode: 'modal' },
       ]);
     }
   });
 
   it('defines open cards as resource lists without navigation-only presentation', () => {
-    expect(getCardDefinition('workflow.open')).toMatchObject({
+    expect(requireCardDefinition('workflow.open')).toMatchObject({
       presentationMode: 'resource_list',
       resourceType: 'workflow',
       allowedActions: [
@@ -93,7 +100,7 @@ describe('getCardDefinition', () => {
       ],
     });
 
-    expect(getCardDefinition('data.open')).toMatchObject({
+    expect(requireCardDefinition('data.open')).toMatchObject({
       presentationMode: 'resource_list',
       resourceSections: [
         {
@@ -114,7 +121,7 @@ describe('getCardDefinition', () => {
       ],
     });
 
-    expect(getCardDefinition('knowledge.open')).toMatchObject({
+    expect(requireCardDefinition('knowledge.open')).toMatchObject({
       presentationMode: 'resource_list',
       resourceSections: [
         {
@@ -131,7 +138,7 @@ describe('getCardDefinition', () => {
       ],
     });
 
-    expect(getCardDefinition('schedule.open')).toMatchObject({
+    expect(requireCardDefinition('schedule.open')).toMatchObject({
       presentationMode: 'resource_list',
       resourceType: 'schedule',
       allowedActions: [
@@ -144,12 +151,11 @@ describe('getCardDefinition', () => {
   });
 
   it('keeps schedule.create as an inline form with optional defaults', () => {
-    const def = getCardDefinition('schedule.create');
-    expect(def).toBeDefined();
-    expect(def!.presentationMode).toBe('inline_form');
-    expect(def!.requiredParams.map((param) => param.name)).not.toContain('workflowId');
-    expect(def!.requiredParams.map((param) => param.name)).not.toContain('cronExpr');
-    expect(def!.optionalParams.map((param) => param.name)).toEqual(
+    const def = requireCardDefinition('schedule.create');
+    expect(def.presentationMode).toBe('inline_form');
+    expect(def.requiredParams.map((param) => param.name)).not.toContain('workflowId');
+    expect(def.requiredParams.map((param) => param.name)).not.toContain('cronExpr');
+    expect(def.optionalParams.map((param) => param.name)).toEqual(
       expect.arrayContaining([
         'workflowName',
         'workflowQuery',
@@ -166,15 +172,6 @@ describe('getCardDefinition', () => {
 });
 
 describe('guidance search terms', () => {
-  function requireCardDefinition(cardId: string) {
-    const def = getCardDefinition(cardId);
-    if (!def) {
-      throw new Error(`Expected card definition for ${cardId}`);
-    }
-
-    return def;
-  }
-
   function searchableText(cardId: string): string {
     const def = requireCardDefinition(cardId);
 
