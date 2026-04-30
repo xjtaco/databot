@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { ToolRegistry } from '../../../src/infrastructure/tools/tools';
 import { ToolName } from '../../../src/infrastructure/tools/types';
 import { ShowUiActionCardTool } from '../../../src/infrastructure/tools/showUiActionCardTool';
+import { getCardDefinition } from '../../../src/infrastructure/tools/uiActionCardCatalog';
 import type { UiActionCardPayload } from '../../../src/infrastructure/tools/uiActionCardTypes';
 
 // Mock logger module
@@ -156,6 +157,11 @@ describe('ShowUiActionCardTool', () => {
 
   it('includes presentation and i18n metadata in workflow copilot cardPayload', async () => {
     const tool = ToolRegistry.get(ToolName.ShowUiActionCard);
+    const definition = getCardDefinition('workflow.copilot_create');
+    if (!definition) {
+      throw new Error('Expected workflow.copilot_create card definition');
+    }
+
     const result = await tool.execute({ cardId: 'workflow.copilot_create' });
 
     expect(result.success).toBe(true);
@@ -166,9 +172,7 @@ describe('ShowUiActionCardTool', () => {
     expect(cardPayload.titleKey).toBe('chat.actionCards.workflow.copilotCreate.title');
     expect(cardPayload.summaryKey).toBe('chat.actionCards.workflow.copilotCreate.summary');
     expect(cardPayload.title).toBe('Create Workflow with Copilot');
-    expect(cardPayload.summary).toBe(
-      'Launch the workflow copilot to design and create a new workflow from a business goal.'
-    );
+    expect(cardPayload.summary).toBe(definition.description);
   });
 
   it('builds direct delete card payloads with modal confirmation', async () => {
