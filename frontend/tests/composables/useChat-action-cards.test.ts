@@ -83,9 +83,47 @@ describe('useChat action_card handling', () => {
     expect(msg.actionCards!.length).toBe(1);
     expect(msg.actionCards![0].payload.id).toBe('card-1');
     expect(msg.actionCards![0].payload.presentationMode).toBe('resource_list');
+    expect(msg.actionCards![0].metadataMessageId).toBeUndefined();
     expect(
       msg.actionCards![0].payload.resourceSections?.map((section) => section.resourceType)
     ).toEqual(['datasource', 'table']);
+  });
+
+  it('stores action card persistence ids from realtime action_card messages', () => {
+    const result = withSetup(() => useChat({ websocket: mockWs as never }));
+    unmount = result.unmount;
+    const chatStore = useChatStore();
+    chatStore.startAssistantMessage();
+
+    const payload: UiActionCardPayload = {
+      id: 'card-1',
+      cardId: 'data.open',
+      domain: 'data',
+      action: 'open',
+      title: 'Open Data Management',
+      summary: 'Navigate to data management',
+      params: {},
+      riskLevel: 'low',
+      confirmRequired: false,
+      executionMode: 'frontend',
+      targetNav: 'data',
+      presentationMode: 'resource_list',
+    };
+
+    mockWs.simulateMessage({
+      type: 'action_card',
+      timestamp: Date.now(),
+      data: {
+        ...payload,
+        metadataMessageId: 'message-1',
+        metadataSessionId: 'session-1',
+      },
+    });
+
+    const msg = chatStore.messages[chatStore.messages.length - 1];
+    expect(msg.actionCards![0].metadataMessageId).toBe('message-1');
+    expect(msg.actionCards![0].metadataSessionId).toBe('session-1');
+    expect(msg.actionCards![0].payload).toEqual(payload);
   });
 
   it('preserves current delete action cards as resource lists without id parameters', () => {

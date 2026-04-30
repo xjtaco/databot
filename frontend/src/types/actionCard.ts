@@ -69,6 +69,8 @@ export interface ChatActionCard {
   id: string;
   payload: UiActionCardPayload;
   status: CardStatus;
+  metadataMessageId?: string;
+  metadataSessionId?: string;
   resultSummary?: string;
   error?: string;
   executedAt?: number;

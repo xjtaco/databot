@@ -16,6 +16,7 @@ import type {
   ToolCallResultData,
   TurnCompleteData,
   SessionInfoData,
+  ActionCardMessageData,
 } from '@/types';
 import type { UiActionCardPayload } from '@/types/actionCard';
 
@@ -72,7 +73,7 @@ export function useChat(options: UseChatOptions): UseChatReturn {
         break;
       }
       case 'action_card':
-        handleActionCard(message.data as UiActionCardPayload);
+        handleActionCard(message.data as ActionCardMessageData);
         break;
     }
   }
@@ -160,8 +161,12 @@ export function useChat(options: UseChatOptions): UseChatReturn {
     }
   }
 
-  function handleActionCard(payload: UiActionCardPayload) {
-    chatStore.addActionCard(payload);
+  function handleActionCard(data: ActionCardMessageData) {
+    const { metadataMessageId, metadataSessionId, ...payload } = data;
+    chatStore.addActionCard(payload as UiActionCardPayload, {
+      metadataMessageId,
+      metadataSessionId,
+    });
   }
 
   function sendMessage(content: string) {

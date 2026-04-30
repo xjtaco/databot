@@ -119,8 +119,16 @@ describe('chatStore action card actions', () => {
   it('loadHistoricalMessages restores action cards from metadata', () => {
     const store = useChatStore();
     store.loadHistoricalMessages([
-      { role: 'assistant', content: 'Here is the card:', createdAt: '2026-01-01T00:00:00Z' },
       {
+        id: 'assistant-1',
+        sessionId: 'session-1',
+        role: 'assistant',
+        content: 'Here is the card:',
+        createdAt: '2026-01-01T00:00:00Z',
+      },
+      {
+        id: 'tool-1',
+        sessionId: 'session-1',
         role: 'tool',
         content: '{"toolName":"show_ui_action_card"}',
         createdAt: '2026-01-01T00:00:01Z',
@@ -135,6 +143,38 @@ describe('chatStore action card actions', () => {
     expect(msg.actionCards).toBeDefined();
     expect(msg.actionCards!.length).toBe(1);
     expect(msg.actionCards![0].status).toBe('succeeded');
+    expect(msg.actionCards![0].metadataMessageId).toBe('tool-1');
+    expect(msg.actionCards![0].metadataSessionId).toBe('session-1');
+  });
+
+  it('loadHistoricalMessages attaches action cards that were persisted before assistant text', () => {
+    const store = useChatStore();
+    store.loadHistoricalMessages([
+      {
+        id: 'tool-1',
+        sessionId: 'session-1',
+        role: 'tool',
+        content: '{"toolName":"show_ui_action_card"}',
+        createdAt: '2026-01-01T00:00:01Z',
+        metadata: {
+          type: 'action_card',
+          payload: makePayload(),
+          status: 'proposed',
+        },
+      },
+      {
+        id: 'assistant-1',
+        sessionId: 'session-1',
+        role: 'assistant',
+        content: 'Here is the card:',
+        createdAt: '2026-01-01T00:00:02Z',
+      },
+    ]);
+
+    const msg = store.messages[store.messages.length - 1];
+    expect(msg.role).toBe('assistant');
+    expect(msg.actionCards).toHaveLength(1);
+    expect(msg.actionCards![0].metadataMessageId).toBe('tool-1');
   });
 
   it('loadHistoricalMessages restores initial form-backed inline form action cards as editing', () => {

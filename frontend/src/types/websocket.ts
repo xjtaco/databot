@@ -1,3 +1,5 @@
+import type { UiActionCardPayload } from './actionCard';
+
 /**
  * WebSocket message types - mirrors backend types
  */
@@ -21,6 +23,11 @@ export interface WsMessage {
   type: MessageType;
   timestamp: number;
   data?: unknown;
+}
+
+export interface ActionCardMessageData extends UiActionCardPayload {
+  metadataMessageId?: string;
+  metadataSessionId?: string;
 }
 
 /**

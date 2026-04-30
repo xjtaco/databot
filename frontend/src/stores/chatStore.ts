@@ -132,6 +132,8 @@ export const useChatStore = defineStore('chat', () => {
 
   function loadHistoricalMessages(
     records: {
+      id?: string;
+      sessionId?: string;
       role: string;
       content: string | null;
       createdAt: string;
@@ -154,6 +156,7 @@ export const useChatStore = defineStore('chat', () => {
 
     // Track the last assistant message to attach tool call IDs
     let lastAssistantMsg: ChatMessage | null = null;
+    const pendingActionCards: ChatActionCard[] = [];
     // Track whether the next assistant message is from output_md tool.
     // Assumes the assistant message immediately following an output_md tool record
     // is the rendered report content (matches the flow in useChat.ts).
@@ -213,6 +216,8 @@ export const useChatStore = defineStore('chat', () => {
                 id: meta.payload.id,
                 payload: meta.payload,
                 status: getRestoredActionCardStatus(meta.payload, meta.status),
+                metadataMessageId: record.id,
+                metadataSessionId: record.sessionId,
                 resultSummary: meta.resultSummary,
                 error: meta.error,
               };
@@ -220,6 +225,16 @@ export const useChatStore = defineStore('chat', () => {
                 lastAssistantMsg.actionCards = [];
               }
               lastAssistantMsg.actionCards.push(card);
+            } else {
+              pendingActionCards.push({
+                id: meta.payload.id,
+                payload: meta.payload,
+                status: getRestoredActionCardStatus(meta.payload, meta.status),
+                metadataMessageId: record.id,
+                metadataSessionId: record.sessionId,
+                resultSummary: meta.resultSummary,
+                error: meta.error,
+              });
             }
           }
         } catch {
@@ -244,6 +259,10 @@ export const useChatStore = defineStore('chat', () => {
         nextAssistantIsOutputMd = false;
       }
 
+      if (role === 'assistant' && pendingActionCards.length > 0) {
+        msg.actionCards = pendingActionCards.splice(0);
+      }
+
       messages.value.push(msg);
 
       if (role === 'assistant') {
@@ -252,13 +271,29 @@ export const useChatStore = defineStore('chat', () => {
         lastAssistantMsg = null;
       }
     }
+
+    if (pendingActionCards.length > 0) {
+      messages.value.push({
+        id: generateMessageId(),
+        role: 'assistant',
+        content: '',
+        timestamp: pendingActionCards[0]?.executedAt ?? Date.now(),
+        status: 'complete',
+        actionCards: pendingActionCards.splice(0),
+      });
+    }
   }
 
-  function addActionCard(payload: UiActionCardPayload): void {
+  function addActionCard(
+    payload: UiActionCardPayload,
+    opts?: { metadataMessageId?: string; metadataSessionId?: string }
+  ): void {
     const card: ChatActionCard = {
       id: payload.id,
       payload,
       status: getInitialActionCardStatus(payload),
+      metadataMessageId: opts?.metadataMessageId,
+      metadataSessionId: opts?.metadataSessionId,
     };
     const targetMsg =
       messages.value.find((m) => m.id === currentMessageId.value) ??

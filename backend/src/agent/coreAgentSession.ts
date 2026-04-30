@@ -14,6 +14,10 @@ import type { SessionConfig, WsMessage } from './types';
 import * as chatSessionService from '../chatSession/chatSession.service';
 import { createAgentRunRecorder, type AgentRunStatus } from '../agentRunEvaluator';
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
 const CORE_PROMPT = `
 You are an interactive command-line agent focused on data analysis tasks. Your primary goal is to assist users safely and efficiently while strictly following these instructions and making full use of available tools.
 
@@ -298,7 +302,8 @@ export class CoreAgentSession extends AgentSession {
                 toolCallId: event.toolCall?.id,
               });
               break;
-            case 'tool_call_result':
+            case 'tool_call_result': {
+              let skipGenericToolPersistence = false;
               if (event.toolCallResult) {
                 toolCallResults.push(event.toolCallResult);
                 const status = event.toolCallResult.metadata?.status;
@@ -338,38 +343,47 @@ export class CoreAgentSession extends AgentSession {
                   event.toolCallResult?.name === ToolName.ShowUiActionCard &&
                   event.toolCallResult?.metadata?.cardPayload
                 ) {
-                  this.sendMessage({
-                    type: 'action_card',
-                    timestamp: Date.now(),
-                    data: event.toolCallResult.metadata.cardPayload,
-                  });
+                  const cardPayload = event.toolCallResult.metadata.cardPayload;
+                  const actionCardData: Record<string, unknown> = isRecord(cardPayload)
+                    ? { ...cardPayload }
+                    : { payload: cardPayload };
 
-                  // Persist card metadata to chat session
+                  // Persist card metadata to chat session before sending the UI event so
+                  // the frontend can update this exact metadata record when status changes.
                   if (this.chatSessionId) {
-                    chatSessionService
-                      .addMessage(
+                    try {
+                      const message = await chatSessionService.addMessage(
                         this.chatSessionId,
                         'tool',
                         JSON.stringify({
                           toolName: 'show_ui_action_card',
                           toolCallId: event.toolCallResult.toolCallId,
                           status: 'success',
-                          cardPayload: event.toolCallResult.metadata.cardPayload,
+                          cardPayload,
                         }),
                         {
                           type: 'action_card',
-                          payload: event.toolCallResult.metadata.cardPayload,
+                          payload: cardPayload,
                           status: 'proposed',
                         } as Record<string, unknown>
-                      )
-                      .catch((error) =>
-                        logger.warn('Failed to persist action card metadata', { error })
                       );
+                      skipGenericToolPersistence = true;
+                      actionCardData.metadataMessageId = message.id;
+                      actionCardData.metadataSessionId = message.sessionId;
+                    } catch (error) {
+                      logger.warn('Failed to persist action card metadata', { error });
+                    }
                   }
+
+                  this.sendMessage({
+                    type: 'action_card',
+                    timestamp: Date.now(),
+                    data: actionCardData,
+                  });
                 }
 
                 // Persist tool call result to chat session
-                if (this.chatSessionId) {
+                if (this.chatSessionId && !skipGenericToolPersistence) {
                   const toolRecord = {
                     toolName: event.toolCallResult.name,
                     toolCallId: event.toolCallResult.toolCallId,
@@ -398,6 +412,7 @@ export class CoreAgentSession extends AgentSession {
                 }
               }
               break;
+            }
             case 'done':
               finishReason = event.finishReason || 'completed';
               if (event.usage) {

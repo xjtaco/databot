@@ -69,7 +69,9 @@ vi.mock('../../../src/chatSession/chatSession.service', () => ({
   createSession: vi.fn().mockResolvedValue({ id: 'session-1', title: null }),
   updateSession: vi.fn().mockResolvedValue({}),
   getSession: vi.fn().mockResolvedValue({ id: 'session-1', title: null }),
-  addMessage: vi.fn().mockResolvedValue({ id: 'msg-1', role: 'tool', content: '{}' }),
+  addMessage: vi
+    .fn()
+    .mockResolvedValue({ id: 'msg-1', sessionId: 'session-1', role: 'tool', content: '{}' }),
   autoGenerateTitle: vi.fn().mockResolvedValue({}),
 }));
 
@@ -114,6 +116,7 @@ vi.mock('../../../src/infrastructure/llm', () => ({
 
 // Now import after mocks are set up
 import { CoreAgentSession } from '../../../src/agent';
+import * as chatSessionService from '../../../src/chatSession/chatSession.service';
 
 // Define TEST_WORK_DIR for beforeAll/afterAll hooks
 const TEST_WORK_DIR = path.join(
@@ -171,9 +174,18 @@ describe('CoreAgentSession action_card WebSocket event', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(chatSessionService.addMessage).mockResolvedValue({
+      id: 'msg-1',
+      sessionId: 'session-1',
+      role: 'tool',
+      content: '{}',
+      metadata: null,
+      createdAt: new Date('2026-01-01T00:00:00.000Z'),
+    });
 
     config = {
       sessionId: 'test-session-action-card',
+      chatSessionId: 'session-1',
       heartbeatInterval: 10000,
       heartbeatTimeout: 5000,
       maxMissedHeartbeats: 3,
@@ -222,8 +234,71 @@ describe('CoreAgentSession action_card WebSocket event', () => {
     const actionCardMessages = getSentMessagesOfType(mockWs, 'action_card');
 
     expect(actionCardMessages.length).toBe(1);
-    expect(actionCardMessages[0].data).toEqual(cardPayload);
+    expect(actionCardMessages[0].data).toEqual({
+      ...cardPayload,
+      metadataMessageId: 'msg-1',
+      metadataSessionId: 'session-1',
+    });
     expect(actionCardMessages[0].timestamp).toBeTypeOf('number');
+  });
+
+  it('should persist action_card metadata once and expose the persisted message id', async () => {
+    const cardPayload = {
+      id: 'card-persist',
+      cardId: 'workflow.open',
+      title: 'Open workflow',
+    };
+    const streamEvents: StreamEvent[] = [
+      {
+        type: 'tool_call_result',
+        toolCallResult: {
+          toolCallId: 'tc-persist',
+          name: 'show_ui_action_card',
+          role: 'tool',
+          content: '{}',
+          metadata: {
+            status: 'success',
+            resultSummary: 'Workflow card',
+            cardPayload,
+          },
+        },
+      },
+      { type: 'done', finishReason: 'stop' },
+    ];
+    mockLLMProvider.streamChat.mockReturnValue(createMockStream(streamEvents));
+
+    await session.handleUserMessage({ content: 'Show workflow card' });
+
+    expect(chatSessionService.addMessage).toHaveBeenCalledWith(
+      'session-1',
+      'tool',
+      JSON.stringify({
+        toolName: 'show_ui_action_card',
+        toolCallId: 'tc-persist',
+        status: 'success',
+        cardPayload,
+      }),
+      {
+        type: 'action_card',
+        payload: cardPayload,
+        status: 'proposed',
+      }
+    );
+    const persistedToolMessages = vi
+      .mocked(chatSessionService.addMessage)
+      .mock.calls.filter((call) => {
+        if (call[1] !== 'tool' || typeof call[2] !== 'string') return false;
+        const parsed = JSON.parse(call[2]) as { toolCallId?: string };
+        return parsed.toolCallId === 'tc-persist';
+      });
+    expect(persistedToolMessages).toHaveLength(1);
+
+    const actionCardMessages = getSentMessagesOfType(mockWs, 'action_card');
+    expect(actionCardMessages[0].data).toEqual({
+      ...cardPayload,
+      metadataMessageId: 'msg-1',
+      metadataSessionId: 'session-1',
+    });
   });
 
   it('should NOT send action_card for non-show_ui_action_card tools (e.g. bash)', async () => {
@@ -315,7 +390,11 @@ describe('CoreAgentSession action_card WebSocket event', () => {
 
     // action_card should also be sent
     expect(actionCardMessages.length).toBe(1);
-    expect(actionCardMessages[0].data).toEqual(cardPayload);
+    expect(actionCardMessages[0].data).toEqual({
+      ...cardPayload,
+      metadataMessageId: 'msg-1',
+      metadataSessionId: 'session-1',
+    });
   });
 
   it('should NOT send action_card when metadata is undefined', async () => {

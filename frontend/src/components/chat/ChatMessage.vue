@@ -75,14 +75,15 @@ import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { ElMessage } from 'element-plus';
 import { Warning, CopyDocument, Download } from '@element-plus/icons-vue';
+import { updateMessageMetadata } from '@/api/chatSession';
 import type { ChatMessage } from '@/types';
-import { useToolCallStore, useChatStore } from '@/stores';
+import { useToolCallStore, useChatStore, useChatSessionStore } from '@/stores';
 import { renderMarkdown } from '@/utils/markdown';
 import { usePlotlyRenderer, usePdfExport } from '@/composables';
 import IconButton from '@/components/common/IconButton.vue';
 import MessageToolCalls from './MessageToolCalls.vue';
 import ActionCard from './ActionCard.vue';
-import type { CardStatus } from '@/types/actionCard';
+import type { CardStatus, ChatActionCard } from '@/types/actionCard';
 
 const props = defineProps<{
   message: ChatMessage;
@@ -91,6 +92,7 @@ const props = defineProps<{
 const { t } = useI18n();
 const toolCallStore = useToolCallStore();
 const chatStore = useChatStore();
+const chatSessionStore = useChatSessionStore();
 const messageBodyRef = ref<HTMLElement | null>(null);
 
 const renderedContent = computed(() => {
@@ -131,6 +133,33 @@ function handleCardStatusChange(
   opts?: { resultSummary?: string; error?: string }
 ) {
   chatStore.updateActionCardStatus(cardId, status, opts);
+  const card = props.message.actionCards?.find((item) => item.id === cardId);
+  if (card) {
+    void persistActionCardStatus(card, status, opts);
+  }
+}
+
+async function persistActionCardStatus(
+  card: ChatActionCard,
+  status: CardStatus,
+  opts?: { resultSummary?: string; error?: string }
+): Promise<void> {
+  const sessionId = card.metadataSessionId ?? chatSessionStore.activeSessionId;
+  if (!sessionId || !card.metadataMessageId) {
+    return;
+  }
+
+  try {
+    await updateMessageMetadata(sessionId, card.metadataMessageId, {
+      type: 'action_card',
+      payload: card.payload,
+      status,
+      resultSummary: opts?.resultSummary ?? card.resultSummary,
+      error: opts?.error ?? card.error,
+    });
+  } catch {
+    // Local card status is already updated; metadata sync can be retried by a later interaction.
+  }
 }
 </script>
 
