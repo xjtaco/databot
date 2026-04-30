@@ -36,6 +36,14 @@ describe('ShowUiActionCardTool', () => {
     expect(ToolRegistry.has(ToolName.ShowUiActionCard)).toBe(true);
   });
 
+  it('describes cards as proposed frontend actions with conditional confirmation', () => {
+    const tool = ToolRegistry.get(ToolName.ShowUiActionCard);
+
+    expect(tool.description).toContain('proposed frontend action');
+    expect(tool.description).toContain('card configuration');
+    expect(tool.description).toContain('confirm before execution');
+  });
+
   it('returns success with correct cardPayload for valid cardId "data.open"', async () => {
     const tool = ToolRegistry.get(ToolName.ShowUiActionCard);
     const result = await tool.execute({ cardId: 'data.open' });
@@ -159,7 +167,7 @@ describe('ShowUiActionCardTool', () => {
     expect(cardPayload.summaryKey).toBe('chat.actionCards.workflow.copilotCreate.summary');
     expect(cardPayload.title).toBe('Create Workflow with Copilot');
     expect(cardPayload.summary).toBe(
-      'Launch the workflow copilot to design and create a new workflow.'
+      'Launch the workflow copilot to design and create a new workflow from a business goal.'
     );
   });
 

@@ -164,3 +164,73 @@ describe('getCardDefinition', () => {
     );
   });
 });
+
+describe('guidance search terms', () => {
+  function requireCardDefinition(cardId: string) {
+    const def = getCardDefinition(cardId);
+    if (!def) {
+      throw new Error(`Expected card definition for ${cardId}`);
+    }
+
+    return def;
+  }
+
+  function searchableText(cardId: string): string {
+    const def = requireCardDefinition(cardId);
+
+    return [
+      def.description,
+      def.usage,
+      ...def.requiredParams.map((param) => param.description),
+      ...def.optionalParams.map((param) => param.description),
+    ]
+      .join(' ')
+      .toLowerCase();
+  }
+
+  function searchCardIds(query: string, options?: Parameters<typeof searchCatalog>[1]): string[] {
+    return searchCatalog(query, { ...options, maxResults: 10 }).map((card) => card.cardId);
+  }
+
+  it('finds data setup cards through upload, import, connect, and analysis terms', () => {
+    expect(searchableText('data.file_upload')).toContain('import');
+    expect(searchableText('data.file_upload')).toContain('analysis');
+    expect(searchableText('data.datasource_create')).toContain('connect');
+    expect(searchCardIds('import analysis', { domain: 'data' })).toContain('data.file_upload');
+    expect(searchCardIds('connect analysis', { domain: 'data' })).toContain(
+      'data.datasource_create'
+    );
+  });
+
+  it('describes open cards with browse, list, and manage terms', () => {
+    for (const cardId of ['data.open', 'knowledge.open', 'workflow.open']) {
+      const text = searchableText(cardId);
+      expect(text).toContain('browse');
+      expect(text).toContain('list');
+      expect(text).toContain('manage');
+    }
+  });
+
+  it('finds workflow and schedule cards through report and recurring guidance terms', () => {
+    expect(searchableText('workflow.copilot_create')).toContain('business goal');
+    expect(searchableText('workflow.template_report')).toContain('dashboard');
+    expect(searchableText('workflow.template_report')).toContain('recurring report');
+    expect(searchableText('schedule.create')).toContain('recurring');
+    expect(searchCardIds('business goal', { domain: 'workflow' })[0]).toBe(
+      'workflow.copilot_create'
+    );
+    expect(searchCardIds('dashboard recurring report', { domain: 'workflow' })[0]).toBe(
+      'workflow.template_report'
+    );
+    expect(searchCardIds('recurring report', { domain: 'schedule' })).toContain('schedule.create');
+  });
+
+  it('finds template copilot creation as reusable workflow or custom node setup', () => {
+    const text = searchableText('template.copilot_create');
+    expect(text).toContain('reusable workflow');
+    expect(searchCardIds('reusable workflow template', { domain: 'template' })[0]).toBe(
+      'template.copilot_create'
+    );
+    expect(searchCardIds('custom node', { domain: 'template' })[0]).toBe('template.copilot_create');
+  });
+});

@@ -192,8 +192,10 @@ const baseCatalog: readonly UiActionCardCatalogEntry[] = [
     domain: 'data',
     action: 'open',
     title: 'Open Data Panel',
-    description: 'Navigate to the data management panel to browse datasources.',
-    usage: 'When the user wants to view or manage their datasources.',
+    description:
+      'Navigate to the data management panel to browse, list, and manage datasources and uploaded/imported tables.',
+    usage:
+      'When the user wants to open, browse, list, view, or manage datasources and data tables.',
     requiredParams: [],
     optionalParams: [],
     riskLevel: 'low',
@@ -225,8 +227,10 @@ const baseCatalog: readonly UiActionCardCatalogEntry[] = [
     domain: 'data',
     action: 'datasource_create',
     title: 'Create Datasource',
-    description: 'Create a new database datasource by providing connection details.',
-    usage: 'When the user wants to add a new database connection (MySQL, PostgreSQL, etc.).',
+    description:
+      'Create and connect a new database datasource before analysis by providing connection details.',
+    usage:
+      'When the user wants to add, connect, or configure a database connection (MySQL, PostgreSQL, ClickHouse, etc.) before analysis.',
     requiredParams: [
       {
         name: 'name',
@@ -413,8 +417,10 @@ const baseCatalog: readonly UiActionCardCatalogEntry[] = [
     domain: 'data',
     action: 'file_upload',
     title: 'Upload Data File',
-    description: 'Upload a CSV, Excel, or SQLite file as a data source.',
-    usage: 'When the user wants to upload a data file (CSV, Excel, SQLite) for analysis.',
+    description:
+      'Upload or import a CSV, Excel, or SQLite file as a data source for later analysis.',
+    usage:
+      'When the user wants to upload, import, or add a data file (CSV, Excel, SQLite) for analysis.',
     requiredParams: [],
     optionalParams: [],
     riskLevel: 'low',
@@ -431,8 +437,9 @@ const baseCatalog: readonly UiActionCardCatalogEntry[] = [
     domain: 'knowledge',
     action: 'open',
     title: 'Open Knowledge Panel',
-    description: 'Navigate to the knowledge base panel to browse folders and files.',
-    usage: 'When the user wants to view or manage their knowledge base.',
+    description:
+      'Navigate to the knowledge base panel to browse, list, and manage folders and files.',
+    usage: 'When the user wants to open, browse, list, view, or manage their knowledge base.',
     requiredParams: [],
     optionalParams: [],
     riskLevel: 'low',
@@ -772,8 +779,10 @@ const baseCatalog: readonly UiActionCardCatalogEntry[] = [
     domain: 'schedule',
     action: 'create',
     title: 'Create Scheduled Task',
-    description: 'Create a new scheduled task with a cron expression.',
-    usage: 'When the user wants to set up a recurring task (e.g. daily data refresh).',
+    description:
+      'Create a new scheduled task for recurring workflow runs, refresh jobs, or daily reports.',
+    usage:
+      'When the user wants to set up a recurring task, daily report, scheduled workflow run, or data refresh.',
     requiredParams: [],
     optionalParams: [
       {
@@ -925,8 +934,10 @@ const baseCatalog: readonly UiActionCardCatalogEntry[] = [
     domain: 'workflow',
     action: 'open',
     title: 'Open Workflow Panel',
-    description: 'Navigate to the workflow panel to browse and manage workflows.',
-    usage: 'When the user wants to view or manage workflows.',
+    description:
+      'Navigate to the workflow panel to browse, list, run, edit, delete, and manage workflows.',
+    usage:
+      'When the user wants to open, browse, list, view, run, edit, delete, or manage workflows.',
     requiredParams: [],
     optionalParams: [],
     riskLevel: 'low',
@@ -946,8 +957,10 @@ const baseCatalog: readonly UiActionCardCatalogEntry[] = [
     domain: 'workflow',
     action: 'copilot_create',
     title: 'Create Workflow with Copilot',
-    description: 'Launch the workflow copilot to design and create a new workflow.',
-    usage: 'When the user wants to build a new data processing or analysis workflow.',
+    description:
+      'Launch the workflow copilot to design and create a new workflow from a business goal.',
+    usage:
+      'When the user wants to create, build, or design a data processing or analysis workflow with Copilot from a business goal.',
     requiredParams: [
       {
         name: 'name',
@@ -1037,8 +1050,9 @@ const baseCatalog: readonly UiActionCardCatalogEntry[] = [
     domain: 'workflow',
     action: 'template_report',
     title: 'Create Report Workflow from Template',
-    description: 'Open the workflow editor with a report template creation flow.',
-    usage: 'When the user wants to create a reporting or dashboard generation workflow.',
+    description: 'Open the workflow editor with a report or dashboard template creation flow.',
+    usage:
+      'When the user wants to create a reporting, dashboard, recurring report, or dashboard generation workflow.',
     requiredParams: [
       {
         name: 'name',
@@ -1119,9 +1133,9 @@ const baseCatalog: readonly UiActionCardCatalogEntry[] = [
     domain: 'template',
     action: 'copilot_create',
     title: 'Create Template with Copilot',
-    description: 'Launch the template copilot to design a reusable workflow template.',
+    description: 'Launch the template copilot to design a reusable workflow or node template.',
     usage:
-      'When the user wants to create a reusable template from an existing workflow or from scratch.',
+      'When the user wants to create a reusable workflow template, node template, or custom node from an existing workflow or from scratch.',
     requiredParams: [
       {
         name: 'name',

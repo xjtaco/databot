@@ -1,6 +1,6 @@
 /**
  * ShowUiActionCardTool — lets the LLM display a UI action card
- * for user confirmation and frontend execution.
+ * for frontend presentation and execution.
  */
 
 import { randomUUID } from 'crypto';
@@ -40,9 +40,10 @@ function extractDefaultQuery(params: Record<string, unknown>): string | undefine
 export class ShowUiActionCardTool extends Tool {
   name = ToolName.ShowUiActionCard;
 
-  description = `Display a UI action card for user confirmation and frontend execution.
-Returns a structured card payload that the frontend renders as a confirmation dialog.
-The user must approve the action before it is executed on the frontend.
+  description = `Display a UI action card as a proposed frontend action.
+Returns a structured card payload that the frontend renders as a confirmation dialog,
+inline form, resource list, or navigation card. Depending on the card configuration,
+the frontend may ask the user to confirm before execution.
 
 Use this tool after searching for an action card (via search_ui_action_card) to present
 a specific card to the user. Provide the cardId and any required parameters.`;

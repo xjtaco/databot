@@ -29,6 +29,15 @@ describe('SearchUiActionCardTool', () => {
     expect(ToolRegistry.has(ToolName.SearchUiActionCard)).toBe(true);
   });
 
+  it('describes navigation, resource management, and guided setup intents', () => {
+    const tool = ToolRegistry.get(ToolName.SearchUiActionCard);
+
+    expect(tool.description).toContain('navigation');
+    expect(tool.description).toContain('browse');
+    expect(tool.description).toContain('resource management');
+    expect(tool.description).toContain('guided setup');
+  });
+
   it('returns relevant cards for query "create datasource"', async () => {
     const tool = ToolRegistry.get(ToolName.SearchUiActionCard);
     const result = await tool.execute({ query: 'create datasource' });

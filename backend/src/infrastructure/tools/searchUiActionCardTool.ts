@@ -15,13 +15,16 @@ export class SearchUiActionCardTool extends Tool {
 
   description = `Search the UI action card catalog to discover available frontend actions.
 Returns an array of card definitions matching the query. Each card describes a UI action
-(e.g. create datasource, create folder) that can be presented to the user for confirmation.
+(e.g. create datasource, upload file, browse resources, create workflow) that can be
+presented to the user as a frontend action card.
 
-Use this tool when the user asks to perform an action that requires a UI interaction,
-such as creating, deleting, or managing resources like datasources, knowledge folders,
-scheduled tasks, or workflows. Always search first before presenting an action card to
-ensure you pick the correct one. Use regex query mode for broad intent matching across
-card IDs, titles, descriptions, usage text, and parameter descriptions.`;
+Use this tool when the user asks for a concrete system operation that requires UI
+interaction, including navigation, browse/list/open requests, resource management,
+guided setup, creating, deleting, or managing datasources, data files, knowledge
+folders/files, scheduled tasks, workflows, or templates. Always search first before
+presenting an action card to ensure you pick the correct one. Use regex query mode for
+broad intent matching across card IDs, titles, descriptions, usage text, and parameter
+descriptions.`;
 
   parameters: JSONSchemaObject = {
     type: 'object',
