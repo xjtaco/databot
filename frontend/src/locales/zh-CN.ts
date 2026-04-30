@@ -31,7 +31,7 @@ export default {
     subtitle: '探索数据',
     senderUser: '用户',
     senderBot: 'databot',
-    inputPlaceholder: '询问您的数据...',
+    inputPlaceholder: '询问数据、上传文件或创建工作流...',
     send: '发送',
     stop: '停止',
     newChat: '新会话',
@@ -412,8 +412,8 @@ export default {
     copied: '已复制',
     copyFailed: '复制失败',
     emptyState: {
-      title: '开始对话',
-      description: '询问您的数据，探索数据库，\n生成深入的分析报告。',
+      title: '开始使用 DataBot',
+      description: '进行数据分析、生成报告，\n也可以连接数据源、上传文件、创建工作流或定时任务。',
     },
     tokenUsage: {
       label: 'Token 使用量',

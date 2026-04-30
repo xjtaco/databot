@@ -31,7 +31,7 @@ export default {
     subtitle: 'Explore Data',
     senderUser: 'User',
     senderBot: 'databot',
-    inputPlaceholder: 'Ask about your data...',
+    inputPlaceholder: 'Ask about data, upload files, or create workflows...',
     send: 'Send',
     stop: 'Stop',
     newChat: 'New Chat',
@@ -413,9 +413,9 @@ export default {
     copied: 'Copied',
     copyFailed: 'Copy failed',
     emptyState: {
-      title: 'Start a Conversation',
+      title: 'Start with DataBot',
       description:
-        'Ask questions about your data, explore databases,\nand generate insightful reports.',
+        'Run data analysis and generate reports,\nor connect data sources, upload files, create workflows, and manage schedules.',
     },
     tokenUsage: {
       label: 'Token Usage',
