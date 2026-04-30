@@ -58,4 +58,34 @@ describe('CORE_PROMPT action card rules', () => {
   it('mentions copilot_create for workflows', () => {
     expect(corePrompt).toContain('copilot_create');
   });
+
+  it('defines request routing between analysis, system operations, and help', () => {
+    expect(corePrompt).toContain('## Request Routing');
+    expect(corePrompt).toContain('Data analysis route');
+    expect(corePrompt).toContain('System operation route');
+    expect(corePrompt).toContain('Help route');
+  });
+
+  it('asks for data location before showing cards for unclear analysis requests', () => {
+    expect(corePrompt).toContain('If the user asks for analysis but the data source is unclear');
+    expect(corePrompt).toContain('ask where the data is located');
+    expect(corePrompt).toContain('do not immediately show upload or datasource cards');
+  });
+
+  it('requires operation cards for concrete system operation intents', () => {
+    expect(corePrompt).toContain('upload or import data files');
+    expect(corePrompt).toContain('create or test datasources');
+    expect(corePrompt).toContain('open, browse, list, or manage');
+    expect(corePrompt).toContain('create workflows, templates, or schedules');
+  });
+
+  it('states action cards are proposals and not completed operations', () => {
+    expect(corePrompt).toContain('Action cards propose frontend actions');
+    expect(corePrompt).toContain('Do not claim that the operation has executed');
+  });
+
+  it('requires clear targets before destructive action cards', () => {
+    expect(corePrompt).toContain('For destructive or high-risk actions');
+    expect(corePrompt).toContain('ask for the target before showing the card');
+  });
 });
