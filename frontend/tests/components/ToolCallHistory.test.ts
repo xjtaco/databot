@@ -7,6 +7,18 @@ import { useToolCallStore } from '@/stores';
 import zhCN from '@/locales/zh-CN';
 import enUS from '@/locales/en-US';
 
+const drawerStub = {
+  template:
+    '<div class="el-drawer-stub" :data-append-to-body="String(appendToBody)" v-if="modelValue"><slot /></div>',
+  props: {
+    modelValue: Boolean,
+    title: String,
+    direction: String,
+    size: String,
+    appendToBody: Boolean,
+  },
+};
+
 const i18n = createI18n({
   legacy: false,
   locale: 'zh-CN',
@@ -29,10 +41,7 @@ describe('ToolCallHistory', () => {
           'el-icon': {
             template: '<span class="el-icon-stub"><slot /></span>',
           },
-          'el-drawer': {
-            template: '<div class="el-drawer-stub" v-if="modelValue"><slot /></div>',
-            props: ['modelValue', 'title', 'direction', 'size'],
-          },
+          'el-drawer': drawerStub,
         },
       },
     });
@@ -94,6 +103,21 @@ describe('ToolCallHistory', () => {
     await wrapper.find('.tool-history').trigger('click');
 
     expect(toolCallStore.isExpanded).toBe(true);
+  });
+
+  it('should append drawer to body so header backdrop filters do not clip the list', () => {
+    const toolCallStore = useToolCallStore();
+    toolCallStore.addToolCall({
+      id: 'tc-1',
+      name: 'sql_query',
+      timestamp: Date.now(),
+      status: 'completed',
+    });
+    toolCallStore.toggleExpanded();
+
+    const wrapper = createWrapper();
+
+    expect(wrapper.find('.el-drawer-stub').attributes('data-append-to-body')).toBe('true');
   });
 
   it('should display tool call items in drawer when expanded', () => {

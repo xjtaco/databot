@@ -13,6 +13,7 @@
     :title="t('chat.toolCall.historyTitle')"
     direction="rtl"
     size="400px"
+    append-to-body
   >
     <div class="tool-history-list">
       <div
