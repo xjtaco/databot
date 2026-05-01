@@ -130,6 +130,34 @@ describe('SearchUiActionCardTool', () => {
     });
   });
 
+  it('returns template.open for node template list intent', async () => {
+    const tool = ToolRegistry.get(ToolName.SearchUiActionCard);
+    const result = await tool.execute({
+      query: 'list node templates',
+      domain: 'template',
+      maxResults: 5,
+    });
+
+    expect(result.success).toBe(true);
+    expect(Array.isArray(result.data)).toBe(true);
+
+    const cards = result.data as Array<{
+      cardId: string;
+      presentationMode?: string;
+      resourceType?: string;
+      allowedActions?: unknown[];
+    }>;
+    expect(cards[0]).toMatchObject({
+      cardId: 'template.open',
+      presentationMode: 'resource_list',
+      resourceType: 'template',
+      allowedActions: [
+        { key: 'edit' },
+        { key: 'delete', riskLevel: 'danger', confirmationMode: 'modal' },
+      ],
+    });
+  });
+
   it('returns cards filtered by domain "knowledge" for query "folder"', async () => {
     const tool = ToolRegistry.get(ToolName.SearchUiActionCard);
     const result = await tool.execute({ query: 'folder', domain: 'knowledge' });

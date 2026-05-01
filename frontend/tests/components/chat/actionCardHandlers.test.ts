@@ -239,7 +239,23 @@ describe('action card handlers', () => {
     });
     deleteWorkflowMock.mockResolvedValue(undefined);
     deleteTemplateMock.mockResolvedValue(undefined);
-    listTemplatesMock.mockResolvedValue([]);
+    listTemplatesMock.mockResolvedValue([
+      {
+        id: 'template-1',
+        name: 'Reusable Node',
+        description: 'Extract common logic',
+        type: 'python',
+        config: {
+          nodeType: 'python',
+          params: {},
+          script: '',
+          outputVariable: 'result',
+        },
+        createdAt: '2026-01-01T00:00:00Z',
+        updatedAt: '2026-01-02T00:00:00Z',
+        creatorName: 'Alice',
+      },
+    ]);
     deleteTableMock.mockResolvedValue(undefined);
     deleteDatasourceMock.mockResolvedValue(undefined);
     deleteRemoteDatasourceMock.mockResolvedValue(undefined);
@@ -259,6 +275,10 @@ describe('action card handlers', () => {
 
   it('registers legacy workflow.open handler for persisted in-chat cards', () => {
     expect(getRegistry().has('workflow:open')).toBe(true);
+  });
+
+  it('registers template.open handler for persisted in-chat cards', () => {
+    expect(getRegistry().has('template:open')).toBe(true);
   });
 
   it('registers workflow.copilot_create handler', () => {
@@ -324,6 +344,12 @@ describe('action card handlers', () => {
         domain: 'schedule',
         action: 'open',
         expectedSnippets: ['Scheduled tasks (1)', 'Daily refresh', 'Daily ETL', 'enabled'],
+      },
+      {
+        cardId: 'template.open',
+        domain: 'template',
+        action: 'open',
+        expectedSnippets: ['Node templates (1)', 'Reusable Node', 'python'],
       },
       {
         cardId: 'data.datasource_test',

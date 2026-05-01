@@ -174,6 +174,12 @@ const cardPresentationMetadata = {
     titleKey: 'chat.actionCards.template.copilotCreate.title',
     summaryKey: 'chat.actionCards.template.copilotCreate.summary',
   },
+  'template.open': {
+    presentationMode: 'resource_list',
+    confirmationMode: 'none',
+    titleKey: 'chat.actionCards.template.open.title',
+    summaryKey: 'chat.actionCards.template.open.summary',
+  },
   'template.delete': {
     presentationMode: 'resource_list',
     confirmationMode: 'modal',
@@ -1132,7 +1138,7 @@ const baseCatalog: readonly UiActionCardCatalogEntry[] = [
     cardId: 'template.copilot_create',
     domain: 'template',
     action: 'copilot_create',
-    title: 'Create Template with Copilot',
+    title: 'Create Custom Node Template with Copilot',
     description: 'Launch the template copilot to design a reusable workflow or node template.',
     usage:
       'When the user wants to create a reusable workflow template, node template, or custom node from an existing workflow or from scratch.',
@@ -1160,6 +1166,59 @@ const baseCatalog: readonly UiActionCardCatalogEntry[] = [
     targetNav: 'workflow',
     relatedDomains: ['workflow'],
     dependencies: ['workflow.copilot_create'],
+  },
+  {
+    cardId: 'template.open',
+    domain: 'template',
+    action: 'open',
+    title: 'Open Node Template Panel',
+    description:
+      'Navigate to the workflow panel to browse, list, edit, delete, and manage reusable node templates.',
+    usage:
+      'When the user wants to open, browse, list, view, edit, delete, or manage reusable node templates.',
+    requiredParams: [],
+    optionalParams: [
+      {
+        name: 'templateId',
+        type: 'string',
+        description: 'Optional template ID filter when known.',
+      },
+      {
+        name: 'id',
+        type: 'string',
+        description: 'Optional template ID filter when known.',
+      },
+      {
+        name: 'name',
+        type: 'string',
+        description: 'Filter templates by name.',
+      },
+      {
+        name: 'keyword',
+        type: 'string',
+        description: 'Keyword used to filter templates.',
+      },
+      {
+        name: 'query',
+        type: 'string',
+        description: 'Search query used to filter templates.',
+      },
+      {
+        name: 'title',
+        type: 'string',
+        description: 'Title text used to filter templates.',
+      },
+    ],
+    riskLevel: 'low',
+    confirmRequired: false,
+    targetNav: 'workflow',
+    resourceType: 'template',
+    allowedActions: [
+      { key: 'edit' },
+      { key: 'delete', riskLevel: 'danger', confirmationMode: 'modal' },
+    ],
+    relatedDomains: ['workflow'],
+    dependencies: [],
   },
   {
     cardId: 'template.delete',

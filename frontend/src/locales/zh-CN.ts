@@ -148,6 +148,9 @@ export default {
         scheduleListTitle: '定时任务（{count}）',
         scheduleListItem: '{name} · {workflow} · {status}',
         scheduleListEmpty: '暂无定时任务。',
+        templateListTitle: '节点模板（{count}）',
+        templateListItem: '{name} · {type}',
+        templateListEmpty: '暂无节点模板。',
         listMore: '另有 {count} 项',
         neverRun: '未运行',
         enabled: '已启用',
@@ -186,7 +189,7 @@ export default {
           schedule: '定时任务',
           knowledge_folder: '知识库目录',
           knowledge_file: '知识库文件',
-          template: '模板',
+          template: '节点模板',
         },
         empty: {
           workflow: '暂无工作流。',
@@ -195,7 +198,7 @@ export default {
           schedule: '暂无定时任务。',
           knowledge_folder: '暂无知识库目录。',
           knowledge_file: '暂无知识库文件。',
-          template: '暂无模板。',
+          template: '暂无节点模板。',
         },
         datasource: {
           sectionTitle: '数据源',
@@ -394,9 +397,13 @@ export default {
         },
       },
       template: {
+        open: {
+          title: '打开节点模板',
+          summary: '进入节点模板管理页面。',
+        },
         copilotCreate: {
-          title: '通过模板创建工作流',
-          summary: '跳转到工作流 Copilot 并基于模板创建工作流。',
+          title: '创建节点模板',
+          summary: '打开 Copilot 并创建可复用节点模板。',
         },
         delete: {
           title: '删除节点模板',

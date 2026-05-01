@@ -179,6 +179,31 @@ async function scheduleListHandler(
   return completeInChat(callbacks, summary);
 }
 
+async function templateListHandler(
+  _payload: UiActionCardPayload,
+  callbacks: ActionCallbacks
+): Promise<ActionResult> {
+  const { useWorkflowStore } = await import('@/stores/workflowStore');
+  const workflowStore = useWorkflowStore();
+  await workflowStore.fetchTemplates();
+
+  const rows = workflowStore.customTemplates.map((template) =>
+    t('chat.actionCards.results.templateListItem', {
+      name: template.name,
+      type: template.type,
+    })
+  );
+  const summary = renderLimitedList(
+    t('chat.actionCards.results.templateListTitle', {
+      count: String(workflowStore.customTemplates.length),
+    }),
+    rows,
+    t('chat.actionCards.results.templateListEmpty'),
+    'chat.actionCards.results.listMore'
+  );
+  return completeInChat(callbacks, summary);
+}
+
 async function knowledgeFileOpenHandler(
   payload: UiActionCardPayload,
   callbacks: ActionCallbacks
@@ -205,6 +230,7 @@ registerActionHandler('data', 'open', dataListHandler);
 registerActionHandler('knowledge', 'open', knowledgeListHandler);
 registerActionHandler('schedule', 'open', scheduleListHandler);
 registerActionHandler('workflow', 'open', workflowListHandler);
+registerActionHandler('template', 'open', templateListHandler);
 
 // ── Workflow Handlers ──────────────────────────────────────
 

@@ -200,6 +200,30 @@ describe('ShowUiActionCardTool', () => {
     expect(cardPayload.titleKey).toBe('chat.actionCards.workflow.delete.title');
   });
 
+  it('builds template open as a resource list with edit and delete actions', async () => {
+    const tool = ToolRegistry.get(ToolName.ShowUiActionCard);
+    const result = await tool.execute({
+      cardId: 'template.open',
+      params: { query: 'reusable node' },
+    });
+
+    expect(result.success).toBe(true);
+
+    const cardPayload = result.metadata?.cardPayload as UiActionCardPayload;
+    expect(cardPayload.cardId).toBe('template.open');
+    expect(cardPayload.domain).toBe('template');
+    expect(cardPayload.action).toBe('open');
+    expect(cardPayload.presentationMode).toBe('resource_list');
+    expect(cardPayload.confirmationMode).toBe('none');
+    expect(cardPayload.resourceType).toBe('template');
+    expect(cardPayload.allowedActions).toEqual([
+      { key: 'edit' },
+      { key: 'delete', riskLevel: 'danger', confirmationMode: 'modal' },
+    ]);
+    expect(cardPayload.defaultQuery).toBe('reusable node');
+    expect(cardPayload.titleKey).toBe('chat.actionCards.template.open.title');
+  });
+
   it('uses human-readable params as resource-list defaultQuery', async () => {
     const tool = ToolRegistry.get(ToolName.ShowUiActionCard);
     const result = await tool.execute({

@@ -148,6 +148,9 @@ export default {
         scheduleListTitle: 'Scheduled tasks ({count})',
         scheduleListItem: '{name} · {workflow} · {status}',
         scheduleListEmpty: 'No scheduled tasks found.',
+        templateListTitle: 'Node templates ({count})',
+        templateListItem: '{name} · {type}',
+        templateListEmpty: 'No node templates found.',
         listMore: '+ {count} more',
         neverRun: 'never run',
         enabled: 'enabled',
@@ -187,7 +190,7 @@ export default {
           schedule: 'Scheduled tasks',
           knowledge_folder: 'Knowledge folders',
           knowledge_file: 'Knowledge files',
-          template: 'Templates',
+          template: 'Node templates',
         },
         empty: {
           workflow: 'No workflows found.',
@@ -196,7 +199,7 @@ export default {
           schedule: 'No scheduled tasks found.',
           knowledge_folder: 'No knowledge folders found.',
           knowledge_file: 'No knowledge files found.',
-          template: 'No templates found.',
+          template: 'No node templates found.',
         },
         datasource: {
           sectionTitle: 'Data sources',
@@ -395,9 +398,13 @@ export default {
         },
       },
       template: {
+        open: {
+          title: 'Open node templates',
+          summary: 'Go to node template management.',
+        },
         copilotCreate: {
-          title: 'Create workflow from template',
-          summary: 'Open Workflow Copilot and create a workflow from a template.',
+          title: 'Create node template',
+          summary: 'Open Copilot and create a reusable node template.',
         },
         delete: {
           title: 'Delete node template',

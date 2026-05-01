@@ -148,6 +148,15 @@ describe('getCardDefinition', () => {
         { key: 'delete', riskLevel: 'danger', confirmationMode: 'modal' },
       ],
     });
+
+    expect(requireCardDefinition('template.open')).toMatchObject({
+      presentationMode: 'resource_list',
+      resourceType: 'template',
+      allowedActions: [
+        { key: 'edit' },
+        { key: 'delete', riskLevel: 'danger', confirmationMode: 'modal' },
+      ],
+    });
   });
 
   it('keeps schedule.create as an inline form with optional defaults', () => {
@@ -229,5 +238,16 @@ describe('guidance search terms', () => {
       'template.copilot_create'
     );
     expect(searchCardIds('custom node', { domain: 'template' })[0]).toBe('template.copilot_create');
+  });
+
+  it('finds the template list card through browse, list, and manage terms', () => {
+    const text = searchableText('template.open');
+    expect(text).toContain('browse');
+    expect(text).toContain('list');
+    expect(text).toContain('manage');
+    expect(searchCardIds('list node templates', { domain: 'template' })[0]).toBe('template.open');
+    expect(searchCardIds('manage custom node templates', { domain: 'template' })).toContain(
+      'template.open'
+    );
   });
 });
