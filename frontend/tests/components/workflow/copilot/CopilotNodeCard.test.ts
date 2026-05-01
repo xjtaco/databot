@@ -28,7 +28,17 @@ describe('CopilotNodeCard', () => {
   };
 
   const mountOpts = {
-    global: { plugins: [i18n, createPinia(), ElementPlus] },
+    global: {
+      plugins: [i18n, createPinia(), ElementPlus],
+      stubs: {
+        WfConfigSqlQuery: { template: '<div class="wf-config-sql-query-stub"></div>' },
+        WfConfigPythonScript: { template: '<div class="wf-config-python-script-stub"></div>' },
+        WfConfigLlmGenerate: { template: '<div class="wf-config-llm-generate-stub"></div>' },
+        WfConfigEmail: { template: '<div class="wf-config-email-stub"></div>' },
+        WfConfigBranch: { template: '<div class="wf-config-branch-stub"></div>' },
+        WfConfigWebSearch: { template: '<div class="wf-config-web-search-stub"></div>' },
+      },
+    },
   };
 
   it('renders collapsed by default', () => {

@@ -5,7 +5,13 @@ import type { DatabaseDatasourceType } from '@/types/datafile';
 import type { KnowledgeFile, KnowledgeFolder } from '@/types/knowledge';
 import type { ScheduleListItem } from '@/types/schedule';
 import type { NodeConfig, WorkflowListItem, WorkflowNodeType } from '@/types/workflow';
+import { getFileContent } from '@/api/knowledge';
+import { createTemplate } from '@/api/workflow';
+import { useDatafileStore } from '@/stores/datafileStore';
+import { useKnowledgeStore } from '@/stores/knowledgeStore';
 import { useNavigationStore } from '@/stores/navigationStore';
+import { useScheduleStore } from '@/stores/scheduleStore';
+import { useWorkflowStore } from '@/stores/workflowStore';
 import { i18n } from '@/locales';
 
 // ── Legacy In-chat Handlers ────────────────────────────────
@@ -43,7 +49,6 @@ async function workflowListHandler(
   _payload: UiActionCardPayload,
   callbacks: ActionCallbacks
 ): Promise<ActionResult> {
-  const { useWorkflowStore } = await import('@/stores/workflowStore');
   const workflowStore = useWorkflowStore();
   await workflowStore.fetchWorkflows();
 
@@ -69,7 +74,6 @@ async function dataListHandler(
   _payload: UiActionCardPayload,
   callbacks: ActionCallbacks
 ): Promise<ActionResult> {
-  const { useDatafileStore } = await import('@/stores/datafileStore');
   const datafileStore = useDatafileStore();
   await Promise.all([datafileStore.fetchDatasources(), datafileStore.fetchTables()]);
 
@@ -119,7 +123,6 @@ async function knowledgeListHandler(
   _payload: UiActionCardPayload,
   callbacks: ActionCallbacks
 ): Promise<ActionResult> {
-  const { useKnowledgeStore } = await import('@/stores/knowledgeStore');
   const knowledgeStore = useKnowledgeStore();
   await knowledgeStore.fetchFolderTree();
 
@@ -155,7 +158,6 @@ async function scheduleListHandler(
   _payload: UiActionCardPayload,
   callbacks: ActionCallbacks
 ): Promise<ActionResult> {
-  const { useScheduleStore } = await import('@/stores/scheduleStore');
   const scheduleStore = useScheduleStore();
   await scheduleStore.fetchSchedules();
 
@@ -183,7 +185,6 @@ async function templateListHandler(
   _payload: UiActionCardPayload,
   callbacks: ActionCallbacks
 ): Promise<ActionResult> {
-  const { useWorkflowStore } = await import('@/stores/workflowStore');
   const workflowStore = useWorkflowStore();
   await workflowStore.fetchTemplates();
 
@@ -213,7 +214,6 @@ async function knowledgeFileOpenHandler(
     return completeInChat(callbacks, t('chat.actionCards.results.knowledgeFileOpenInChat'));
   }
 
-  const { getFileContent } = await import('@/api/knowledge');
   const result = await getFileContent(fileId);
   const content =
     result.content.length > MAX_FILE_PREVIEW_LENGTH
@@ -266,7 +266,6 @@ async function createWorkflowAndOpen(
   const copilotPrompt = getCopilotPrompt(payload);
 
   try {
-    const { useWorkflowStore } = await import('@/stores/workflowStore');
     const workflowStore = useWorkflowStore();
     const workflowId = await workflowStore.createWorkflow(name, description);
 
@@ -356,76 +355,11 @@ function createDefaultNodeConfig(nodeType: WorkflowNodeType): NodeConfig {
   }
 }
 
-async function createTemplateAndOpen(
-  payload: UiActionCardPayload,
-  callbacks: ActionCallbacks
-): Promise<ActionResult> {
-  const navigationStore = useNavigationStore();
-  const name = getWorkflowName(payload, 'chat.actionCards.results.untitledTemplate');
-  const description = getDescription(payload);
-  const copilotPrompt = getCopilotPrompt(payload);
-  const nodeType = parseWorkflowNodeType(payload.params.nodeType);
-
-  try {
-    const { createTemplate } = await import('@/api/workflow');
-    const template = await createTemplate({
-      name,
-      description: description ?? '',
-      type: nodeType,
-      config: createDefaultNodeConfig(nodeType),
-    });
-
-    const summary = t(
-      copilotPrompt
-        ? 'chat.actionCards.results.templateCreatedWithCopilot'
-        : 'chat.actionCards.results.templateCreated',
-      { name }
-    );
-    callbacks.setResult(summary);
-    navigationStore.setPendingIntent({
-      type: 'open_template_editor',
-      templateId: template.id,
-      copilotPrompt,
-    });
-    navigationStore.navigateTo('workflow');
-
-    return {
-      success: true,
-      summary,
-    };
-  } catch (err) {
-    const error = err instanceof Error ? err.message : String(err);
-    callbacks.setError(error);
-    return { success: false, error, summary: t('chat.actionCards.results.templateCreateFailed') };
-  }
-}
-
 registerActionHandler(
   'workflow',
   'copilot_create',
   async (payload: UiActionCardPayload, callbacks: ActionCallbacks): Promise<ActionResult> =>
     createWorkflowAndOpen(payload, 'chat.actionCards.results.untitledWorkflow', callbacks)
-);
-
-registerActionHandler(
-  'workflow',
-  'template_node',
-  async (payload: UiActionCardPayload, callbacks: ActionCallbacks): Promise<ActionResult> =>
-    createTemplateAndOpen(payload, callbacks)
-);
-
-registerActionHandler(
-  'workflow',
-  'template_etl',
-  async (payload: UiActionCardPayload, callbacks: ActionCallbacks): Promise<ActionResult> =>
-    createWorkflowAndOpen(payload, 'chat.actionCards.results.untitledEtlWorkflow', callbacks)
-);
-
-registerActionHandler(
-  'workflow',
-  'template_report',
-  async (payload: UiActionCardPayload, callbacks: ActionCallbacks): Promise<ActionResult> =>
-    createWorkflowAndOpen(payload, 'chat.actionCards.results.untitledReportWorkflow', callbacks)
 );
 
 // ── Template copilot_create Handler ────────────────────────
@@ -441,7 +375,6 @@ registerActionHandler(
     const nodeType = parseWorkflowNodeType(payload.params.nodeType);
 
     try {
-      const { createTemplate } = await import('@/api/workflow');
       const template = await createTemplate({
         name,
         description: description ?? '',
@@ -495,7 +428,6 @@ registerActionHandler(
   'datasource_delete',
   async (payload: UiActionCardPayload, _callbacks: ActionCallbacks): Promise<ActionResult> => {
     try {
-      const { useDatafileStore } = await import('@/stores/datafileStore');
       const datafileStore = useDatafileStore();
       const datasourceId = getParamString(payload, 'datasourceId');
       let datasourceType = getParamString(payload, 'type');
@@ -525,7 +457,6 @@ registerActionHandler(
   'table_delete',
   async (payload: UiActionCardPayload, _callbacks: ActionCallbacks): Promise<ActionResult> => {
     try {
-      const { useDatafileStore } = await import('@/stores/datafileStore');
       const datafileStore = useDatafileStore();
       const tableId = getParamString(payload, 'tableId');
       if (!tableId) {
@@ -548,7 +479,6 @@ registerActionHandler(
   'delete',
   async (payload: UiActionCardPayload, _callbacks: ActionCallbacks): Promise<ActionResult> => {
     try {
-      const { useWorkflowStore } = await import('@/stores/workflowStore');
       const workflowStore = useWorkflowStore();
       const workflowId = getParamString(payload, 'workflowId');
       if (!workflowId) {
@@ -571,7 +501,6 @@ registerActionHandler(
   'delete',
   async (payload: UiActionCardPayload, _callbacks: ActionCallbacks): Promise<ActionResult> => {
     try {
-      const { useWorkflowStore } = await import('@/stores/workflowStore');
       const workflowStore = useWorkflowStore();
       const templateId = getParamString(payload, 'templateId');
       if (!templateId) {

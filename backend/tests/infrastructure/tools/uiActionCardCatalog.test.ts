@@ -94,7 +94,7 @@ describe('getCardDefinition', () => {
       presentationMode: 'resource_list',
       resourceType: 'workflow',
       allowedActions: [
-        { key: 'edit' },
+        { key: 'edit', confirmationMode: 'modal' },
         { key: 'execute' },
         { key: 'delete', riskLevel: 'danger', confirmationMode: 'modal' },
       ],
@@ -153,10 +153,16 @@ describe('getCardDefinition', () => {
       presentationMode: 'resource_list',
       resourceType: 'template',
       allowedActions: [
-        { key: 'edit' },
+        { key: 'edit', confirmationMode: 'modal' },
         { key: 'delete', riskLevel: 'danger', confirmationMode: 'modal' },
       ],
     });
+  });
+
+  it('omits duplicate workflow template creation cards', () => {
+    expect(getCardDefinition('workflow.template_node')).toBeUndefined();
+    expect(getCardDefinition('workflow.template_etl')).toBeUndefined();
+    expect(getCardDefinition('workflow.template_report')).toBeUndefined();
   });
 
   it('keeps schedule.create as an inline form with optional defaults', () => {
@@ -219,14 +225,14 @@ describe('guidance search terms', () => {
 
   it('finds workflow and schedule cards through report and recurring guidance terms', () => {
     expect(searchableText('workflow.copilot_create')).toContain('business goal');
-    expect(searchableText('workflow.template_report')).toContain('dashboard');
-    expect(searchableText('workflow.template_report')).toContain('recurring report');
+    expect(searchableText('workflow.copilot_create')).toContain('dashboard');
+    expect(searchableText('workflow.copilot_create')).toContain('report');
     expect(searchableText('schedule.create')).toContain('recurring');
     expect(searchCardIds('business goal', { domain: 'workflow' })[0]).toBe(
       'workflow.copilot_create'
     );
     expect(searchCardIds('dashboard recurring report', { domain: 'workflow' })[0]).toBe(
-      'workflow.template_report'
+      'workflow.copilot_create'
     );
     expect(searchCardIds('recurring report', { domain: 'schedule' })).toContain('schedule.create');
   });

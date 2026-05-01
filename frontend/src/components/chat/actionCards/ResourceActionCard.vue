@@ -117,6 +117,20 @@
       @confirm="confirmPendingAction"
       @cancel="clearPendingConfirmation"
     />
+
+    <el-dialog
+      v-model="tableDetailDialogVisible"
+      class="resource-action-card__table-dialog"
+      :title="tableDetailDialog?.title ?? ''"
+      width="min(960px, 92vw)"
+      destroy-on-close
+    >
+      <TableDetail
+        v-if="tableDetailDialog"
+        :table-id="tableDetailDialog.tableId"
+        @back="closeTableDetailDialog"
+      />
+    </el-dialog>
   </div>
 </template>
 
@@ -125,6 +139,7 @@ import { computed, onMounted, reactive, ref, type Component } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { Delete, Edit, Open, Search, TurnOff, VideoPlay, View } from '@element-plus/icons-vue';
 import ConfirmDialog from '@/components/common/ConfirmDialog.vue';
+import TableDetail from '@/components/datafile/TableDetail.vue';
 import InlineScheduleForm from './forms/InlineScheduleForm.vue';
 import type {
   ResourceActionKey,
@@ -164,6 +179,11 @@ interface InlineEditState {
   payload: UiActionCardPayload;
 }
 
+interface TableDetailDialogState {
+  tableId: string;
+  title: string;
+}
+
 type InlineScheduleSubmitStatus = 'succeeded' | 'failed';
 
 interface InlineScheduleSubmitOptions {
@@ -186,6 +206,7 @@ const cardError = ref<string | null>(null);
 const runningActionKey = ref<string | null>(null);
 const pendingConfirmation = ref<PendingConfirmation | null>(null);
 const inlineEdit = ref<InlineEditState | null>(null);
+const tableDetailDialog = ref<TableDetailDialogState | null>(null);
 const rowResults = reactive<Record<string, string>>({});
 const rowErrors = reactive<Record<string, string>>({});
 const latestSectionRequestIds = new Map<string, number>();
@@ -199,6 +220,15 @@ const confirmationMessage = computed(() => {
     action: t(pendingConfirmation.value.action.labelKey),
     name: pendingConfirmation.value.row.title,
   });
+});
+
+const tableDetailDialogVisible = computed({
+  get: () => tableDetailDialog.value !== null,
+  set: (visible: boolean) => {
+    if (!visible) {
+      tableDetailDialog.value = null;
+    }
+  },
 });
 
 onMounted(() => {
@@ -406,6 +436,13 @@ async function executeRowAction(
       rowResults[key] = formatResult(result);
     }
 
+    if (result.dialog?.kind === 'table_detail') {
+      tableDetailDialog.value = {
+        tableId: result.dialog.tableId,
+        title: row.title,
+      };
+    }
+
     if (result.refresh) {
       await refreshSection(section.key);
     }
@@ -429,6 +466,10 @@ async function refreshSection(sectionKey: string): Promise<void> {
 
 function closeInlineEdit(): void {
   inlineEdit.value = null;
+}
+
+function closeTableDetailDialog(): void {
+  tableDetailDialog.value = null;
 }
 
 async function handleInlineScheduleSubmit(

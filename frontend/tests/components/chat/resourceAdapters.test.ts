@@ -5,7 +5,7 @@ import { useNavigationStore } from '@/stores/navigationStore';
 import { useScheduleStore } from '@/stores/scheduleStore';
 import type { ResourceActionSpec } from '@/types/actionCard';
 import type { WorkflowListItem, CustomNodeTemplateInfo } from '@/types/workflow';
-import type { DatasourceWithTables, TableMetadata } from '@/types/datafile';
+import type { DatasourceWithTables, TableMetadata, TableWithColumns } from '@/types/datafile';
 import type { ScheduleListItem } from '@/types/schedule';
 import type { KnowledgeFolder, KnowledgeFile } from '@/types/knowledge';
 
@@ -36,7 +36,7 @@ const {
   deleteTemplateMock: vi.fn<(id: string) => Promise<void>>(),
   listDatasourcesMock: vi.fn<() => Promise<{ datasources: DatasourceWithTables[] }>>(),
   listTablesMock: vi.fn<() => Promise<{ tables: TableMetadata[] }>>(),
-  getTableMock: vi.fn<(id: string) => Promise<{ table: TableMetadata }>>(),
+  getTableMock: vi.fn<(id: string) => Promise<{ table: TableWithColumns }>>(),
   deleteDatasourceMock: vi.fn<(id: string) => Promise<void>>(),
   deleteRemoteDatasourceMock: vi.fn<(id: string) => Promise<void>>(),
   deleteTableMock: vi.fn<(id: string) => Promise<void>>(),
@@ -232,7 +232,7 @@ describe('resource adapters', () => {
     deleteTemplateMock.mockResolvedValue(undefined);
     listDatasourcesMock.mockResolvedValue({ datasources: [datasource('ds-1', 'Warehouse')] });
     listTablesMock.mockResolvedValue({ tables: [table('table-1', 'Orders')] });
-    getTableMock.mockResolvedValue({ table: table('table-1', 'Orders') });
+    getTableMock.mockResolvedValue({ table: { ...table('table-1', 'Orders'), columns: [] } });
     deleteDatasourceMock.mockResolvedValue(undefined);
     deleteRemoteDatasourceMock.mockResolvedValue(undefined);
     deleteTableMock.mockResolvedValue(undefined);
@@ -314,6 +314,7 @@ describe('resource adapters', () => {
     });
 
     expect(row.statusLabel).toBe('chat.actionCards.resource.status.workflow.neverRun');
+    expect(row.actions.find((action) => action.key === 'edit')?.confirmationMode).toBe('modal');
 
     const editResult = await getResourceAdapter('workflow').executeAction(row, 'edit');
     const navigationStore = useNavigationStore();
@@ -355,9 +356,14 @@ describe('resource adapters', () => {
     expect(tableRow.title).toBe('Orders');
     expect(datasourceRow.actions.map((action) => action.key)).toEqual(['delete']);
     expect(tableRow.actions.map((action) => action.key)).toEqual(['view', 'delete']);
+    expect(
+      tableRow.actions.find((action) => action.key === 'view')?.confirmationMode
+    ).toBeUndefined();
   });
 
-  it('table view fetches table details and navigates to data management', async () => {
+  it('table view opens a table detail dialog without leaving chat', async () => {
+    const navigationStore = useNavigationStore();
+    navigationStore.navigateTo('chat');
     const [row] = await getResourceAdapter('table').fetchRows({
       query: '',
       limit: 10,
@@ -365,12 +371,12 @@ describe('resource adapters', () => {
     });
 
     const result = await getResourceAdapter('table').executeAction(row, 'view');
-    const navigationStore = useNavigationStore();
 
-    expect(getTableMock).toHaveBeenCalledWith('table-1');
-    expect(navigationStore.pendingIntent).toEqual({ type: 'open_data_management', tab: 'data' });
-    expect(navigationStore.activeNav).toBe('data');
+    expect(getTableMock).not.toHaveBeenCalled();
+    expect(navigationStore.pendingIntent).toBeNull();
+    expect(navigationStore.activeNav).toBe('chat');
     expect(result.summaryKey).toBe('chat.actionCards.resource.summary.table.view');
+    expect(result.dialog).toEqual({ kind: 'table_detail', tableId: 'table-1' });
   });
 
   it('schedule delete, enable, and disable call the schedule store and request refresh', async () => {
@@ -501,6 +507,7 @@ describe('resource adapters', () => {
       label: 'chat.actionCards.resource.meta.creatorName',
       value: 'Alice',
     });
+    expect(row.actions.find((action) => action.key === 'edit')?.confirmationMode).toBe('modal');
 
     const editResult = await getResourceAdapter('template').executeAction(row, 'edit');
     const navigationStore = useNavigationStore();

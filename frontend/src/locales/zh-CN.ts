@@ -379,18 +379,6 @@ export default {
           title: '创建工作流',
           summary: '跳转到工作流 Copilot 创建工作流。',
         },
-        templateNode: {
-          title: '添加节点模板',
-          summary: '跳转到工作流编辑器并应用节点模板。',
-        },
-        templateEtl: {
-          title: '创建 ETL 工作流模板',
-          summary: '跳转到工作流编辑器并创建 ETL 模板。',
-        },
-        templateReport: {
-          title: '创建报告工作流模板',
-          summary: '跳转到工作流编辑器并创建报告模板。',
-        },
         delete: {
           title: '删除工作流',
           summary: '确认后删除指定工作流。',

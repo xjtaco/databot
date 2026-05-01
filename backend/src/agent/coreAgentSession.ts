@@ -114,7 +114,7 @@ Use operation cards for concrete system operations involving managed objects: da
 3. Use ${ToolName.ShowUiActionCard} with the chosen cardId and any known parameters. Leave optional parameters empty if the user has not provided them.
 4. Action cards propose frontend actions for user confirmation/execution. Do not claim that the operation has executed just because a card was shown.
 5. Use cards when the user asks to upload or import data files, create or test datasources, open, browse, list, or manage resources, create workflows, templates, or schedules, or delete resources.
-6. For creating workflows or custom node templates, prefer the Copilot creation cards (workflow.copilot_create, template.copilot_create). For reporting or dashboard workflows, prefer workflow.template_report when it matches the user intent.
+6. For creating workflows, including ETL, reporting, dashboard, or recurring report workflows, prefer workflow.copilot_create. For creating custom node templates, prefer template.copilot_create.
 7. Inline form cards such as data source, knowledge, and schedule create cards should be shown directly when the user asks to create/manage them; do not ask for an extra pre-confirmation.
 8. Workflow and node-template cards are deferred navigation actions. Show the card with a jump/open button; the UI will ask for modal confirmation before leaving CoreAgent chat and only then create/open the target.
 9. For destructive or high-risk actions such as delete, if the target resource is not clear from the user request, ask for the target before showing the card.

@@ -131,6 +131,7 @@ describe('usePdfExport', () => {
   });
 
   it('should reset isExporting on error', async () => {
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
     mockSave.mockRejectedValueOnce(new Error('PDF generation failed'));
 
     const { result, unmount } = withSetup(() => usePdfExport());
@@ -138,11 +139,15 @@ describe('usePdfExport', () => {
     const element = document.createElement('div');
     element.innerHTML = '<p>Report</p>';
 
-    await result.exportToPdf(element);
+    try {
+      await result.exportToPdf(element);
 
-    expect(result.isExporting.value).toBe(false);
-
-    unmount();
+      expect(result.isExporting.value).toBe(false);
+      expect(consoleErrorSpy).toHaveBeenCalledWith('PDF export failed:', expect.any(Error));
+    } finally {
+      consoleErrorSpy.mockRestore();
+      unmount();
+    }
   });
 
   it('should pass the original element to html2pdf (no manual clone)', async () => {

@@ -1,3 +1,4 @@
+/* eslint-disable vue/one-component-per-file */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { mount } from '@vue/test-utils';
 import { createI18n } from 'vue-i18n';
@@ -65,6 +66,33 @@ vi.mock('@/components/chat/actionCards/forms/InlineScheduleForm.vue', () => ({
                 }),
             },
             'fail'
+          ),
+        ]);
+    },
+  }),
+}));
+
+vi.mock('@/components/datafile/TableDetail.vue', () => ({
+  default: defineComponent({
+    name: 'TableDetail',
+    props: {
+      tableId: {
+        type: String,
+        required: true,
+      },
+    },
+    emits: ['back'],
+    setup(props, { emit }) {
+      return () =>
+        h('div', { class: 'table-detail-stub' }, [
+          h('span', `table:${props.tableId}`),
+          h(
+            'button',
+            {
+              class: 'table-detail-close',
+              onClick: () => emit('back'),
+            },
+            'close'
           ),
         ]);
     },
@@ -160,6 +188,12 @@ function mountCard(payload = makePayload()) {
         'el-tag': {
           template: '<span class="el-tag-stub"><slot /></span>',
           props: ['size', 'type', 'effect'],
+        },
+        'el-dialog': {
+          template:
+            '<div v-if="modelValue" class="el-dialog-stub"><slot /><button class="el-dialog-close" @click="$emit(\'update:modelValue\', false)">close</button></div>',
+          props: ['modelValue', 'title', 'width', 'destroyOnClose'],
+          emits: ['update:modelValue'],
         },
         ConfirmDialog: {
           template: `
@@ -376,6 +410,42 @@ describe('ResourceActionCard.vue', () => {
     expect(wrapper.text()).toContain('Weekly Report');
   });
 
+  it('confirms non-danger modal actions before executing', async () => {
+    fetchRowsMock.mockResolvedValue([
+      makeRow({
+        actions: [
+          {
+            key: 'edit',
+            labelKey: 'chat.actionCards.resource.actions.edit',
+            icon: 'Edit',
+            confirmationMode: 'modal',
+          },
+        ],
+      }),
+    ]);
+    executeActionMock.mockResolvedValueOnce({
+      summaryKey: 'chat.actionCards.resource.summary.workflow.edit',
+      summaryParams: { name: 'Daily Report' },
+    } satisfies ResourceActionResult);
+    const wrapper = mountCard();
+    await flush();
+
+    await wrapper.find('[data-action-key="edit"]').trigger('click');
+    await flush();
+
+    expect(wrapper.find('.confirm-dialog-stub').exists()).toBe(true);
+    expect(executeActionMock).not.toHaveBeenCalled();
+
+    await wrapper.find('.confirm-dialog-confirm').trigger('click');
+    await flush();
+
+    expect(executeActionMock).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'workflow-1' }),
+      'edit'
+    );
+    expect(wrapper.text()).toContain('Opened workflow Daily Report.');
+  });
+
   it('executes workflow actions and shows the result inside the card', async () => {
     const wrapper = mountCard();
     await flush();
@@ -388,6 +458,45 @@ describe('ResourceActionCard.vue', () => {
       'execute'
     );
     expect(wrapper.text()).toContain('Executed workflow Daily Report.');
+  });
+
+  it('opens table view actions in a dialog without confirmation', async () => {
+    fetchRowsMock.mockResolvedValue([
+      makeRow({
+        rawType: 'table',
+        title: 'Orders',
+        actions: [
+          {
+            key: 'view',
+            labelKey: 'chat.actionCards.resource.actions.view',
+            icon: 'View',
+          },
+        ],
+      }),
+    ]);
+    executeActionMock.mockResolvedValueOnce({
+      summaryKey: 'chat.actionCards.resource.summary.table.view',
+      summaryParams: { name: 'Orders' },
+      dialog: { kind: 'table_detail', tableId: 'workflow-1' },
+    } satisfies ResourceActionResult);
+    const wrapper = mountCard(makePayload({ domain: 'data', resourceType: 'table' }));
+    await flush();
+
+    await wrapper.find('[data-action-key="view"]').trigger('click');
+    await flush();
+
+    expect(wrapper.find('.confirm-dialog-stub').exists()).toBe(false);
+    expect(executeActionMock).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'workflow-1' }),
+      'view'
+    );
+    expect(wrapper.find('.table-detail-stub').exists()).toBe(true);
+    expect(wrapper.text()).toContain('table:workflow-1');
+
+    await wrapper.find('.table-detail-close').trigger('click');
+    await flush();
+
+    expect(wrapper.find('.table-detail-stub').exists()).toBe(false);
   });
 
   it('embeds schedule edit form and refreshes after successful update', async () => {

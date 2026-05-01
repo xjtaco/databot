@@ -144,24 +144,6 @@ const cardPresentationMetadata = {
     titleKey: 'chat.actionCards.workflow.copilotCreate.title',
     summaryKey: 'chat.actionCards.workflow.copilotCreate.summary',
   },
-  'workflow.template_node': {
-    presentationMode: 'deferred_navigation',
-    confirmationMode: 'modal',
-    titleKey: 'chat.actionCards.workflow.templateNode.title',
-    summaryKey: 'chat.actionCards.workflow.templateNode.summary',
-  },
-  'workflow.template_etl': {
-    presentationMode: 'deferred_navigation',
-    confirmationMode: 'modal',
-    titleKey: 'chat.actionCards.workflow.templateEtl.title',
-    summaryKey: 'chat.actionCards.workflow.templateEtl.summary',
-  },
-  'workflow.template_report': {
-    presentationMode: 'deferred_navigation',
-    confirmationMode: 'modal',
-    titleKey: 'chat.actionCards.workflow.templateReport.title',
-    summaryKey: 'chat.actionCards.workflow.templateReport.summary',
-  },
   'workflow.delete': {
     presentationMode: 'resource_list',
     confirmationMode: 'modal',
@@ -951,7 +933,7 @@ const baseCatalog: readonly UiActionCardCatalogEntry[] = [
     targetNav: 'workflow',
     resourceType: 'workflow',
     allowedActions: [
-      { key: 'edit' },
+      { key: 'edit', confirmationMode: 'modal' },
       { key: 'execute' },
       { key: 'delete', riskLevel: 'danger', confirmationMode: 'modal' },
     ],
@@ -964,9 +946,9 @@ const baseCatalog: readonly UiActionCardCatalogEntry[] = [
     action: 'copilot_create',
     title: 'Create Workflow with Copilot',
     description:
-      'Launch the workflow copilot to design and create a new workflow from a business goal.',
+      'Launch the workflow copilot to design and create a new workflow from a business goal, including ETL, report, dashboard, and recurring reporting workflows.',
     usage:
-      'When the user wants to create, build, or design a data processing or analysis workflow with Copilot from a business goal.',
+      'When the user wants to create, build, or design a data processing, ETL, analysis, report, dashboard, recurring report, or scheduled reporting workflow with Copilot from a business goal.',
     requiredParams: [
       {
         name: 'name',
@@ -985,103 +967,6 @@ const baseCatalog: readonly UiActionCardCatalogEntry[] = [
     confirmRequired: false,
     targetNav: 'workflow',
     relatedDomains: ['data', 'schedule', 'template'],
-    dependencies: [],
-  },
-  {
-    cardId: 'workflow.template_node',
-    domain: 'workflow',
-    action: 'template_node',
-    title: 'Create Node Template Workflow',
-    description: 'Open the workflow editor with a node template creation flow.',
-    usage: 'When the user wants to create a reusable node template or custom workflow node.',
-    requiredParams: [
-      {
-        name: 'name',
-        type: 'string',
-        description: 'Template or workflow name.',
-      },
-    ],
-    optionalParams: [
-      {
-        name: 'description',
-        type: 'string',
-        description: 'Brief description of the template to create.',
-      },
-      {
-        name: 'copilotPrompt',
-        type: 'string',
-        description: 'Prompt to send to Copilot after navigation.',
-      },
-    ],
-    riskLevel: 'low',
-    confirmRequired: false,
-    targetNav: 'workflow',
-    relatedDomains: ['template'],
-    dependencies: [],
-  },
-  {
-    cardId: 'workflow.template_etl',
-    domain: 'workflow',
-    action: 'template_etl',
-    title: 'Create ETL Workflow from Template',
-    description: 'Open the workflow editor with an ETL template creation flow.',
-    usage: 'When the user wants to create an ETL, data pipeline, or data processing workflow.',
-    requiredParams: [
-      {
-        name: 'name',
-        type: 'string',
-        description: 'Workflow name.',
-      },
-    ],
-    optionalParams: [
-      {
-        name: 'description',
-        type: 'string',
-        description: 'Brief description of the ETL workflow.',
-      },
-      {
-        name: 'copilotPrompt',
-        type: 'string',
-        description: 'Prompt to send to Copilot after navigation.',
-      },
-    ],
-    riskLevel: 'low',
-    confirmRequired: false,
-    targetNav: 'workflow',
-    relatedDomains: ['data', 'schedule'],
-    dependencies: [],
-  },
-  {
-    cardId: 'workflow.template_report',
-    domain: 'workflow',
-    action: 'template_report',
-    title: 'Create Report Workflow from Template',
-    description: 'Open the workflow editor with a report or dashboard template creation flow.',
-    usage:
-      'When the user wants to create a reporting, dashboard, recurring report, or dashboard generation workflow.',
-    requiredParams: [
-      {
-        name: 'name',
-        type: 'string',
-        description: 'Workflow name.',
-      },
-    ],
-    optionalParams: [
-      {
-        name: 'description',
-        type: 'string',
-        description: 'Brief description of the report workflow.',
-      },
-      {
-        name: 'copilotPrompt',
-        type: 'string',
-        description: 'Prompt to send to Copilot after navigation.',
-      },
-    ],
-    riskLevel: 'low',
-    confirmRequired: false,
-    targetNav: 'workflow',
-    relatedDomains: ['data', 'schedule'],
     dependencies: [],
   },
   {
@@ -1214,7 +1099,7 @@ const baseCatalog: readonly UiActionCardCatalogEntry[] = [
     targetNav: 'workflow',
     resourceType: 'template',
     allowedActions: [
-      { key: 'edit' },
+      { key: 'edit', confirmationMode: 'modal' },
       { key: 'delete', riskLevel: 'danger', confirmationMode: 'modal' },
     ],
     relatedDomains: ['workflow'],

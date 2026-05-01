@@ -68,6 +68,7 @@ export interface ResourceActionResult {
   summaryParams?: Record<string, string | number>;
   refresh?: boolean;
   inlineForm?: ResourceInlineFormRequest;
+  dialog?: { kind: 'table_detail'; tableId: string };
 }
 
 export interface ResourceAdapter {
@@ -80,7 +81,7 @@ const KNOWLEDGE_CONTENT_PREVIEW_LIMIT = 2_000;
 
 const DEFAULT_ALLOWED_ACTIONS: Record<ResourceActionCardType, ResourceActionSpec[]> = {
   workflow: [
-    { key: 'edit' },
+    { key: 'edit', confirmationMode: 'modal' },
     { key: 'execute' },
     { key: 'delete', riskLevel: 'danger', confirmationMode: 'modal' },
   ],
@@ -97,7 +98,10 @@ const DEFAULT_ALLOWED_ACTIONS: Record<ResourceActionCardType, ResourceActionSpec
     { key: 'view' },
     { key: 'delete', riskLevel: 'danger', confirmationMode: 'modal' },
   ],
-  template: [{ key: 'edit' }, { key: 'delete', riskLevel: 'danger', confirmationMode: 'modal' }],
+  template: [
+    { key: 'edit', confirmationMode: 'modal' },
+    { key: 'delete', riskLevel: 'danger', confirmationMode: 'modal' },
+  ],
 };
 
 const DATABASE_DATASOURCE_TYPES: readonly DatabaseDatasourceType[] = [
@@ -337,13 +341,10 @@ const tableAdapter: ResourceAdapter = {
   async executeAction(row, actionKey): Promise<ResourceActionResult> {
     const { table } = assertRowData(row, 'table');
     if (actionKey === 'view') {
-      await useDatafileStore().fetchTable(row.id);
-      const navigationStore = useNavigationStore();
-      navigationStore.setPendingIntent({ type: 'open_data_management', tab: 'data' });
-      navigationStore.navigateTo('data');
       return {
         summaryKey: summary(actionKey, 'table'),
         summaryParams: { name: table.displayName },
+        dialog: { kind: 'table_detail', tableId: row.id },
       };
     }
     if (actionKey === 'delete') {

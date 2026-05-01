@@ -168,7 +168,24 @@ describe('ActionCard.vue', () => {
             props: ['modelValue', 'size', 'placeholder'],
           },
           'el-form': defineComponent({
-            props: ['labelPosition', 'model', 'rules', 'labelWidth'],
+            props: {
+              labelPosition: {
+                type: String,
+                default: undefined,
+              },
+              model: {
+                type: Object,
+                default: undefined,
+              },
+              rules: {
+                type: Object,
+                default: undefined,
+              },
+              labelWidth: {
+                type: String,
+                default: undefined,
+              },
+            },
             emits: ['submit'],
             setup(_, { emit, expose, slots }) {
               expose({

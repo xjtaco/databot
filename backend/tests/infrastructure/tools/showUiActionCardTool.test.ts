@@ -217,7 +217,7 @@ describe('ShowUiActionCardTool', () => {
     expect(cardPayload.confirmationMode).toBe('none');
     expect(cardPayload.resourceType).toBe('template');
     expect(cardPayload.allowedActions).toEqual([
-      { key: 'edit' },
+      { key: 'edit', confirmationMode: 'modal' },
       { key: 'delete', riskLevel: 'danger', confirmationMode: 'modal' },
     ]);
     expect(cardPayload.defaultQuery).toBe('reusable node');

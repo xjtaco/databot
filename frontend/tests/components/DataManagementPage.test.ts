@@ -34,7 +34,7 @@ const defaultStubs = {
     template: '<div class="knowledge-file-viewer-stub"></div>',
     props: ['fileId', 'fileName'],
   },
-  PostgresConnectionDialog: { template: '<div class="postgres-dialog-stub"></div>' },
+  DatabaseConnectionDialog: { template: '<div class="database-connection-dialog-stub"></div>' },
   ConfirmDialog: { template: '<div class="confirm-dialog-stub"></div>' },
   Database: { template: '<span class="database-icon-stub"></span>' },
   ArrowLeft: { template: '<span class="arrow-left-stub"></span>' },

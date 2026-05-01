@@ -134,6 +134,7 @@ import { useI18n } from 'vue-i18n';
 import ConfirmDialog from '@/components/common/ConfirmDialog.vue';
 import { executeAction } from './actionCards';
 import ResourceActionCard from './actionCards/ResourceActionCard.vue';
+import InlineScheduleForm from './actionCards/forms/InlineScheduleForm.vue';
 import type { ChatActionCard, CardStatus } from '@/types/actionCard';
 import { getActionCardKey } from '@/utils/actionCardSupport';
 
@@ -142,7 +143,8 @@ const InlineDataCreateForm = () => import('./actionCards/forms/InlineDataCreateF
 const InlineFileUploadForm = () => import('./actionCards/forms/InlineFileUploadForm.vue');
 const InlineKnowledgeFolderForm = () => import('./actionCards/forms/InlineKnowledgeFolderForm.vue');
 const InlineKnowledgeFileForm = () => import('./actionCards/forms/InlineKnowledgeFileForm.vue');
-const InlineScheduleForm = () => import('./actionCards/forms/InlineScheduleForm.vue');
+const inlineScheduleForm = (): Promise<{ default: Component }> =>
+  Promise.resolve({ default: InlineScheduleForm });
 
 const formComponentMap: Record<string, () => Promise<{ default: Component }>> = {
   'data:datasource_create': InlineDataCreateForm,
@@ -155,9 +157,9 @@ const formComponentMap: Record<string, () => Promise<{ default: Component }>> = 
   'knowledge:file_upload': InlineKnowledgeFileForm,
   'knowledge:file_move': InlineKnowledgeFileForm,
   'knowledge:file_delete': InlineKnowledgeFileForm,
-  'schedule:create': InlineScheduleForm,
-  'schedule:update': InlineScheduleForm,
-  'schedule:delete': InlineScheduleForm,
+  'schedule:create': inlineScheduleForm,
+  'schedule:update': inlineScheduleForm,
+  'schedule:delete': inlineScheduleForm,
 };
 
 const props = defineProps<{ card: ChatActionCard }>();

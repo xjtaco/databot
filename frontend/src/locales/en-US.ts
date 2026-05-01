@@ -380,18 +380,6 @@ export default {
           title: 'Create workflow',
           summary: 'Open Workflow Copilot to create a workflow.',
         },
-        templateNode: {
-          title: 'Add node template',
-          summary: 'Open the workflow editor and apply a node template.',
-        },
-        templateEtl: {
-          title: 'Create ETL workflow template',
-          summary: 'Open the workflow editor and create an ETL template.',
-        },
-        templateReport: {
-          title: 'Create report workflow template',
-          summary: 'Open the workflow editor and create a report template.',
-        },
         delete: {
           title: 'Delete workflow',
           summary: 'Confirm and delete the selected workflow.',

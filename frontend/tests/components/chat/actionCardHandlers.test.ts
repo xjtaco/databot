@@ -307,10 +307,10 @@ describe('action card handlers', () => {
     expect(getRegistry().has('knowledge:file_open')).toBe(true);
   });
 
-  it('registers backend-discoverable workflow creation handlers', () => {
-    expect(getRegistry().has('workflow:template_node')).toBe(true);
-    expect(getRegistry().has('workflow:template_etl')).toBe(true);
-    expect(getRegistry().has('workflow:template_report')).toBe(true);
+  it('does not register duplicate workflow template creation handlers', () => {
+    expect(getRegistry().has('workflow:template_node')).toBe(false);
+    expect(getRegistry().has('workflow:template_etl')).toBe(false);
+    expect(getRegistry().has('workflow:template_report')).toBe(false);
   });
 
   it('keeps legacy in-chat list cards inside the chat and shows fetched results', async () => {
@@ -408,8 +408,8 @@ describe('action card handlers', () => {
   it('returns localized workflow creation summaries', async () => {
     const result = await executeAction(
       makePayload({
-        cardId: 'workflow.template_etl',
-        action: 'template_etl',
+        cardId: 'workflow.copilot_create',
+        action: 'copilot_create',
         params: { name: 'Daily ETL' },
       }),
       {
@@ -557,70 +557,6 @@ describe('action card handlers', () => {
     expect(listDatasourcesMock).toHaveBeenCalled();
     expect(deleteRemoteDatasourceMock).toHaveBeenCalledWith('ds-1');
     expect(navigationStore.activeNav).toBe('chat');
-  });
-
-  it('executes workflow.template_node by creating a template and opening it', async () => {
-    const result = await executeAction(
-      makePayload({
-        cardId: 'workflow.template_node',
-        action: 'template_node',
-        params: {
-          name: 'Reusable Node',
-          description: 'Extract common logic',
-          nodeType: 'python',
-        },
-        copilotPrompt: 'Build a reusable node',
-      }),
-      {
-        setStatus: vi.fn(),
-        setResult: vi.fn(),
-        setError: vi.fn(),
-      }
-    );
-
-    const navigationStore = useNavigationStore();
-    expect(result.success).toBe(true);
-    expect(createTemplateMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        name: 'Reusable Node',
-        description: 'Extract common logic',
-        type: 'python',
-      })
-    );
-    expect(navigationStore.pendingIntent).toEqual({
-      type: 'open_template_editor',
-      templateId: 'template-1',
-      copilotPrompt: 'Build a reusable node',
-    });
-    expect(navigationStore.activeNav).toBe('workflow');
-  });
-
-  it('executes workflow template workflow cards by creating workflows and opening them', async () => {
-    for (const action of ['template_etl', 'template_report']) {
-      const result = await executeAction(
-        makePayload({
-          cardId: `workflow.${action}`,
-          action,
-          params: { name: `Workflow ${action}`, description: 'Generated from template' },
-          copilotPrompt: `Create ${action}`,
-        }),
-        {
-          setStatus: vi.fn(),
-          setResult: vi.fn(),
-          setError: vi.fn(),
-        }
-      );
-
-      const navigationStore = useNavigationStore();
-      expect(result.success).toBe(true);
-      expect(navigationStore.pendingIntent).toEqual({
-        type: 'open_workflow_editor',
-        workflowId: 'workflow-1',
-        copilotPrompt: `Create ${action}`,
-      });
-      expect(navigationStore.activeNav).toBe('workflow');
-    }
-    expect(createWorkflowMock).toHaveBeenCalledTimes(2);
   });
 
   it('does NOT register handlers for form-based cards', () => {
