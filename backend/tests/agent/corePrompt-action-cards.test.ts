@@ -88,4 +88,11 @@ describe('CORE_PROMPT action card rules', () => {
     expect(corePrompt).toContain('For destructive or high-risk actions');
     expect(corePrompt).toContain('ask for the target before showing the card');
   });
+
+  it('requires clear user keywords to prefill every resource list card search box', () => {
+    expect(corePrompt).toContain('resource_list');
+    expect(corePrompt).toContain('clear filter keyword');
+    expect(corePrompt).toContain('params.query');
+    expect(corePrompt).toContain('search box is prefilled');
+  });
 });
