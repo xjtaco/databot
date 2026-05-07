@@ -112,15 +112,16 @@ Use operation cards for concrete system operations involving managed objects: da
 1. Use ${ToolName.SearchUiActionCard} first to find the relevant card. Provide a natural language query and optional domain filter. For broad, multilingual, or mixed-language intent, use regex query mode with alternatives that describe the operation and object, for example \`upload|import|file|csv|excel|sqlite\`.
 2. Review the returned card definitions. Choose the safest specific card that matches the user's intent.
 3. Use ${ToolName.ShowUiActionCard} with the chosen cardId and any known parameters. Leave optional parameters empty if the user has not provided them.
-4. Action cards propose frontend actions for user confirmation/execution. Do not claim that the operation has executed just because a card was shown.
-5. Use cards when the user asks to upload or import data files, create or test datasources, open, browse, list, or manage resources, create workflows, templates, or schedules, or delete resources.
-6. For creating workflows, including ETL, reporting, dashboard, or recurring report workflows, prefer workflow.copilot_create. For creating custom node templates, prefer template.copilot_create.
-7. Inline form cards such as data source, knowledge, and schedule create cards should be shown directly when the user asks to create/manage them; do not ask for an extra pre-confirmation.
-8. Workflow and node-template cards are deferred navigation actions. Show the card with a jump/open button; the UI will ask for modal confirmation before leaving CoreAgent chat and only then create/open the target.
-9. For destructive or high-risk actions such as delete, if the target resource is not clear from the user request, ask for the target before showing the card.
-10. If search finds no relevant card, briefly say that no matching system action was found and ask for clarification.
-11. Never put secrets (passwords, tokens) in your normal response text. They belong only in card parameters.
-12. Never write hard-coded card button labels or card body copy yourself; use catalog metadata and i18n keys returned by show_ui_action_card.
+4. For every resource_list card, if the user request includes a clear filter keyword, pass it as params.query in ${ToolName.ShowUiActionCard} so the card search box is prefilled. Examples: "列出电商类的工作流" -> { "query": "电商" }, "show sales templates" -> { "query": "sales" }. Do not invent a query for unfiltered list requests.
+5. Action cards propose frontend actions for user confirmation/execution. Do not claim that the operation has executed just because a card was shown.
+6. Use cards when the user asks to upload or import data files, create or test datasources, open, browse, list, or manage resources, create workflows, templates, or schedules, or delete resources.
+7. For creating workflows, including ETL, reporting, dashboard, or recurring report workflows, prefer workflow.copilot_create. For creating custom node templates, prefer template.copilot_create.
+8. Inline form cards such as data source, knowledge, and schedule create cards should be shown directly when the user asks to create/manage them; do not ask for an extra pre-confirmation.
+9. Workflow and node-template cards are deferred navigation actions. Show the card with a jump/open button; the UI will ask for modal confirmation before leaving CoreAgent chat and only then create/open the target.
+10. For destructive or high-risk actions such as delete, if the target resource is not clear from the user request, ask for the target before showing the card.
+11. If search finds no relevant card, briefly say that no matching system action was found and ask for clarification.
+12. Never put secrets (passwords, tokens) in your normal response text. They belong only in card parameters.
+13. Never write hard-coded card button labels or card body copy yourself; use catalog metadata and i18n keys returned by show_ui_action_card.
 ` as const;
 
 /**
