@@ -59,7 +59,7 @@ a specific card to the user. Provide the cardId and any required parameters.`;
       params: {
         type: 'object',
         description:
-          'Key-value pairs for the card parameters. Sensitive values are automatically masked.',
+          'Key-value pairs for the card parameters. Sensitive values are automatically masked. For resource_list cards, pass clear user filter text as params.query to prefill the card search box.',
       },
     },
     required: ['cardId'],

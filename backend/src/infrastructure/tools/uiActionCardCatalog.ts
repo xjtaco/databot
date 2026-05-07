@@ -173,6 +173,29 @@ const cardPresentationMetadata = {
 const presentationMetadataByCardId: Record<string, ActionCardPresentationMetadata> =
   cardPresentationMetadata;
 
+const resourceListFilterParams = [
+  {
+    name: 'query',
+    type: 'string',
+    description: 'Search query used to filter the resource list.',
+  },
+  {
+    name: 'keyword',
+    type: 'string',
+    description: 'Keyword used to filter the resource list.',
+  },
+  {
+    name: 'name',
+    type: 'string',
+    description: 'Name text used to filter the resource list.',
+  },
+  {
+    name: 'title',
+    type: 'string',
+    description: 'Title text used to filter the resource list.',
+  },
+] satisfies UiActionCardCatalogEntry['optionalParams'];
+
 const baseCatalog: readonly UiActionCardCatalogEntry[] = [
   // ── data ──────────────────────────────────────────────────────────────────
   {
@@ -185,7 +208,7 @@ const baseCatalog: readonly UiActionCardCatalogEntry[] = [
     usage:
       'When the user wants to open, browse, list, view, or manage datasources and data tables.',
     requiredParams: [],
-    optionalParams: [],
+    optionalParams: resourceListFilterParams,
     riskLevel: 'low',
     confirmRequired: false,
     targetNav: 'data',
@@ -316,26 +339,7 @@ const baseCatalog: readonly UiActionCardCatalogEntry[] = [
         type: 'string',
         description: 'Optional datasource ID filter when known.',
       },
-      {
-        name: 'name',
-        type: 'string',
-        description: 'Filter datasources by display name.',
-      },
-      {
-        name: 'keyword',
-        type: 'string',
-        description: 'Keyword used to filter datasources.',
-      },
-      {
-        name: 'query',
-        type: 'string',
-        description: 'Search query used to filter datasources.',
-      },
-      {
-        name: 'title',
-        type: 'string',
-        description: 'Title text used to filter datasources.',
-      },
+      ...resourceListFilterParams,
       {
         name: 'type',
         type: 'string',
@@ -370,26 +374,7 @@ const baseCatalog: readonly UiActionCardCatalogEntry[] = [
         type: 'string',
         description: 'Optional table ID filter when known.',
       },
-      {
-        name: 'name',
-        type: 'string',
-        description: 'Filter tables by display name.',
-      },
-      {
-        name: 'keyword',
-        type: 'string',
-        description: 'Keyword used to filter tables.',
-      },
-      {
-        name: 'query',
-        type: 'string',
-        description: 'Search query used to filter tables.',
-      },
-      {
-        name: 'title',
-        type: 'string',
-        description: 'Title text used to filter tables.',
-      },
+      ...resourceListFilterParams,
     ],
     riskLevel: 'danger',
     confirmRequired: true,
@@ -429,7 +414,7 @@ const baseCatalog: readonly UiActionCardCatalogEntry[] = [
       'Navigate to the knowledge base panel to browse, list, and manage folders and files.',
     usage: 'When the user wants to open, browse, list, view, or manage their knowledge base.',
     requiredParams: [],
-    optionalParams: [],
+    optionalParams: resourceListFilterParams,
     riskLevel: 'low',
     confirmRequired: false,
     targetNav: 'data',
@@ -555,26 +540,7 @@ const baseCatalog: readonly UiActionCardCatalogEntry[] = [
         type: 'string',
         description: 'Optional folder ID filter when known.',
       },
-      {
-        name: 'name',
-        type: 'string',
-        description: 'Filter folders by name.',
-      },
-      {
-        name: 'keyword',
-        type: 'string',
-        description: 'Keyword used to filter folders.',
-      },
-      {
-        name: 'query',
-        type: 'string',
-        description: 'Search query used to filter folders.',
-      },
-      {
-        name: 'title',
-        type: 'string',
-        description: 'Title text used to filter folders.',
-      },
+      ...resourceListFilterParams,
     ],
     riskLevel: 'danger',
     confirmRequired: true,
@@ -708,26 +674,7 @@ const baseCatalog: readonly UiActionCardCatalogEntry[] = [
         type: 'string',
         description: 'Optional file ID filter when known.',
       },
-      {
-        name: 'name',
-        type: 'string',
-        description: 'Filter files by name.',
-      },
-      {
-        name: 'keyword',
-        type: 'string',
-        description: 'Keyword used to filter files.',
-      },
-      {
-        name: 'query',
-        type: 'string',
-        description: 'Search query used to filter files.',
-      },
-      {
-        name: 'title',
-        type: 'string',
-        description: 'Title text used to filter files.',
-      },
+      ...resourceListFilterParams,
     ],
     riskLevel: 'danger',
     confirmRequired: true,
@@ -748,7 +695,7 @@ const baseCatalog: readonly UiActionCardCatalogEntry[] = [
     description: 'Navigate to the scheduled tasks panel.',
     usage: 'When the user wants to view or manage scheduled tasks.',
     requiredParams: [],
-    optionalParams: [],
+    optionalParams: resourceListFilterParams,
     riskLevel: 'low',
     confirmRequired: false,
     targetNav: 'schedule',
@@ -886,26 +833,7 @@ const baseCatalog: readonly UiActionCardCatalogEntry[] = [
         type: 'string',
         description: 'Optional schedule ID filter when known.',
       },
-      {
-        name: 'name',
-        type: 'string',
-        description: 'Filter schedules by display name.',
-      },
-      {
-        name: 'keyword',
-        type: 'string',
-        description: 'Keyword used to filter schedules.',
-      },
-      {
-        name: 'query',
-        type: 'string',
-        description: 'Search query used to filter schedules.',
-      },
-      {
-        name: 'title',
-        type: 'string',
-        description: 'Title text used to filter schedules.',
-      },
+      ...resourceListFilterParams,
     ],
     riskLevel: 'danger',
     confirmRequired: true,
@@ -927,7 +855,7 @@ const baseCatalog: readonly UiActionCardCatalogEntry[] = [
     usage:
       'When the user wants to open, browse, list, view, run, edit, delete, or manage workflows.',
     requiredParams: [],
-    optionalParams: [],
+    optionalParams: resourceListFilterParams,
     riskLevel: 'low',
     confirmRequired: false,
     targetNav: 'workflow',
@@ -988,26 +916,7 @@ const baseCatalog: readonly UiActionCardCatalogEntry[] = [
         type: 'string',
         description: 'Optional workflow ID filter when known.',
       },
-      {
-        name: 'name',
-        type: 'string',
-        description: 'Filter workflows by name.',
-      },
-      {
-        name: 'keyword',
-        type: 'string',
-        description: 'Keyword used to filter workflows.',
-      },
-      {
-        name: 'query',
-        type: 'string',
-        description: 'Search query used to filter workflows.',
-      },
-      {
-        name: 'title',
-        type: 'string',
-        description: 'Title text used to filter workflows.',
-      },
+      ...resourceListFilterParams,
     ],
     riskLevel: 'danger',
     confirmRequired: true,
@@ -1073,26 +982,7 @@ const baseCatalog: readonly UiActionCardCatalogEntry[] = [
         type: 'string',
         description: 'Optional template ID filter when known.',
       },
-      {
-        name: 'name',
-        type: 'string',
-        description: 'Filter templates by name.',
-      },
-      {
-        name: 'keyword',
-        type: 'string',
-        description: 'Keyword used to filter templates.',
-      },
-      {
-        name: 'query',
-        type: 'string',
-        description: 'Search query used to filter templates.',
-      },
-      {
-        name: 'title',
-        type: 'string',
-        description: 'Title text used to filter templates.',
-      },
+      ...resourceListFilterParams,
     ],
     riskLevel: 'low',
     confirmRequired: false,
@@ -1124,26 +1014,7 @@ const baseCatalog: readonly UiActionCardCatalogEntry[] = [
         type: 'string',
         description: 'Optional template ID filter when known.',
       },
-      {
-        name: 'name',
-        type: 'string',
-        description: 'Filter templates by name.',
-      },
-      {
-        name: 'keyword',
-        type: 'string',
-        description: 'Keyword used to filter templates.',
-      },
-      {
-        name: 'query',
-        type: 'string',
-        description: 'Search query used to filter templates.',
-      },
-      {
-        name: 'title',
-        type: 'string',
-        description: 'Title text used to filter templates.',
-      },
+      ...resourceListFilterParams,
     ],
     riskLevel: 'danger',
     confirmRequired: true,
@@ -1282,4 +1153,11 @@ export function searchCatalog(
  */
 export function getCardDefinition(cardId: string): UiActionCardDefinition | undefined {
   return byId.get(cardId);
+}
+
+/**
+ * Return every UI action card definition in catalog order.
+ */
+export function getAllCardDefinitions(): readonly UiActionCardDefinition[] {
+  return catalog;
 }
