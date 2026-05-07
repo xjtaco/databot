@@ -2,7 +2,10 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { ToolRegistry } from '../../../src/infrastructure/tools/tools';
 import { ToolName } from '../../../src/infrastructure/tools/types';
 import { ShowUiActionCardTool } from '../../../src/infrastructure/tools/showUiActionCardTool';
-import { getCardDefinition } from '../../../src/infrastructure/tools/uiActionCardCatalog';
+import {
+  getAllCardDefinitions,
+  getCardDefinition,
+} from '../../../src/infrastructure/tools/uiActionCardCatalog';
 import type { UiActionCardPayload } from '../../../src/infrastructure/tools/uiActionCardTypes';
 
 // Mock logger module
@@ -43,6 +46,19 @@ describe('ShowUiActionCardTool', () => {
     expect(tool.description).toContain('proposed frontend action');
     expect(tool.description).toContain('card configuration');
     expect(tool.description).toContain('confirm before execution');
+  });
+
+  it('documents query prefill behavior for resource list params', () => {
+    const tool = ToolRegistry.get(ToolName.ShowUiActionCard);
+    const paramsSchema = tool.parameters.properties?.params;
+    if (!paramsSchema || typeof paramsSchema !== 'object' || Array.isArray(paramsSchema)) {
+      throw new Error('Expected params schema object');
+    }
+
+    expect(paramsSchema.description).toContain('resource_list');
+    expect(paramsSchema.description).toContain('params.query');
+    expect(paramsSchema.description).toContain('prefill');
+    expect(paramsSchema.description).toContain('search box');
   });
 
   it('returns success with correct cardPayload for valid cardId "data.open"', async () => {
@@ -248,6 +264,58 @@ describe('ShowUiActionCardTool', () => {
 
     const cardPayload = result.metadata?.cardPayload as UiActionCardPayload;
     expect(cardPayload.defaultQuery).toBe('workflow-1');
+  });
+
+  it('uses params.query as defaultQuery for every resource list card', async () => {
+    const tool = ToolRegistry.get(ToolName.ShowUiActionCard);
+    const resourceListCards = getAllCardDefinitions().filter(
+      (definition) => definition.presentationMode === 'resource_list'
+    );
+
+    expect(resourceListCards.map((definition) => definition.cardId).sort()).toEqual([
+      'data.datasource_delete',
+      'data.open',
+      'data.table_delete',
+      'knowledge.file_delete',
+      'knowledge.folder_delete',
+      'knowledge.open',
+      'schedule.delete',
+      'schedule.open',
+      'template.delete',
+      'template.open',
+      'workflow.delete',
+      'workflow.open',
+    ]);
+
+    for (const definition of resourceListCards) {
+      const result = await tool.execute({
+        cardId: definition.cardId,
+        params: { query: '电商' },
+      });
+      expect(result.success).toBe(true);
+
+      const cardPayload = result.metadata?.cardPayload as UiActionCardPayload;
+      expect(cardPayload.presentationMode).toBe('resource_list');
+      expect(cardPayload.defaultQuery).toBe('电商');
+    }
+  });
+
+  it('advertises query filtering on every resource list catalog definition', () => {
+    const resourceListCards = getAllCardDefinitions().filter(
+      (definition) => definition.presentationMode === 'resource_list'
+    );
+
+    for (const definition of resourceListCards) {
+      expect(
+        definition.optionalParams.some(
+          (param) =>
+            param.name === 'query' &&
+            param.type === 'string' &&
+            param.description.toLowerCase().includes('filter')
+        ),
+        `${definition.cardId} should expose an optional query filter parameter`
+      ).toBe(true);
+    }
   });
 
   it('preserves resource list metadata from catalog definitions', async () => {
